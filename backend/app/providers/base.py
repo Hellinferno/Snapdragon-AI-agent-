@@ -69,3 +69,39 @@ class OCRProvider(ABC):
     async def extract_text_from_image(self, image_bytes: bytes) -> str:
         """Extract text from image bytes."""
         pass
+
+
+@dataclass
+class VisionAnalysisResult:
+    figure_type: str
+    title: str
+    summary: str
+    observations: list[str]
+    confidence: float
+
+
+@dataclass
+class VisualQAResult:
+    question: str
+    answer: str
+    grounded_visual_cues: list[str]
+
+
+class VisionProvider(ABC):
+    """Abstract interface for research figure and screenshot understanding."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider identifier."""
+        pass
+
+    @abstractmethod
+    async def analyze_figure(self, image_bytes: bytes, filename: str) -> VisionAnalysisResult:
+        """Decompose a research figure into type, summary, and structural observations."""
+        pass
+
+    @abstractmethod
+    async def answer_question(self, image_bytes: bytes, question: str, filename: str) -> VisualQAResult:
+        """Answer questions grounded in the visual evidence of the figure."""
+        pass

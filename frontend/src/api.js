@@ -130,3 +130,48 @@ export async function generateFlashcards() {
   }
   return res.json();
 }
+
+export async function uploadVisionImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/vision/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Image upload failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function analyzeFigure(imageId) {
+  const res = await fetch(`${API_BASE}/vision/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_id: imageId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Figure analysis failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function chatWithFigure(imageId, question) {
+  const res = await fetch(`${API_BASE}/vision/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_id: imageId, question }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Visual chat failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export function getVisionImageUrl(imageId) {
+  return `${API_BASE}/vision/${imageId}/file`;
+}
+

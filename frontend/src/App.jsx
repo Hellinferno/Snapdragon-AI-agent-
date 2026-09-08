@@ -27,6 +27,7 @@ import {
   RotateCw,
   ChevronRight,
   ChevronLeft,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   fetchDocuments,
@@ -40,6 +41,10 @@ import {
   explainConcept,
   generateQuiz,
   generateFlashcards,
+  uploadVisionImage,
+  analyzeFigure,
+  chatWithFigure,
+  getVisionImageUrl,
 } from './api';
 
 const ALL_DIMENSIONS = [
@@ -102,6 +107,17 @@ export default function App() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
 
+  // Vision mode state (M5)
+  const [visionImage, setVisionImage] = useState(null);
+  const [visionAnalysis, setVisionAnalysis] = useState(null);
+  const [visionUploading, setVisionUploading] = useState(false);
+  const [visionAnalyzing, setVisionAnalyzing] = useState(false);
+  const [visionChatLoading, setVisionChatLoading] = useState(false);
+  const [visionChatInput, setVisionChatInput] = useState('');
+  const [visionChatMessages, setVisionChatMessages] = useState([]);
+  const visionFileInputRef = useRef(null);
+  const visionChatBottomRef = useRef(null);
+
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
@@ -116,6 +132,12 @@ export default function App() {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'vision') {
+      visionChatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [visionChatMessages, activeTab]);
 
   useEffect(() => {
     if (documents.length >= 2 && selectedCompareDocs.length === 0) {
@@ -339,6 +361,60 @@ export default function App() {
     }
   }
 
+  async function handleVisionUpload(file) {
+    if (!file) return;
+    try {
+      setVisionUploading(true);
+      const uploaded = await uploadVisionImage(file);
+      setVisionImage(uploaded);
+      showSuccess(`Figure '${uploaded.filename}' uploaded (${uploaded.width}x${uploaded.height}). Analyzing...`);
+
+      setVisionAnalyzing(true);
+      const analysis = await analyzeFigure(uploaded.id);
+      setVisionAnalysis(analysis);
+      setVisionChatMessages([
+        {
+          id: 'vision-welcome',
+          sender: 'assistant',
+          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence_score * 100).toFixed(0)}% confidence. You can now ask questions about trends, methodology, or observations.`,
+        },
+      ]);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setVisionUploading(false);
+      setVisionAnalyzing(false);
+    }
+  }
+
+  async function handleVisionChat(customText = null) {
+    const text = customText || visionChatInput;
+    if (!text.trim() || !visionImage || visionChatLoading) return;
+
+    const userMsg = { id: 'u-' + Date.now(), sender: 'user', text };
+    setVisionChatMessages((prev) => [...prev, userMsg]);
+    if (!customText) setVisionChatInput('');
+    setVisionChatLoading(true);
+
+    try {
+      const res = await chatWithFigure(visionImage.id, text);
+      const assistantMsg = {
+        id: 'a-' + Date.now(),
+        sender: 'assistant',
+        text: res.answer,
+      };
+      setVisionChatMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      showError(err.message);
+      setVisionChatMessages((prev) => [
+        ...prev,
+        { id: 'err-' + Date.now(), sender: 'assistant', text: `Error: ${err.message}` },
+      ]);
+    } finally {
+      setVisionChatLoading(false);
+    }
+  }
+
   function formatBytes(bytes) {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -438,6 +514,15 @@ export default function App() {
             <GraduationCap size={18} />
             Learn
             <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>Active</span>
+          </button>
+
+          <button
+            className={`nav-item ${activeTab === 'vision' ? 'active' : ''}`}
+            onClick={() => setActiveTab('vision')}
+          >
+            <ImageIcon size={18} />
+            Vision (Figures)
+            <span className="nav-badge" style={{ color: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}>Active</span>
           </button>
         </nav>
 
@@ -1259,6 +1344,274 @@ export default function App() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB 5: VISION MODE (M5)                                            */}
+          {/* ================================================================= */}
+          {activeTab === 'vision' && (
+            <div className="vision-container">
+              {/* Header & Upload Bar */}
+              <div className="vision-upload-bar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                    }}
+                  >
+                    <ImageIcon size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>Figure & Diagram Visual Studio</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Local multimodal analysis of research charts, architectures, ROC curves, and tables with zero external API calls.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input
+                    type="file"
+                    ref={visionFileInputRef}
+                    style={{ display: 'none' }}
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        handleVisionUpload(e.target.files[0]);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <button
+                    className="primary-btn"
+                    disabled={visionUploading || visionAnalyzing}
+                    onClick={() => visionFileInputRef.current?.click()}
+                  >
+                    {visionUploading ? (
+                      <>
+                        <RefreshCw size={16} className="spin" /> Uploading...
+                      </>
+                    ) : visionAnalyzing ? (
+                      <>
+                        <RefreshCw size={16} className="spin" /> Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud size={16} /> Upload Research Figure
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {!visionImage ? (
+                <div
+                  className="upload-dropzone"
+                  style={{ minHeight: '320px', cursor: 'pointer' }}
+                  onClick={() => visionFileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files?.[0]) {
+                      handleVisionUpload(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
+                  <div className="dropzone-icon">
+                    <ImageIcon size={48} />
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '8px' }}>
+                    Upload a Paper Figure, Architecture, or Plot
+                  </h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '440px', marginBottom: '16px' }}>
+                    Drag & drop PNG, JPEG, or WebP screenshots of architecture diagrams, benchmark charts, or tables for automated decomposition.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <span className="nav-badge">PNG</span>
+                    <span className="nav-badge">JPEG</span>
+                    <span className="nav-badge">WebP</span>
+                    <span className="nav-badge">Local-First</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="vision-workspace">
+                  {/* Left Column: Image Preview & Visual Decomposition */}
+                  <div className="figure-preview-card">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="nav-badge" style={{ color: 'var(--accent-cyan)', borderColor: 'var(--accent-cyan)' }}>
+                          {visionAnalysis?.figure_type || 'FIGURE'}
+                        </span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {visionImage.filename}
+                        </span>
+                      </div>
+                      <button
+                        className="chip-btn"
+                        onClick={() => {
+                          setVisionImage(null);
+                          setVisionAnalysis(null);
+                          setVisionChatMessages([]);
+                        }}
+                      >
+                        <X size={14} /> Clear
+                      </button>
+                    </div>
+
+                    <div className="figure-image-container">
+                      <img
+                        src={getVisionImageUrl(visionImage.id)}
+                        alt={visionAnalysis?.title || visionImage.filename}
+                      />
+                    </div>
+
+                    {/* Telemetry Info */}
+                    <div className="figure-telemetry-grid">
+                      <div className="telemetry-item">
+                        <div className="telemetry-label">Resolution</div>
+                        <div className="telemetry-value">{visionImage.width} × {visionImage.height}</div>
+                      </div>
+                      <div className="telemetry-item">
+                        <div className="telemetry-label">Aspect Ratio</div>
+                        <div className="telemetry-value">{visionImage.aspect_ratio.toFixed(2)} : 1</div>
+                      </div>
+                      <div className="telemetry-item">
+                        <div className="telemetry-label">Format / Mode</div>
+                        <div className="telemetry-value">{visionImage.format} ({visionImage.mode})</div>
+                      </div>
+                      <div className="telemetry-item">
+                        <div className="telemetry-label">Confidence</div>
+                        <div className="telemetry-value" style={{ color: 'var(--accent-emerald)' }}>
+                          {((visionAnalysis?.confidence_score || 0.85) * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insights & Decomposition */}
+                    <div className="figure-insights-card">
+                      <h4 style={{ fontSize: '0.92rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={16} style={{ color: 'var(--accent-cyan)' }} />
+                        {visionAnalysis?.title || 'Visual Analysis'}
+                      </h4>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {visionAnalysis?.key_observations?.map((obs, idx) => (
+                          <div key={idx} className="observation-row">
+                            <span className="observation-bullet">✦</span>
+                            <span>{obs}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {visionAnalysis?.axes_or_labels?.length > 0 && (
+                        <div style={{ marginTop: '10px' }}>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Extracted Axes, Labels & Headers
+                          </div>
+                          <div className="labels-tag-cloud">
+                            {visionAnalysis.axes_or_labels.map((lbl, idx) => (
+                              <span key={idx} className="label-tag">
+                                {lbl}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Visual QA Chat */}
+                  <div className="vision-chat-card">
+                    <div className="vision-chat-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <GraduationCap size={18} style={{ color: 'var(--accent-cyan)' }} />
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>Figure Visual Q&A</span>
+                      </div>
+                      <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>
+                        Provider: DevelopmentVision
+                      </span>
+                    </div>
+
+                    {/* Quick Prompts */}
+                    <div className="vision-quick-prompts">
+                      <button
+                        className="quick-prompt-btn"
+                        onClick={() => handleVisionChat('What is the primary trend or structural relationship shown?')}
+                      >
+                        Trend Analysis
+                      </button>
+                      <button
+                        className="quick-prompt-btn"
+                        onClick={() => handleVisionChat('Explain the detected axes, headers, and coordinate methodology.')}
+                      >
+                        Axes & Methodology
+                      </button>
+                      <button
+                        className="quick-prompt-btn"
+                        onClick={() => handleVisionChat('What are the key numerical findings or component metrics?')}
+                      >
+                        Numerical Findings
+                      </button>
+                      <button
+                        className="quick-prompt-btn"
+                        onClick={() => handleVisionChat('Summarize the architectural flow or diagram pipeline.')}
+                      >
+                        Architecture Flow
+                      </button>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="vision-chat-messages">
+                      {visionChatMessages.map((msg) => (
+                        <div key={msg.id} className={`vision-msg ${msg.sender}`}>
+                          {msg.text}
+                        </div>
+                      ))}
+                      {visionChatLoading && (
+                        <div className="vision-msg assistant" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <RefreshCw size={14} className="spin" />
+                          Analyzing visual attributes...
+                        </div>
+                      )}
+                      <div ref={visionChatBottomRef} />
+                    </div>
+
+                    {/* Input Bar */}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleVisionChat();
+                      }}
+                      style={{ display: 'flex', gap: '10px' }}
+                    >
+                      <input
+                        type="text"
+                        className="chat-input"
+                        placeholder="Ask a question about this figure..."
+                        value={visionChatInput}
+                        onChange={(e) => setVisionChatInput(e.target.value)}
+                        disabled={visionChatLoading}
+                      />
+                      <button
+                        type="submit"
+                        className="primary-btn"
+                        disabled={visionChatLoading || !visionChatInput.trim()}
+                        style={{ padding: '0 18px' }}
+                      >
+                        <Send size={16} />
+                      </button>
+                    </form>
+                  </div>
                 </div>
               )}
             </div>

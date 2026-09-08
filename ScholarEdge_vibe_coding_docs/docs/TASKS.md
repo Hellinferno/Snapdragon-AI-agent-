@@ -44,11 +44,11 @@
 - [x] Flashcard schema
 
 ## M5 Vision
-- [ ] Image upload
-- [ ] OCR provider interface
-- [ ] Vision provider interface
-- [ ] Figure understanding
-- [ ] Screenshot Q&A
+- [x] Image upload
+- [x] OCR provider interface
+- [x] Vision provider interface
+- [x] Figure understanding
+- [x] Screenshot Q&A
 
 ## M6 Snapdragon
 - [ ] Verify current AI Hub candidates
