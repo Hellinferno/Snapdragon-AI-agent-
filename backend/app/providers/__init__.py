@@ -18,6 +18,19 @@ from app.providers.vision_provider import (
     vision_provider,
 )
 
+from app.providers.qualcomm import (
+    QualcommConfig,
+    QualcommEmbeddingProvider,
+    QualcommLLMProvider,
+    QualcommVisionProvider,
+)
+from app.providers.factory import (
+    get_embedding_provider,
+    get_llm_provider,
+    get_vision_provider,
+    get_ocr_provider,
+)
+
 __all__ = [
     "EmbeddingProvider",
     "EmbeddingResult",
@@ -38,4 +51,13 @@ __all__ = [
     "vision_provider",
     "DevelopmentOCRProvider",
     "ocr_provider",
+    "QualcommConfig",
+    "QualcommEmbeddingProvider",
+    "QualcommLLMProvider",
+    "QualcommVisionProvider",
+    "get_embedding_provider",
+    "get_llm_provider",
+    "get_vision_provider",
+    "get_ocr_provider",
 ]
+

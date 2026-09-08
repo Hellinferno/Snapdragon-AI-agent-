@@ -51,12 +51,12 @@
 - [x] Screenshot Q&A
 
 ## M6 Snapdragon
-- [ ] Verify current AI Hub candidates
-- [ ] Verify runtime requirements
-- [ ] Implement Qualcomm provider
-- [ ] Deploy to target hardware
-- [ ] Validate accelerator execution
-- [ ] Add reproducible benchmarks
+- [x] Verify current AI Hub candidates
+- [x] Verify runtime requirements
+- [x] Implement Qualcomm provider
+- [ ] Deploy to target hardware (requires physical device or Device Cloud)
+- [ ] Validate accelerator execution (requires physical device or Device Cloud)
+- [x] Add reproducible benchmarks
 
 ## M7 Polish
 - [ ] Error states

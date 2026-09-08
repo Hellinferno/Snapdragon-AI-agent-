@@ -21,4 +21,12 @@ def setup_logging() -> logging.Logger:
     return logger
 
 
+def get_logger(name: str = "scholaredge") -> logging.Logger:
+    """Returns a child logger under the scholaredge namespace."""
+    if name == "scholaredge":
+        return logger
+    return logger.getChild(name)
+
+
 logger = setup_logging()
+

@@ -21,9 +21,17 @@ class Settings(BaseSettings):
     CHUNK_SIZE_CHARS: int = 600
     CHUNK_OVERLAP_CHARS: int = 100
 
-    # AI Providers (defaults for development)
+    # AI Providers
+    PROVIDER_BACKEND: str = "development"  # "development" | "qualcomm"
     LLM_PROVIDER: str = "development"
     EMBEDDING_PROVIDER: str = "development"
+    VISION_PROVIDER: str = "development"
+
+    # Qualcomm Deployment Settings
+    QUALCOMM_DEVICE_TARGET: str = "auto"  # "Snapdragon X Elite" | "Snapdragon 8 Gen 3" | "auto"
+    QUALCOMM_MODEL_DIR: Path = BASE_DIR / "models" / "qualcomm"
+    QUALCOMM_BACKEND_PATH: str = "QnnHtp.dll"
+    QUALCOMM_PERFORMANCE_MODE: str = "burst"  # "burst" | "sustained_high_performance"
 
     model_config = SettingsConfigDict(
         env_file=".env",

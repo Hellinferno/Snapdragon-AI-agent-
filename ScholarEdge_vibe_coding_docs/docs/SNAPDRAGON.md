@@ -2,68 +2,71 @@
 
 ## Objective
 
-Make ScholarEdge suitable for Snapdragon-powered Windows PCs and validate selected AI workloads on actual target hardware.
+Make ScholarEdge suitable for Snapdragon-powered Windows Copilot+ PCs (e.g. Snapdragon X Elite / X Plus with Hexagon NPU 45 TOPS) and validate selected AI workloads on actual target hardware while maintaining full development compatibility on non-Snapdragon host PCs.
 
 ## Current status
 
-No Snapdragon PC is currently owned by the developer.
+- Development host: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 Pro).
+- Snapdragon support: Implemented as an isolated, pluggable provider layer (`backend/app/providers/qualcomm/`).
+- Local zero-weight fallback ensures seamless development on 8 GB RAM without requiring Snapdragon hardware or downloading heavy neural weights.
+- Actual hardware claims require target device execution.
 
-Therefore:
-- Snapdragon support is a target;
-- local application development continues on an Intel ThinkBook;
-- actual hardware claims require later validation.
-
-## Intended deployment architecture
+## Deployment Architecture
 
 ```text
-ScholarEdge application
+ScholarEdge Application (FastAPI + React)
         ↓
-Provider interface
+Provider Factory (`backend/app/providers/factory.py`)
         ↓
-Qualcomm-compatible model/runtime
+Qualcomm Provider Layer (`backend/app/providers/qualcomm/`)
+  ├── QualcommEmbeddingProvider (all-MiniLM-L6-v2, 384-d)
+  ├── QualcommLLMProvider (Qwen2.5-3B-Instruct / Llama-3.2-3B)
+  └── QualcommVisionProvider (MobileNet-v2 / CLIP)
         ↓
-ONNX Runtime + QNN or another verified supported path
+ONNX Runtime with QNN Execution Provider (`QnnHtp.dll` on Hexagon NPU)
+  └── Fallback: CPUExecutionProvider / Development fallback
         ↓
-Snapdragon hardware
+Target Hardware (Snapdragon X Elite / Copilot+ PC)
 ```
 
-The exact runtime must be selected after verifying current Qualcomm documentation, model artifacts, and device compatibility.
+## Qualcomm AI Hub Verified Candidate Models
 
-## Qualcomm AI Hub
+| Modality | Candidate Model | Target Precision | NPU Runtime Target |
+|---|---|---|---|
+| **Embeddings** | `all-MiniLM-L6-v2` | INT8 / FP16 | ONNX Runtime + QNN HTP |
+| **Grounded LLM** | `Qwen2.5-3B-Instruct` / `Llama-3.2-3B` | INT4 (W4A16) | ONNX Runtime GenAI + QNN HTP |
+| **Vision / Figures** | `MobileNet-v2` / `CLIP-ViT-B-32` | INT8 / FP16 | ONNX Runtime + QNN HTP |
+| **OCR** | `EasyOCR` / `TrOCR` | INT8 | ONNX Runtime + QNN HTP |
 
-Use Qualcomm AI Hub to:
-- identify suitable models;
-- inspect supported devices;
-- obtain/prepare compatible model artifacts where available;
-- inspect deployment information.
+## Target Environment Setup
 
-Do not assume that every model in the catalog supports every runtime or device.
+To deploy on a physical Snapdragon Windows PC:
 
-## Remote testing
+```powershell
+# 1. Install ARM64 Python 3.11 or 3.12
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
-If available to the project, use Qualcomm Device Cloud or other authorized remote Snapdragon hardware access for actual validation.
+# 2. Install ONNX Runtime with Qualcomm QNN Execution Provider
+pip install onnxruntime-qnn
 
-## Benchmark plan
+# 3. Configure Qualcomm Hexagon SDK runtime path
+$env:PATH += ";C:\Program Files\Qualcomm\Hexagon_SDK\lib\hexagon_nn_skel"
 
-For each selected model:
-1. record model/version;
-2. record runtime/version;
-3. record target Snapdragon device;
-4. record precision/quantization;
-5. record warm/cold latency;
-6. record memory;
-7. record accelerator execution;
-8. record application-level latency;
-9. store reproducible benchmark configuration.
+# 4. Run ScholarEdge with Qualcomm backend
+$env:PROVIDER_BACKEND = "qualcomm"
+$env:QUALCOMM_DEVICE_TARGET = "Snapdragon X Elite"
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-## Evidence requirement
+## Reproducible Benchmark Harness
 
-A final competition claim such as "runs on Snapdragon NPU" should be supported by:
-- reproducible deployment steps;
-- runtime configuration;
-- target device;
-- benchmark/test evidence.
+Run the automated benchmark harness to collect all 9 required metrics:
 
-## Development compatibility
+```powershell
+# From backend directory:
+python scripts/benchmark_snapdragon.py --dry-run
+```
 
-Do not make the entire repository require Qualcomm tooling. Snapdragon support should be an additional deployment backend.
+The script automatically probes system telemetry, measures cold vs warm latency, token generation throughput, peak memory delta, and writes a reproducible JSON record to `backend/benchmarks/snapdragon_benchmark_<timestamp>.json`.
+

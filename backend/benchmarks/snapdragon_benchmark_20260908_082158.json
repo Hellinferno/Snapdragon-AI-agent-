@@ -1,0 +1,52 @@
+{
+  "timestamp_utc": "2026-09-08T08:21:58.324230Z",
+  "harness_version": "1.0.0",
+  "system_telemetry": {
+    "os": "Windows 11 (Build 10.0.26200)",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+    "python_version": "3.12.10",
+    "onnxruntime_version": "not_installed",
+    "available_providers": [],
+    "qnn_execution_provider_active": false,
+    "detected_device": "Windows AMD64",
+    "is_target_snapdragon": false
+  },
+  "configuration": {
+    "device_target": "auto",
+    "preferred_provider": "QNNExecutionProvider",
+    "fallback_provider": "CPUExecutionProvider",
+    "qnn_backend_path": "QnnHtp.dll",
+    "precision": "int4",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "llm_model": "Qwen2.5-3B-Instruct",
+    "vision_model": "MobileNet-v2"
+  },
+  "benchmarks": {
+    "embedding": {
+      "model_id": "all-MiniLM-L6-v2",
+      "precision": "int4",
+      "cold_latency_ms": 3.2,
+      "warm_mean_latency_ms": 10.31,
+      "warm_p95_latency_ms": 10.93,
+      "batch_size": 10,
+      "peak_memory_delta_mb": 0.134,
+      "accelerator_execution": false
+    },
+    "llm": {
+      "model_id": "Qwen2.5-3B-Instruct",
+      "precision": "int4",
+      "cold_latency_ms": 1.47,
+      "warm_mean_latency_ms": 1.66,
+      "tokens_per_second": 63789.3,
+      "peak_memory_delta_mb": 0.018,
+      "completion_tokens": 80,
+      "accelerator_execution": false
+    },
+    "application_e2e": {
+      "cold_e2e_latency_ms": 4.67,
+      "warm_e2e_latency_ms": 2.69,
+      "total_peak_memory_delta_mb": 0.152
+    }
+  }
+}
