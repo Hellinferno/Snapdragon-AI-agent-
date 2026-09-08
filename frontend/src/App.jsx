@@ -14,6 +14,11 @@ import {
   AlertCircle,
   Cpu,
   RefreshCw,
+  Send,
+  Sparkles,
+  ExternalLink,
+  ShieldCheck,
+  Filter,
 } from 'lucide-react';
 import {
   fetchDocuments,
@@ -21,6 +26,8 @@ import {
   uploadDocument,
   deleteDocument,
   fetchHealth,
+  sendChatQuestion,
+  searchDocuments,
 } from './api';
 
 export default function App() {
@@ -36,13 +43,38 @@ export default function App() {
   const [successToast, setSuccessToast] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Load documents and health on mount
+  // Research mode state
+  const [selectedScope, setSelectedScope] = useState('ALL');
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    {
+      id: 'welcome-1',
+      sender: 'assistant',
+      text: 'Welcome to ScholarEdge Research Copilot. I answer questions grounded strictly in your indexed documents, with explicit citations to source documents and page numbers.',
+      sources: [],
+      hasSufficientEvidence: true,
+    },
+  ]);
+  const [researchSubTab, setResearchSubTab] = useState('chat'); // 'chat' | 'search'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const chatBottomRef = useRef(null);
+
   useEffect(() => {
     loadDocs();
     checkHealth();
     const interval = setInterval(checkHealth, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'research') {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, activeTab]);
 
   async function checkHealth() {
     try {
@@ -120,6 +152,65 @@ export default function App() {
       await loadDocs();
     } catch (err) {
       showError(err.message);
+    }
+  }
+
+  async function handleSendChat(customText = null) {
+    const textToSend = customText || chatInput;
+    if (!textToSend.trim() || chatLoading) return;
+
+    const userMsgId = 'user-' + Date.now();
+    const newUserMsg = {
+      id: userMsgId,
+      sender: 'user',
+      text: textToSend,
+    };
+
+    setChatMessages((prev) => [...prev, newUserMsg]);
+    if (!customText) setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const scopeIds = selectedScope === 'ALL' ? null : [selectedScope];
+      const res = await sendChatQuestion(textToSend, scopeIds, 5);
+
+      const assistantMsg = {
+        id: 'assistant-' + Date.now(),
+        sender: 'assistant',
+        text: res.answer,
+        sources: res.sources || [],
+        hasSufficientEvidence: res.has_sufficient_evidence,
+      };
+
+      setChatMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      showError(err.message);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: 'error-' + Date.now(),
+          sender: 'assistant',
+          text: `Error processing query: ${err.message}`,
+          sources: [],
+          hasSufficientEvidence: false,
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function handleSearch(query) {
+    if (!query.trim() || searchLoading) return;
+    try {
+      setSearchLoading(true);
+      const scopeIds = selectedScope === 'ALL' ? null : [selectedScope];
+      const res = await searchDocuments(query, scopeIds, 8);
+      setSearchResults(res.results || []);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setSearchLoading(false);
     }
   }
 
@@ -202,8 +293,8 @@ export default function App() {
             onClick={() => setActiveTab('research')}
           >
             <Search size={18} />
-            Research
-            <span className="nav-badge" style={{ color: 'var(--accent-amber)' }}>M2</span>
+            Research (RAG)
+            <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>Active</span>
           </button>
 
           <button
@@ -247,7 +338,27 @@ export default function App() {
         <header className="top-bar">
           <div className="top-bar-title">
             {activeTab === 'library' && <>Document Library</>}
-            {activeTab === 'research' && <>Grounded Research Mode</>}
+            {activeTab === 'research' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span>Grounded Research Studio</span>
+                <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-tertiary)', padding: '3px', borderRadius: '8px' }}>
+                  <button
+                    className={`tab-btn ${researchSubTab === 'chat' ? 'active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    onClick={() => setResearchSubTab('chat')}
+                  >
+                    Grounded Chat
+                  </button>
+                  <button
+                    className={`tab-btn ${researchSubTab === 'search' ? 'active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    onClick={() => setResearchSubTab('search')}
+                  >
+                    Semantic Retrieval
+                  </button>
+                </div>
+              </div>
+            )}
             {activeTab === 'compare' && <>Cross-Paper Comparison</>}
             {activeTab === 'learn' && <>Interactive Learning & Quizzes</>}
           </div>
@@ -259,6 +370,7 @@ export default function App() {
         </header>
 
         <div className="view-content">
+          {/* LIBRARY TAB */}
           {activeTab === 'library' && (
             <div>
               <div className="library-header">
@@ -381,35 +493,229 @@ export default function App() {
             </div>
           )}
 
-          {/* Research Placeholder */}
+          {/* RESEARCH (RAG) TAB */}
           {activeTab === 'research' && (
-            <div className="empty-state">
-              <Search size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-              <h3>Grounded Research & Multi-Paper Q&A</h3>
-              <p style={{ marginTop: '8px', maxWidth: '480px', marginInline: 'auto' }}>
-                Phase 1 Document Engine is ready. Phase 2 (M2) will introduce local embeddings, vector retrieval, and source-grounded answers.
-              </p>
+            <div className="research-container">
+              {/* Header with Scope Filter */}
+              <div className="research-header">
+                <div className="scope-bar">
+                  <Filter size={16} />
+                  <span>Research Scope:</span>
+                  <select
+                    className="scope-select"
+                    value={selectedScope}
+                    onChange={(e) => setSelectedScope(e.target.value)}
+                  >
+                    <option value="ALL">All Documents in Library ({documents.length})</option>
+                    {documents.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.title || d.filename}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--accent-emerald)' }}>
+                  <ShieldCheck size={16} />
+                  <span>Source Grounding Active (Refusal on unverified facts)</span>
+                </div>
+              </div>
+
+              {/* Subtab 1: Grounded Chat */}
+              {researchSubTab === 'chat' && (
+                <>
+                  <div className="chat-scroll">
+                    {chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`chat-message ${msg.sender === 'user' ? 'user' : 'assistant'}`}
+                      >
+                        {msg.sender === 'user' ? (
+                          <div className="user-bubble">{msg.text}</div>
+                        ) : (
+                          <div className="assistant-card">
+                            <div className="assistant-header">
+                              <Sparkles size={16} />
+                              <span>ScholarEdge Evidence Synthesis</span>
+                            </div>
+                            <div className="assistant-text">{msg.text}</div>
+
+                            {!msg.hasSufficientEvidence && msg.id !== 'welcome-1' && (
+                              <div className="insufficient-alert">
+                                <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                                <div>
+                                  <strong>Insufficient Evidence Detected:</strong>
+                                  <div>
+                                    The indexed documents do not contain authoritative evidence on this topic. ScholarEdge refuses to fabricate ungrounded claims.
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {msg.sources && msg.sources.length > 0 && (
+                              <div className="sources-panel">
+                                <div className="sources-label">
+                                  <BookOpen size={14} />
+                                  <span>Retrieved Evidence ({msg.sources.length} sources)</span>
+                                </div>
+                                <div className="source-cards-grid">
+                                  {msg.sources.map((src, idx) => (
+                                    <div
+                                      key={src.chunk_id || idx}
+                                      className="source-card"
+                                      onClick={() => {
+                                        const docMatch = documents.find((d) => d.id === src.document_id);
+                                        if (docMatch) handleOpenDoc(docMatch);
+                                      }}
+                                      title="Click to view in document inspector"
+                                    >
+                                      <div className="source-card-top">
+                                        <span>PAGE {src.page_number} {src.section ? `• ${src.section}` : ''}</span>
+                                        <span className="source-score">sim: {src.relevance_score}</span>
+                                      </div>
+                                      <div className="source-card-title">{src.document_title}</div>
+                                      <div className="source-card-snippet">"{src.excerpt}"</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {chatLoading && (
+                      <div className="chat-message assistant">
+                        <div className="assistant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <RefreshCw size={18} className="spin" style={{ color: 'var(--accent-cyan)' }} />
+                          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            Retrieving vectors and synthesizing grounded response...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatBottomRef} />
+                  </div>
+
+                  {/* Prompt Suggestion Chips */}
+                  <div className="prompt-chips">
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Quick queries:</span>
+                    <button
+                      className="chip-btn"
+                      onClick={() => handleSendChat('What are the latency benefits of on-device NPU inference?')}
+                    >
+                      Latency benefits on NPU?
+                    </button>
+                    <button
+                      className="chip-btn"
+                      onClick={() => handleSendChat('How is citation traceability verified in RAG?')}
+                    >
+                      Citation traceability?
+                    </button>
+                    <button
+                      className="chip-btn"
+                      onClick={() => handleSendChat('What were the student test results for quiz generation?')}
+                    >
+                      Quiz retention results?
+                    </button>
+                    <button
+                      className="chip-btn"
+                      onClick={() => handleSendChat('What is the weather like on Mars today?')}
+                    >
+                      Test refusal (Mars weather)
+                    </button>
+                  </div>
+
+                  {/* Chat Input Bar */}
+                  <div className="chat-input-bar">
+                    <input
+                      type="text"
+                      className="chat-input-field"
+                      placeholder="Ask a question across your research library..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                      disabled={chatLoading}
+                    />
+                    <button
+                      className="send-btn"
+                      onClick={() => handleSendChat()}
+                      disabled={chatLoading || !chatInput.trim()}
+                      title="Send question"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Subtab 2: Semantic Retrieval Inspector */}
+              {researchSubTab === 'search' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="chat-input-bar">
+                    <input
+                      type="text"
+                      className="chat-input-field"
+                      placeholder="Enter search query to inspect raw vector similarity..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+                    />
+                    <button
+                      className="send-btn"
+                      onClick={() => handleSearch(searchQuery)}
+                      disabled={searchLoading || !searchQuery.trim()}
+                    >
+                      <Search size={18} />
+                    </button>
+                  </div>
+
+                  {searchLoading && <div className="empty-state">Searching vector store...</div>}
+
+                  {!searchLoading && searchResults.length === 0 && searchQuery && (
+                    <div className="empty-state">No chunks matched the similarity threshold.</div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {searchResults.map((res, idx) => (
+                      <div key={res.chunk_id || idx} className="chunk-item">
+                        <div className="chunk-header">
+                          <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                            HIT #{idx + 1} — {res.document_title} (PAGE {res.page_number})
+                          </span>
+                          <span className="source-score">cosine similarity: {res.relevance_score}</span>
+                        </div>
+                        {res.section && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Section: [{res.section}]
+                          </div>
+                        )}
+                        <div className="chunk-text">{res.excerpt}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Compare Placeholder */}
+          {/* COMPARE TAB (M3) */}
           {activeTab === 'compare' && (
             <div className="empty-state">
               <Scale size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
               <h3>Cross-Paper Comparative Analysis</h3>
               <p style={{ marginTop: '8px', maxWidth: '480px', marginInline: 'auto' }}>
-                Multi-paper comparison across methodologies, datasets, and conclusions (M3).
+                Multi-paper comparison across methodologies, datasets, and conclusions (Coming in Phase 3 / M3).
               </p>
             </div>
           )}
 
-          {/* Learn Placeholder */}
+          {/* LEARN TAB (M4) */}
           {activeTab === 'learn' && (
             <div className="empty-state">
               <GraduationCap size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
               <h3>Interactive Learning & Study Mode</h3>
               <p style={{ marginTop: '8px', maxWidth: '480px', marginInline: 'auto' }}>
-                Conceptual explanations, automated quiz generation, and active recall assistance (M4).
+                Conceptual explanations, automated quiz generation, and active recall assistance (Coming in Phase 4 / M4).
               </p>
             </div>
           )}

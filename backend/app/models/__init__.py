@@ -1,3 +1,3 @@
-from app.models.db_models import Chunk, Document, Page
+from app.models.db_models import Chunk, ChunkEmbedding, Document, Page
 
-__all__ = ["Document", "Page", "Chunk"]
+__all__ = ["Document", "Page", "Chunk", "ChunkEmbedding"]

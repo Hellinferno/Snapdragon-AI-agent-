@@ -53,3 +53,29 @@ export async function fetchHealth() {
   }
   return res.json();
 }
+
+export async function searchDocuments(query, documentIds = null, topK = 5) {
+  const res = await fetch(`${API_BASE}/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, document_ids: documentIds, top_k: topK }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Search failed with status ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function sendChatQuestion(question, documentIds = null, topK = 5) {
+  const res = await fetch(`${API_BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, document_ids: documentIds, top_k: topK }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Chat failed with status ${res.status}`);
+  }
+  return res.json();
+}

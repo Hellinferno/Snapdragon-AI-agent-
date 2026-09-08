@@ -20,15 +20,15 @@
 - [x] Document deletion
 
 ## M2 RAG
-- [ ] Embedding interface
-- [ ] Development embedding provider
-- [ ] Vector store interface
-- [ ] Retrieval service
-- [ ] LLM interface
-- [ ] Development LLM provider
-- [ ] Context builder
-- [ ] Source citations
-- [ ] Chat endpoint
+- [x] Embedding interface
+- [x] Development embedding provider
+- [x] Vector store interface
+- [x] Retrieval service
+- [x] LLM interface
+- [x] Development LLM provider
+- [x] Context builder
+- [x] Source citations
+- [x] Chat endpoint
 
 ## M3 Research
 - [ ] Multi-document retrieval

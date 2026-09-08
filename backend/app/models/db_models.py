@@ -65,3 +65,21 @@ class Chunk(Base):
 
     document: Mapped["Document"] = relationship("Document", back_populates="chunks")
     page: Mapped["Page"] = relationship("Page", back_populates="chunks")
+    embedding: Mapped["ChunkEmbedding | None"] = relationship(
+        "ChunkEmbedding",
+        back_populates="chunk",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+
+class ChunkEmbedding(Base):
+    __tablename__ = "chunk_embeddings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    chunk_id: Mapped[str] = mapped_column(String(36), ForeignKey("chunks.id", ondelete="CASCADE"), unique=True, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), index=True)
+    embedding_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    chunk: Mapped["Chunk"] = relationship("Chunk", back_populates="embedding")

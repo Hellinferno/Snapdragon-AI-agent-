@@ -10,6 +10,8 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.logging import logger
 from app.models.db_models import Chunk, Document, Page
+from app.providers.embedding_provider import embedding_provider
+from app.providers.vector_store import SQLiteVectorStore
 from app.schemas.document import (
     ChunkResponse,
     DocumentDetailResponse,
@@ -138,6 +140,7 @@ class DocumentService:
                 chunk_overlap=settings.CHUNK_OVERLAP_CHARS,
             )
 
+            created_chunks: list[Chunk] = []
             for gen_chunk in generated_chunks:
                 parent_page = page_map.get(gen_chunk.page_number)
                 if not parent_page:
@@ -151,6 +154,20 @@ class DocumentService:
                     section=gen_chunk.section,
                 )
                 self.db.add(chunk)
+                created_chunks.append(chunk)
+
+            # Flush to obtain generated chunk IDs
+            await self.db.flush()
+
+            # Generate and persist embeddings in vector store
+            if created_chunks:
+                chunk_texts = [c.text for c in created_chunks]
+                vectors = await embedding_provider.embed_batch(chunk_texts)
+                vector_entries = [
+                    (c.id, doc.id, vec) for c, vec in zip(created_chunks, vectors, strict=False)
+                ]
+                vector_store = SQLiteVectorStore(self.db)
+                await vector_store.add_vectors(vector_entries)
 
             doc.status = "INDEXED"
             await self.db.commit()
