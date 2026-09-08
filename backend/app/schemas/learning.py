@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from app.schemas.rag import SourceReference
 
 ExplanationLevel = Literal["beginner", "intermediate", "deep_dive"]
-DifficultyLevel = Literal["easy", "medium", "hard"]
+DifficultyLevel = Literal["easy", "medium", "hard", "research_level"]
 
 
 class ExplainRequest(BaseModel):
@@ -26,8 +26,11 @@ class QuizQuestion(BaseModel):
     question: str
     options: list[str]
     correct_answer_index: int
+    correct_answer: str
     explanation: str
+    difficulty: str = "medium"
     source: SourceReference | None = None
+
 
 
 class QuizRequest(BaseModel):

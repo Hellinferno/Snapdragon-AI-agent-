@@ -26,3 +26,11 @@ class CompareResponse(BaseModel):
     comparisons: list[DocumentComparisonItem]
     synthesis: str
     all_sources: list[SourceReference]
+    commonalities: list[str] = []
+    methodological_differences: list[str] = []
+    performance_differences: list[str] = []
+    dataset_differences: list[str] = []
+    limitations: list[str] = []
+    contradictory_findings: list[str] = []
+    recommendations: dict[str, str] = {}
+

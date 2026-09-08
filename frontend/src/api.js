@@ -67,6 +67,15 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function fetchRuntimeStatus() {
+  const res = await fetch(`${API_BASE}/runtime/status`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch runtime telemetry');
+  }
+  return res.json();
+}
+
+
 export async function searchDocuments(query, documentIds = null, topK = 5) {
   const res = await fetch(`${API_BASE}/search`, {
     method: 'POST',

@@ -65,3 +65,4 @@ htmlcov/
 pytest_tmp/
 backend/pytest_tmp/
 backend/benchmarks/*.json
+backend/models/qualcomm/**/*.onnx

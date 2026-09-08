@@ -10,6 +10,23 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _resolve_default_model_dir() -> Path:
+    env_dir = os.getenv("QUALCOMM_MODEL_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        if p.exists():
+            return p
+    candidates = [
+        Path("models/qualcomm"),
+        Path("backend/models/qualcomm"),
+        Path(__file__).resolve().parents[3] / "models" / "qualcomm",
+    ]
+    for cand in candidates:
+        if cand.exists():
+            return cand
+    return candidates[-1]
+
+
 @dataclass
 class QualcommConfig:
     """Configuration for Qualcomm Snapdragon AI runtime and models."""
@@ -20,7 +37,7 @@ class QualcommConfig:
     qnn_backend_path: str = "QnnHtp.dll"
     htp_performance_mode: str = "burst"
     htp_graph_optimization: str = "3"
-    model_dir: Path = field(default_factory=lambda: Path("models/qualcomm"))
+    model_dir: Path = field(default_factory=_resolve_default_model_dir)
 
     # Qualcomm AI Hub verified candidate models
     embedding_model_id: str = "all-MiniLM-L6-v2"

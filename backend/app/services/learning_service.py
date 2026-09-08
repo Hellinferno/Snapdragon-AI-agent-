@@ -91,26 +91,60 @@ class LearningService:
         questions: list[QuizQuestion] = []
         target_sources = unique_sources[:question_count]
 
+        difficulty_labels = {
+            "easy": "Fundamental Understanding",
+            "medium": "Methodological Assessment",
+            "hard": "Quantitative & Constraint Analysis",
+            "research_level": "Deep Architectural & Causal Inference",
+        }
+
         for idx, src in enumerate(target_sources):
             sentences = [s.strip() for s in src.excerpt.split(". ") if len(s.strip()) > 15]
             main_sentence = sentences[0] if sentences else src.excerpt[:120]
             if not main_sentence.endswith("."):
                 main_sentence += "."
 
-            # Synthesize question based on text
-            q_text = f"According to {src.document_title} (Page {src.page_number}), which of the following statements is true regarding {src.section or 'the research'}?"
+            # Synthesize question style depending on difficulty
+            if difficulty == "easy":
+                q_text = f"Based on '{src.document_title}' (Page {src.page_number}), what core conclusion or finding is reported?"
+                distractors = [
+                    "The study concluded that local processing is infeasible for scientific workflows.",
+                    "The researchers found that ungrounded speculation produces more reliable answers than cited evidence.",
+                    "The authors recommended transmitting all sensitive records to public third-party endpoints.",
+                ]
+            elif difficulty == "hard":
+                q_text = f"Evaluating '{src.document_title}' (Page {src.page_number}), which precise trade-off or constraint is established regarding {src.section or 'the architecture'}?"
+                distractors = [
+                    "Throughput was doubled by bypassing all memory cache structures without penalty.",
+                    "Latency scaled exponentially with document page count due to quadratic vector indexing.",
+                    "Accuracy was found to be independent of quantization and weight representation.",
+                ]
+            elif difficulty == "research_level":
+                q_text = f"From a peer-review and reproducibility perspective ('{src.document_title}', Page {src.page_number}), which architectural premise is critically substantiated?"
+                distractors = [
+                    "Local-first edge copilot architectures fail to satisfy clinical privacy compliance requirements.",
+                    "Zero-cloud execution requires proprietary cloud orchestrators during initialization.",
+                    "Heuristic aspect-ratio rules provide superior semantic accuracy compared to neural vision models.",
+                ]
+            else:  # medium
+                q_text = f"According to '{src.document_title}' (Page {src.page_number}), which of the following statements is true regarding {src.section or 'the research'}?"
+                distractors = [
+                    "It mandates transmitting raw user files to an external third-party cloud for validation.",
+                    "It demonstrates that citation tracking introduces unmanageable computational overhead without benefits.",
+                    "It concludes that on-device architectures cannot operate under strict local memory constraints.",
+                ]
+
             correct_opt = main_sentence
-
-            distractors = [
-                "It mandates transmitting raw user files to an external third-party cloud for validation.",
-                "It demonstrates that citation tracking introduces unmanageable computational overhead without benefits.",
-                "It concludes that on-device architectures cannot operate under strict local memory constraints.",
-            ]
-
             options = [correct_opt] + distractors
-            random.seed(idx + len(src.chunk_id))
+            random.seed(idx + len(src.chunk_id) + len(difficulty))
             random.shuffle(options)
             correct_idx = options.index(correct_opt)
+
+            sec_tag = f" (Section: {src.section})" if src.section else ""
+            explanation = (
+                f"Grounded directly in {src.document_title}, Page {src.page_number}{sec_tag}: "
+                f"\"{main_sentence}\""
+            )
 
             questions.append(
                 QuizQuestion(
@@ -118,13 +152,16 @@ class LearningService:
                     question=q_text,
                     options=options,
                     correct_answer_index=correct_idx,
-                    explanation=f"Grounded directly in {src.document_title} (Page {src.page_number}): \"{main_sentence}\"",
+                    correct_answer=correct_opt,
+                    explanation=explanation,
+                    difficulty=difficulty,
                     source=src,
                 )
             )
 
+        diff_title = difficulty_labels.get(difficulty, difficulty.title())
         return QuizResponse(
-            quiz_title=f"ScholarEdge Formative Assessment ({difficulty.title()} Difficulty)",
+            quiz_title=f"ScholarEdge Formative Assessment — {diff_title}",
             difficulty=difficulty,
             questions=questions,
             sources_used=target_sources,

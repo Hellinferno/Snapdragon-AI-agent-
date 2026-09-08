@@ -35,16 +35,34 @@ class DevelopmentLLMProvider(LLMProvider):
             return GenerationResult(text=refusal_text, prompt_tokens=len(prompt.split()), completion_tokens=len(refusal_text.split()))
 
         # Check semantic alignment: does the context contain substantive terms from the question?
-        question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{4,}\b", question.lower()))
+        question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", question.lower()))
         query_framing = {
             "what", "which", "where", "when", "does", "have", "with", "from",
             "that", "this", "these", "those", "about", "regarding", "indicate",
-            "demonstrate", "discuss", "explain", "model", "paper", "study", "research",
+            "demonstrate", "discuss", "explain", "paper", "study", "research",
+            "for", "the", "and", "are", "was", "were", "can", "could", "would",
+            "should", "how", "why", "who", "whom", "whose", "into", "onto",
+            "over", "under", "than", "then", "more", "most", "some", "such",
+            "each", "all", "both", "stage",
         }
         key_query_terms = question_words - query_framing
-        content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{4,}\b", context_text.lower()))
+        content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", context_text.lower()))
 
-        if key_query_terms and not (key_query_terms & content_words):
+        has_overlap = False
+        if not key_query_terms:
+            has_overlap = True
+        else:
+            for term in key_query_terms:
+                if len(term) >= 4:
+                    prefix = term[:4]
+                    if any(cw == term or cw.startswith(prefix) or (len(cw) >= 4 and term.startswith(cw[:4])) for cw in content_words):
+                        has_overlap = True
+                        break
+                elif term in content_words:
+                    has_overlap = True
+                    break
+
+        if not has_overlap:
             refusal_text = (
                 "Insufficient evidence in the indexed documents to answer this question. "
                 "The documents in your library do not contain information directly addressing this query."
