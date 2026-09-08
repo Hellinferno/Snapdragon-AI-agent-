@@ -175,3 +175,16 @@ export function getVisionImageUrl(imageId) {
   return `${API_BASE}/vision/${imageId}/file`;
 }
 
+export async function seedDemoDataset() {
+  const res = await fetch(`${API_BASE}/documents/seed_demo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Demo seeding failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+

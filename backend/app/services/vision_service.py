@@ -124,3 +124,32 @@ class VisionService:
     def get_image_path(self, image_id: str) -> Path:
         path, _ = self._find_image_file(image_id)
         return path
+
+    async def save_raw_image(self, content: bytes, filename: str) -> ImageUploadResponse:
+        """Saves raw image bytes directly from disk or generator."""
+        clean_name = re.sub(r"[^\w\s\.-]", "_", Path(filename).name)
+        ext = Path(clean_name).suffix.lower() or ".png"
+
+        image = Image.open(io.BytesIO(content))
+        dimensions = image.size
+        mime_type = Image.MIME.get(image.format, f"image/{ext.lstrip('.')}")
+
+        image_id = str(uuid.uuid4())[:8]
+        stored_filename = f"{image_id}_{clean_name}"
+        stored_path = self.storage_dir / stored_filename
+
+        with open(stored_path, "wb") as f:
+            f.write(content)
+
+        return ImageUploadResponse(
+            image_id=image_id,
+            filename=clean_name,
+            file_size=len(content),
+            dimensions=dimensions,
+            mime_type=mime_type,
+            preview_url=f"/api/vision/{image_id}/file",
+        )
+
+
+vision_service = VisionService()
+

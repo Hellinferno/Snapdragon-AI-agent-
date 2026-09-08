@@ -59,11 +59,11 @@
 - [x] Add reproducible benchmarks
 
 ## M7 Polish
-- [ ] Error states
-- [ ] Loading states
-- [ ] Accessibility
-- [ ] Demo dataset
-- [ ] README walkthrough
-- [ ] Architecture diagram
-- [ ] Benchmark report
-- [ ] Final competition review
+- [x] Error states
+- [x] Loading states
+- [x] Accessibility
+- [x] Demo dataset
+- [x] README walkthrough
+- [x] Architecture diagram
+- [x] Benchmark report
+- [x] Final competition review

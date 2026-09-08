@@ -45,6 +45,7 @@ import {
   analyzeFigure,
   chatWithFigure,
   getVisionImageUrl,
+  seedDemoDataset,
 } from './api';
 
 const ALL_DIMENSIONS = [
@@ -59,6 +60,7 @@ export default function App() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [docDetailLoading, setDocDetailLoading] = useState(false);
   const [detailTab, setDetailTab] = useState('chunks'); // 'chunks' | 'pages'
@@ -195,6 +197,19 @@ export default function App() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleSeedDemo() {
+    try {
+      setSeedingDemo(true);
+      const res = await seedDemoDataset();
+      showSuccess(res.message);
+      await loadDocs();
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setSeedingDemo(false);
     }
   }
 
@@ -479,8 +494,11 @@ export default function App() {
           </div>
         </div>
 
-        <nav className="nav-section">
+        <nav className="nav-section" role="tablist" aria-label="Studio Navigation Tabs">
           <button
+            role="tab"
+            aria-selected={activeTab === 'library'}
+            aria-label={`Document Library, ${documents.length} documents`}
             className={`nav-item ${activeTab === 'library' ? 'active' : ''}`}
             onClick={() => setActiveTab('library')}
           >
@@ -490,6 +508,9 @@ export default function App() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'research'}
+            aria-label="Research RAG Studio"
             className={`nav-item ${activeTab === 'research' ? 'active' : ''}`}
             onClick={() => setActiveTab('research')}
           >
@@ -499,6 +520,9 @@ export default function App() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'compare'}
+            aria-label="Cross-Paper Comparison Studio"
             className={`nav-item ${activeTab === 'compare' ? 'active' : ''}`}
             onClick={() => setActiveTab('compare')}
           >
@@ -508,6 +532,9 @@ export default function App() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'learn'}
+            aria-label="Learning and Quiz Studio"
             className={`nav-item ${activeTab === 'learn' ? 'active' : ''}`}
             onClick={() => setActiveTab('learn')}
           >
@@ -517,6 +544,9 @@ export default function App() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'vision'}
+            aria-label="Vision Figure and Diagram Studio"
             className={`nav-item ${activeTab === 'vision' ? 'active' : ''}`}
             onClick={() => setActiveTab('vision')}
           >
@@ -606,7 +636,7 @@ export default function App() {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button className="btn-icon" onClick={loadDocs} title="Refresh documents">
+            <button className="btn-icon" onClick={loadDocs} title="Refresh documents" aria-label="Refresh documents">
               <RefreshCw size={17} className={loading ? 'spin' : ''} />
             </button>
           </div>
@@ -616,13 +646,37 @@ export default function App() {
           {/* LIBRARY TAB */}
           {activeTab === 'library' && (
             <div>
-              <div className="library-header">
+              <div className="library-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Documents & Knowledge Base</h2>
                   <p className="section-desc">
                     Upload PDFs for local page-aware extraction, chunking, and verifiable source references.
                   </p>
                 </div>
+                <button
+                  className="primary-btn"
+                  disabled={seedingDemo || uploading}
+                  onClick={handleSeedDemo}
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-emerald), #059669)',
+                    borderColor: 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.85rem',
+                  }}
+                  title="Seed 3 sample academic research papers and 1 architecture diagram"
+                >
+                  {seedingDemo ? (
+                    <>
+                      <RefreshCw size={15} className="spin" /> Seeding Demo Data...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={15} /> Load Demo Papers (1-Click)
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Upload Dropzone */}
@@ -665,10 +719,37 @@ export default function App() {
               ) : documents.length === 0 ? (
                 <div className="empty-state">
                   <FileText size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                  <p>No documents uploaded yet.</p>
-                  <p style={{ fontSize: '0.85rem', marginTop: '6px' }}>
-                    Upload your first research paper or study material above to begin.
+                  <p style={{ fontWeight: 600, fontSize: '1.05rem' }}>No documents in your library yet.</p>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '6px', maxWidth: '440px' }}>
+                    Upload your own PDF research papers, or click below to populate the workspace with pre-formatted academic papers.
                   </p>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      className="primary-btn"
+                      disabled={seedingDemo}
+                      onClick={handleSeedDemo}
+                      style={{
+                        background: 'linear-gradient(135deg, var(--accent-emerald), #059669)',
+                        borderColor: 'transparent',
+                      }}
+                    >
+                      {seedingDemo ? (
+                        <>
+                          <RefreshCw size={15} className="spin" /> Seeding Dataset...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={15} /> Load 3 Academic Demo Papers
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="chip-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadCloud size={15} /> Browse PDF
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="doc-grid">
@@ -1630,7 +1711,7 @@ export default function App() {
                   ID: {selectedDoc.id} • {selectedDoc.page_count} Pages • {selectedDoc.chunks?.length || 0} Chunks
                 </div>
               </div>
-              <button className="btn-icon" onClick={() => setSelectedDoc(null)}>
+              <button className="btn-icon" onClick={() => setSelectedDoc(null)} aria-label="Close document inspector">
                 <X size={20} />
               </button>
             </div>

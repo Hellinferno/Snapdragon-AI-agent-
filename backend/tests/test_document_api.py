@@ -84,3 +84,20 @@ async def test_upload_and_lifecycle(client: AsyncClient):
     # 7. Verify list is empty
     empty_list = await client.get("/api/documents")
     assert len(empty_list.json()) == 0
+
+
+@pytest.mark.asyncio
+async def test_seed_demo_endpoint(client: AsyncClient):
+    response = await client.post("/api/documents/seed_demo")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["documents_seeded"] >= 1
+    assert data["figures_seeded"] >= 1
+
+    # Verify documents are returned in list
+    list_res = await client.get("/api/documents")
+    assert list_res.status_code == 200
+    docs = list_res.json()
+    assert len(docs) >= 1
+

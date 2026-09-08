@@ -52,6 +52,31 @@ class DocumentService:
 
         # Read content to compute hash and check size
         content = await file.read()
+        return await self._process_raw_bytes(content, filename, title, authors)
+
+    async def process_local_pdf(
+        self,
+        pdf_path: Path,
+        title: str | None = None,
+        authors: str | None = None,
+    ) -> DocumentUploadResponse:
+        """Process a local PDF directly from disk without multipart upload."""
+        if not pdf_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Local PDF file {pdf_path.name} not found.",
+            )
+        content = pdf_path.read_bytes()
+        return await self._process_raw_bytes(content, pdf_path.name, title, authors)
+
+    async def _process_raw_bytes(
+        self,
+        content: bytes,
+        filename: str,
+        title: str | None = None,
+        authors: str | None = None,
+    ) -> DocumentUploadResponse:
+        """Core parsing and indexing pipeline for raw PDF bytes."""
         file_size = len(content)
         max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
