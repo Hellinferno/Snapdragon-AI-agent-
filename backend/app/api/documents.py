@@ -54,3 +54,13 @@ async def delete_document(
     """Delete a document and purge all derived pages, chunks, and storage files."""
     service = DocumentService(db)
     return await service.delete_document(document_id)
+
+
+@router.post("/{document_id}/retry", response_model=DocumentUploadResponse)
+async def retry_document(
+    document_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> DocumentUploadResponse:
+    """Retry parsing and indexing for a document in FAILED state."""
+    service = DocumentService(db)
+    return await service.retry_document(document_id)

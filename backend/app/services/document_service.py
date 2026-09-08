@@ -10,7 +10,8 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.logging import logger
 from app.models.db_models import Chunk, Document, Page
-from app.providers.embedding_provider import embedding_provider
+from app.providers.base import EmbeddingProvider
+from app.providers.factory import get_embedding_provider
 from app.providers.vector_store import SQLiteVectorStore
 from app.schemas.document import (
     ChunkResponse,
@@ -30,8 +31,9 @@ def sanitize_filename(filename: str) -> str:
 
 
 class DocumentService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, embedding: EmbeddingProvider | None = None):
         self.db = db
+        self.embedding_provider = embedding or get_embedding_provider()
 
     async def upload_and_process(
         self,
@@ -99,12 +101,18 @@ class DocumentService:
             select(Document).where(Document.content_hash == content_hash)
         )
         if existing:
-            return DocumentUploadResponse(
-                id=existing.id,
-                filename=existing.filename,
-                status=existing.status,
-                message="Document already uploaded and processed.",
-            )
+            if existing.status == "FAILED":
+                logger.info("Cleaning up previously failed document %s (%s) for retry", existing.id, existing.filename)
+                await self._cleanup_document_artifacts(existing.id)
+                await self.db.delete(existing)
+                await self.db.commit()
+            else:
+                return DocumentUploadResponse(
+                    id=existing.id,
+                    filename=existing.filename,
+                    status=existing.status,
+                    message="Document already uploaded and processed.",
+                )
 
         # Save file to disk
         safe_stored_name = f"{content_hash[:12]}_{filename}"
@@ -187,7 +195,7 @@ class DocumentService:
             # Generate and persist embeddings in vector store
             if created_chunks:
                 chunk_texts = [c.text for c in created_chunks]
-                vectors = await embedding_provider.embed_batch(chunk_texts)
+                vectors = await self.embedding_provider.embed_batch(chunk_texts)
                 vector_entries = [
                     (c.id, doc.id, vec) for c, vec in zip(created_chunks, vectors, strict=False)
                 ]
@@ -200,6 +208,10 @@ class DocumentService:
 
         except Exception as err:
             logger.error("Error processing document %s: %s", doc.id, str(err), exc_info=True)
+            try:
+                await self._cleanup_document_artifacts(doc.id)
+            except Exception as clean_err:
+                logger.warning("Cleanup error on failure for %s: %s", doc.id, clean_err)
             doc.status = "FAILED"
             doc.error_message = str(err)
             await self.db.commit()
@@ -214,6 +226,14 @@ class DocumentService:
             status=doc.status,
             message="Document successfully processed and indexed.",
         )
+
+    async def _cleanup_document_artifacts(self, document_id: str) -> None:
+        """Removes all database chunks, pages, and vector store embeddings for a document."""
+        vector_store = SQLiteVectorStore(self.db)
+        await vector_store.delete_by_document(document_id)
+        await self.db.execute(delete(Chunk).where(Chunk.document_id == document_id))
+        await self.db.execute(delete(Page).where(Page.document_id == document_id))
+        await self.db.flush()
 
     async def list_documents(self) -> list[DocumentResponse]:
         """Lists all documents with chunk counts."""
@@ -305,13 +325,16 @@ class DocumentService:
         )
 
     async def delete_document(self, document_id: str) -> dict[str, str]:
-        """Deletes a document, its database records, and its physical file."""
+        """Deletes a document, its database records, vector store entries, and physical file."""
         doc = await self.db.scalar(select(Document).where(Document.id == document_id))
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document with ID {document_id} not found.",
             )
+
+        # Purge chunks, pages, and embeddings
+        await self._cleanup_document_artifacts(document_id)
 
         file_path = Path(doc.file_path)
         if file_path.exists():
@@ -320,8 +343,104 @@ class DocumentService:
             except OSError as e:
                 logger.warning("Failed to remove physical file %s: %s", file_path, str(e))
 
-        await self.db.execute(delete(Document).where(Document.id == document_id))
+        await self.db.delete(doc)
         await self.db.commit()
         logger.info("Deleted document %s and its derived chunks/pages", document_id)
 
         return {"message": f"Document {document_id} successfully deleted."}
+
+    async def retry_document(self, document_id: str) -> DocumentUploadResponse:
+        """Retries parsing and indexing for a document in FAILED state."""
+        doc = await self.db.scalar(select(Document).where(Document.id == document_id))
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID {document_id} not found.",
+            )
+
+        stored_path = Path(doc.file_path)
+        if not stored_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Underlying document file no longer exists on disk.",
+            )
+
+        # Purge partial artifacts from prior failed run
+        await self._cleanup_document_artifacts(doc.id)
+        doc.status = "PROCESSING"
+        doc.error_message = None
+        await self.db.commit()
+
+        try:
+            parsed = parse_pdf(stored_path)
+            doc.page_count = parsed.page_count
+            if not doc.title and parsed.title:
+                doc.title = parsed.title
+
+            page_map: dict[int, Page] = {}
+            for parsed_page in parsed.pages:
+                page = Page(
+                    document_id=doc.id,
+                    page_number=parsed_page.page_number,
+                    text=parsed_page.text,
+                    ocr_used=parsed_page.ocr_used,
+                )
+                self.db.add(page)
+                page_map[parsed_page.page_number] = page
+
+            await self.db.flush()
+
+            generated_chunks = chunk_pages(
+                pages=parsed.pages,
+                chunk_size=settings.CHUNK_SIZE_CHARS,
+                chunk_overlap=settings.CHUNK_OVERLAP_CHARS,
+            )
+
+            created_chunks: list[Chunk] = []
+            for gen_chunk in generated_chunks:
+                parent_page = page_map.get(gen_chunk.page_number)
+                if not parent_page:
+                    continue
+
+                chunk = Chunk(
+                    document_id=doc.id,
+                    page_id=parent_page.id,
+                    chunk_index=gen_chunk.chunk_index,
+                    text=gen_chunk.text,
+                    section=gen_chunk.section,
+                )
+                self.db.add(chunk)
+                created_chunks.append(chunk)
+
+            await self.db.flush()
+
+            if created_chunks:
+                chunk_texts = [c.text for c in created_chunks]
+                vectors = await self.embedding_provider.embed_batch(chunk_texts)
+                vector_entries = [
+                    (c.id, doc.id, vec) for c, vec in zip(created_chunks, vectors, strict=False)
+                ]
+                vector_store = SQLiteVectorStore(self.db)
+                await vector_store.add_vectors(vector_entries)
+
+            doc.status = "INDEXED"
+            await self.db.commit()
+            logger.info("Successfully re-indexed document %s on retry", doc.id)
+
+            return DocumentUploadResponse(
+                id=doc.id,
+                filename=doc.filename,
+                status=doc.status,
+                message="Document successfully re-indexed.",
+            )
+
+        except Exception as err:
+            logger.error("Retry failed for document %s: %s", doc.id, str(err), exc_info=True)
+            await self._cleanup_document_artifacts(doc.id)
+            doc.status = "FAILED"
+            doc.error_message = str(err)
+            await self.db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Document retry parsing failed: {str(err)}",
+            )

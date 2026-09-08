@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.db_models import Chunk, Document
-from app.providers.embedding_provider import embedding_provider
-from app.providers.llm_provider import llm_provider
+from app.providers.base import EmbeddingProvider, LLMProvider
+from app.providers.factory import get_embedding_provider, get_llm_provider
 from app.providers.vector_store import SQLiteVectorStore
 from app.schemas.rag import ChatResponse, SearchResponse, SourceReference
 from app.services.context_builder import (
@@ -15,9 +15,16 @@ from app.services.context_builder import (
 
 
 class RetrievalService:
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        embedding: EmbeddingProvider | None = None,
+        llm: LLMProvider | None = None,
+    ):
         self.db = db
         self.vector_store = SQLiteVectorStore(db)
+        self.embedding_provider = embedding or get_embedding_provider()
+        self.llm_provider = llm or get_llm_provider()
 
     async def search(
         self,
@@ -27,7 +34,7 @@ class RetrievalService:
         min_score: float = 0.05,
     ) -> SearchResponse:
         """Retrieves top-k source-aware chunks matching query."""
-        query_vec = await embedding_provider.embed_text(query)
+        query_vec = await self.embedding_provider.embed_text(query)
         scored_pairs = await self.vector_store.search(
             query_vector=query_vec,
             top_k=top_k,
@@ -107,7 +114,10 @@ class RetrievalService:
             context_block = build_context_block(sources)
 
         prompt = build_rag_prompt(question, context_block)
-        gen_result = await llm_provider.generate(prompt, system_prompt=GROUNDING_SYSTEM_PROMPT)
+        gen_result = await self.llm_provider.generate(prompt, system_prompt=GROUNDING_SYSTEM_PROMPT)
+
+        if "Insufficient evidence" in gen_result.text:
+            has_sufficient = False
 
         return ChatResponse(
             question=question,

@@ -8,7 +8,8 @@ from PIL import Image
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.providers.vision_provider import vision_provider
+from app.providers.base import VisionProvider
+from app.providers.factory import get_vision_provider
 from app.schemas.vision import (
     FigureAnalysisResponse,
     ImageUploadResponse,
@@ -26,8 +27,9 @@ def get_image_storage_dir() -> Path:
 
 
 class VisionService:
-    def __init__(self):
+    def __init__(self, vision: VisionProvider | None = None):
         self.storage_dir = get_image_storage_dir()
+        self.vision_provider = vision or get_vision_provider()
 
     async def save_image(self, file: UploadFile) -> ImageUploadResponse:
         filename = file.filename or "figure.png"
@@ -98,7 +100,7 @@ class VisionService:
         with open(path, "rb") as f:
             content = f.read()
 
-        result = await vision_provider.analyze_figure(content, filename)
+        result = await self.vision_provider.analyze_figure(content, filename)
         return FigureAnalysisResponse(
             image_id=image_id,
             figure_type=result.figure_type,
@@ -113,7 +115,7 @@ class VisionService:
         with open(path, "rb") as f:
             content = f.read()
 
-        result = await vision_provider.answer_question(content, question, filename)
+        result = await self.vision_provider.answer_question(content, question, filename)
         return VisualQAResponse(
             image_id=image_id,
             question=question,

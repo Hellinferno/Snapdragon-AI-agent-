@@ -133,11 +133,14 @@ class ComparisonService:
             if dim_points:
                 paragraphs.append(f"### {dim}\n" + "\n".join(dim_points))
 
-        paragraphs.append(
-            "### Architectural & Research Synthesis\n"
-            f"A comparative examination reveals that while {titles[0]} emphasizes direct execution/algorithmic design, "
-            f"{titles[1]} focuses on verification and empirical validation. "
-            "Combining these perspectives enables researchers to balance performance speedups with rigorous source grounding."
-        )
+        if len(paragraphs) == 1:
+            paragraphs.append(
+                "No source-backed comparison evidence was retrieved for the selected dimensions."
+            )
+        else:
+            paragraphs.append(
+                "### Evidence-Based Summary\n"
+                "The cited excerpts above are the available comparison evidence; no additional conclusion is inferred."
+            )
 
         return "\n\n".join(paragraphs)

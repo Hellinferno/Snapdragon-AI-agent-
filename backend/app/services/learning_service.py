@@ -46,47 +46,17 @@ class LearningService:
         sentences = [s.strip() for s in excerpt_clean.split(". ") if len(s.strip()) > 10]
         core_point = sentences[0] if sentences else excerpt_clean
 
-        if level == "beginner":
-            intro = f"In simple terms, think of **{concept}** like this:"
-            body = (
-                f"{intro}\n\n"
-                f"Imagine you need to solve complex problems without sending your private work to someone else's computer. "
-                f"According to {top_source.document_title} (Page {top_source.page_number}), "
-                f"it allows researchers to process information locally: \"{core_point}\"."
-            )
-            takeaways = [
-                f"Core idea: {core_point}.",
-                "Designed to operate privately without external dependencies.",
-                f"Grounded in {top_source.document_title}, Page {top_source.page_number}.",
-            ]
-        elif level == "deep_dive":
-            body = (
-                f"### Architectural Analysis of {concept}\n\n"
-                f"Within the indexed literature ({top_source.document_title}, Page {top_source.page_number}), "
-                f"the technical foundation is defined as: \"{excerpt_clean}\".\n\n"
-                "Key performance and architectural implications:\n"
-                "1. Eliminates network communication boundaries.\n"
-                "2. Guarantees deterministic inference latencies.\n"
-                "3. Preserves full provenance across intermediate representations."
-            )
-            takeaways = [
-                f"Formal specification: {core_point}.",
-                f"Section context: {top_source.section or 'Core text'}.",
-                f"Verified evidence source: Page {top_source.page_number}.",
-            ]
-        else:  # intermediate default
-            body = (
-                f"### Technical Overview: {concept}\n\n"
-                f"From an engineering perspective, {concept} addresses practical research constraints. "
-                f"In {top_source.document_title} (Page {top_source.page_number}), "
-                f"the authors highlight: \"{core_point}\".\n\n"
-                "This mechanism enables fast, traceable workflows while keeping data footprint within local memory limits."
-            )
-            takeaways = [
-                f"Primary mechanism: {core_point}.",
-                "Balances computational efficiency with verifiable source accuracy.",
-                f"Source document: {top_source.document_title} (p. {top_source.page_number}).",
-            ]
+        headings = {
+            "beginner": f"### Explanation: {concept}",
+            "intermediate": f"### Technical Overview: {concept}",
+            "deep_dive": f"### Architectural Analysis & Evidence Review: {concept}",
+        }
+        source_label = f"[Doc: {top_source.document_title}, Page: {top_source.page_number}]"
+        body = f"{headings[level]}\n\n{excerpt_clean}\n\n{source_label}"
+        takeaways = [
+            f"Evidence: {core_point}",
+            f"Source: {top_source.document_title}, Page {top_source.page_number}.",
+        ]
 
         return ExplainResponse(
             concept=concept,

@@ -46,33 +46,33 @@ def main():
     demo_dir.mkdir(parents=True, exist_ok=True)
 
     paper_1 = [
-        "Abstract\nOn-device neural network execution has become increasingly vital for privacy-sensitive research environments. In this paper, we explore how compact transformer models can run efficiently on modern NPU architectures.",
-        "Introduction\nTraditional cloud-based retrieval-augmented generation exposes proprietary user documents to network latencies and security vulnerabilities. Our work proposes local vector indexing and quantized inference.",
-        "Methodology\nWe benchmarked quantized INT4 embeddings across varied memory bandwidths. Document chunks are extracted with strict page boundaries preserved to enable verifiable citations.",
-        "Results and Discussion\nEvaluation demonstrates a 4.2x reduction in end-to-end question answering latency compared to cloud fallbacks, with zero external network leakage.",
-        "Conclusion\nLocal on-device copilots provide sufficient accuracy while strictly guaranteeing user data confidentiality.",
+        "Abstract\nInvestigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inference to protect protected health information (PHI) under strict HIPAA regulations without external cloud transmission.",
+        "Introduction\nHospital diagnostic workflows require automated radiograph triage without transmitting sensitive diagnostic imaging over insecure external networks. Local inference on edge clinical workstations ensures absolute data residency.",
+        "Methodology & Architecture\nEvaluated a cross-attention vision-language backbone trained on multi-view chest X-rays. Document chunks and diagnostic bounding boxes preserve exact study slice and radiological report indices for verifiable provenance.",
+        "Key Findings & Metrics\nAchieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of patient telemetry.",
+        "Limitations & Future Work\nLimited generalization on low-dose portable bedside radiography units and pediatric cohorts under 12 years old. Multi-center validation remains ongoing.",
     ]
 
     paper_2 = [
-        "Abstract\nComparative analysis of academic literature requires multi-document synthesis and precise evidence tracking. This study introduces an automated verification framework for scholarly summarization.",
-        "Introduction\nResearchers frequently analyze dozens of peer-reviewed articles to identify methodological divergences. Without page-level grounding, hallucinations significantly degrade researcher trust.",
-        "Methodology\nWe construct a bi-encoder retrieval pipeline paired with cross-encoder verification. Each retrieved chunk retains its source document ID, page index, and parent section header.",
-        "Results\nAcross 50 cross-paper comparative queries, our system achieved 94.2% citation precision, completely eliminating fabricated bibliographic references.",
-        "Conclusion\nSource-traceable RAG constitutes a fundamental prerequisite for scholarly AI assistants.",
+        "Abstract\nExplores quantized 4-bit transformer deployment on clinical workstations for automated patient history summarization and discharge note generation. Strict source citations guarantee verifiable provenance.",
+        "Introduction\nCentralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prevents proprietary health information from crossing hospital perimeter firewalls.",
+        "Methodology & Architecture\nImplemented 4-bit INT4 quantization paired with strict page-level citation tracking. Every clinical summary sentence must map to an indexed patient encounter or laboratory report.",
+        "Key Findings & Metrics\nAchieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors to 1.8%.",
+        "Limitations & Future Work\nRequires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotation and domain adaptation.",
     ]
 
     paper_3 = [
-        "Abstract\nActive recall and spaced repetition dramatically accelerate academic learning. We investigate how structured quiz generation from local notes boosts concept retention in higher education.",
-        "Introduction\nStudents are overwhelmed by dense technical papers. Transforming technical text into bite-sized explanations and formative quizzes promotes deeper conceptual understanding.",
-        "System Design\nOur pipeline takes indexed document chunks and formulates multiple-choice and conceptual questions. Distractors are dynamically generated from neighboring topic clusters.",
-        "Evaluation\nA double-blind user study with 40 graduate students showed a 38% increase in retention test scores when studying via interactive quizzes compared to passive reading.",
-        "Conclusion\nAutomated formative assessment powered by on-device retrieval is a viable tool for university study workflows.",
+        "Abstract\nAssesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident training using local retrieval.",
+        "Introduction\nMedical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive formative testing fosters deeper diagnostic retention.",
+        "Methodology & Architecture\nOur system constructs case-grounded multiple-choice questions from peer-reviewed clinical guidelines, dynamically generating distractors from neighboring diagnostic differential categories.",
+        "Key Findings & Metrics\nDouble-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passive textbook review.",
+        "Limitations & Future Work\nRelies on high-quality guideline indexing; rare genetic pathology differentials remain undersampled in the training distribution.",
     ]
 
-    create_demo_pdf(demo_dir / "paper_1_on_device_npu_ai.pdf", "On-Device NPU Architectures for Private Research", "Dr. Elena Vance", paper_1)
-    create_demo_pdf(demo_dir / "paper_2_source_traceable_rag.pdf", "Source-Traceable RAG in Scholarly Synthesis", "Prof. Marcus Thorne", paper_2)
-    create_demo_pdf(demo_dir / "paper_3_active_recall_learning.pdf", "Formative Quiz Generation for Concept Retention", "Dr. Sarah Lin", paper_3)
-    print("All demo papers successfully generated in data/demo_papers/")
+    create_demo_pdf(demo_dir / "paper_1_clinical_multimodal_radiology.pdf", "Clinical Multimodal Transformers for Diagnostic Radiology", "Dr. Elena Vance, MD, PhD", paper_1)
+    create_demo_pdf(demo_dir / "paper_2_privacy_preserving_clinical_lm.pdf", "Privacy-Preserving On-Device Clinical Language Models", "Prof. Marcus Thorne, MD", paper_2)
+    create_demo_pdf(demo_dir / "paper_3_medical_education_active_recall.pdf", "Formative Assessment and Active Recall in Medical Education", "Dr. Sarah Lin, MD", paper_3)
+    print("All Medical-AI demo papers successfully generated in data/demo_papers/")
 
 
 if __name__ == "__main__":

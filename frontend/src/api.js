@@ -1,5 +1,18 @@
 const API_BASE = '/api';
 
+export function normalizeVisionUpload(response) {
+  const [width, height] = response.dimensions;
+  return {
+    id: response.image_id,
+    filename: response.filename,
+    width,
+    height,
+    aspectRatio: width / height,
+    mimeType: response.mime_type,
+    previewUrl: response.preview_url,
+  };
+}
+
 export async function fetchDocuments() {
   const res = await fetch(`${API_BASE}/documents`);
   if (!res.ok) {
@@ -142,7 +155,8 @@ export async function uploadVisionImage(file) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.detail || `Image upload failed: ${res.statusText}`);
   }
-  return res.json();
+  const data = await res.json();
+  return normalizeVisionUpload(data);
 }
 
 export async function analyzeFigure(imageId) {
@@ -186,5 +200,4 @@ export async function seedDemoDataset() {
   }
   return res.json();
 }
-
 

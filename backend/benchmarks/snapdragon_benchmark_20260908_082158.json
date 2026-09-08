@@ -1,6 +1,16 @@
 {
   "timestamp_utc": "2026-09-08T08:21:58.324230Z",
-  "harness_version": "1.0.0",
+  "harness_version": "1.1.0",
+  "benchmark_mode": "DEVELOPMENT_HOST_SIMULATION",
+  "hardware_npu_verified": false,
+  "notes": "Execution ran in development fallback / host simulation mode on non-Snapdragon host (AMD64). Measurements reflect host CPU baseline and must NOT be cited as physical Qualcomm Hexagon NPU performance. Physical NPU numbers require completing the target device checklist on an ARM64 Windows Copilot+ PC.",
+  "target_device_checklist": {
+    "arm64_windows_host": false,
+    "onnxruntime_qnn_installed": false,
+    "qnn_execution_provider_active": false,
+    "model_artifacts_present": false,
+    "validation_status": "PENDING_TARGET_DEVICE_VALIDATION"
+  },
   "system_telemetry": {
     "os": "Windows 11 (Build 10.0.26200)",
     "machine": "AMD64",

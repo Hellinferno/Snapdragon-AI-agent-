@@ -62,3 +62,6 @@ Desktop.ini
 .pytest_cache/
 .coverage
 htmlcov/
+pytest_tmp/
+backend/pytest_tmp/
+backend/benchmarks/*.json

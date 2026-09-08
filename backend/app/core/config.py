@@ -23,9 +23,12 @@ class Settings(BaseSettings):
 
     # AI Providers
     PROVIDER_BACKEND: str = "development"  # "development" | "qualcomm"
-    LLM_PROVIDER: str = "development"
-    EMBEDDING_PROVIDER: str = "development"
-    VISION_PROVIDER: str = "development"
+    LLM_PROVIDER: str | None = None
+    EMBEDDING_PROVIDER: str | None = None
+    VISION_PROVIDER: str | None = None
+    ALLOW_EXTERNAL_PROVIDERS: bool = False
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # Qualcomm Deployment Settings
     QUALCOMM_DEVICE_TARGET: str = "auto"  # "Snapdragon X Elite" | "Snapdragon 8 Gen 3" | "auto"

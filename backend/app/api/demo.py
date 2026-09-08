@@ -57,19 +57,19 @@ async def seed_demo_dataset(db: AsyncSession = Depends(get_db)):
 
     paper_metadata = [
         {
-            "filename": "paper_1_on_device_npu_ai.pdf",
-            "title": "On-Device Neural Acceleration for Private Document Copilots",
-            "authors": "Dr. Sarah Chen, Michael Vance (2025)",
+            "filename": "paper_1_clinical_multimodal_radiology.pdf",
+            "title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "authors": "Dr. Elena Vance, MD, PhD (2025)",
         },
         {
-            "filename": "paper_2_source_traceable_rag.pdf",
-            "title": "Comparative Retrieval-Augmented Generation with Verifiable Citations",
-            "authors": "Elena Rostova, Dr. Kenji Sato (2025)",
+            "filename": "paper_2_privacy_preserving_clinical_lm.pdf",
+            "title": "Privacy-Preserving On-Device Clinical Language Models",
+            "authors": "Prof. Marcus Thorne, MD (2025)",
         },
         {
-            "filename": "paper_3_active_recall_learning.pdf",
-            "title": "Active-Recall Learning Systems: Pedagogical Synthesis of Complex Text",
-            "authors": "Marcus Brody, Alicia Gomez (2024)",
+            "filename": "paper_3_medical_education_active_recall.pdf",
+            "title": "Formative Assessment and Active Recall in Medical Education",
+            "authors": "Dr. Sarah Lin, MD (2024)",
         },
     ]
 

@@ -180,6 +180,9 @@ def run_full_benchmark(output_dir: Path, dry_run: bool = False) -> Path:
     print(f"ONNX Runtime:         {system_info['onnxruntime_version']}")
     print(f"Available Providers:  {', '.join(system_info['available_providers']) or 'None'}")
     print(f"QNN NPU Active:       {'YES' if system_info['qnn_execution_provider_active'] else 'NO (CPU Fallback)'}")
+    mode_label = "QUALCOMM PHYSICAL NPU" if (system_info['is_target_snapdragon'] and system_info['qnn_execution_provider_active']) else "DEVELOPMENT HOST SIMULATION (Baseline)"
+    print(f"Benchmark Mode:       {mode_label}")
+    print(f"Target Checklist:     {'VERIFIED' if (system_info['is_target_snapdragon'] and system_info['qnn_execution_provider_active']) else 'PENDING TARGET-DEVICE VALIDATION'}")
     print("-" * 70)
 
     config = QualcommConfig()
@@ -206,9 +209,40 @@ def run_full_benchmark(output_dir: Path, dry_run: bool = False) -> Path:
     print(f"      Cold End-to-End:    {app_cold_ms:.2f} ms")
     print(f"      Warm End-to-End:    {app_warm_ms:.2f} ms")
 
+    # Determine execution mode and target device checklist status
+    is_target_snapdragon = system_info.get("is_target_snapdragon", False)
+    qnn_active = system_info.get("qnn_execution_provider_active", False)
+    models_present = (config.model_dir / "all-MiniLM-L6-v2" / "model.onnx").exists()
+
+    if is_target_snapdragon and qnn_active and models_present:
+        benchmark_mode = "QUALCOMM_QNN_NPU_VERIFIED"
+        hardware_npu_verified = True
+        notes = "Empirical verification on physical Snapdragon Windows Copilot+ PC with Hexagon NPU QNN execution."
+    else:
+        benchmark_mode = "DEVELOPMENT_HOST_SIMULATION"
+        hardware_npu_verified = False
+        notes = (
+            "Execution ran in development fallback / host simulation mode on non-Snapdragon host "
+            f"({system_info.get('machine')}). Measurements reflect host CPU baseline and must NOT "
+            "be cited as physical Qualcomm Hexagon NPU performance. Physical NPU numbers require "
+            "completing the target device checklist on an ARM64 Windows Copilot+ PC."
+        )
+
+    checklist = {
+        "arm64_windows_host": is_target_snapdragon,
+        "onnxruntime_qnn_installed": qnn_active,
+        "qnn_execution_provider_active": qnn_active,
+        "model_artifacts_present": models_present,
+        "validation_status": "VERIFIED" if hardware_npu_verified else "PENDING_TARGET_DEVICE_VALIDATION",
+    }
+
     benchmark_record = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "harness_version": "1.0.0",
+        "harness_version": "1.1.0",
+        "benchmark_mode": benchmark_mode,
+        "hardware_npu_verified": hardware_npu_verified,
+        "notes": notes,
+        "target_device_checklist": checklist,
         "system_telemetry": system_info,
         "configuration": {
             "device_target": config.device_target,

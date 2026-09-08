@@ -95,7 +95,7 @@ export default function App() {
 
   // Learn mode state (M4)
   const [learnSubTab, setLearnSubTab] = useState('explain'); // 'explain' | 'quiz' | 'flashcards'
-  const [explainConceptText, setExplainConceptText] = useState('Quantized Transformer Inference');
+  const [explainConceptText, setExplainConceptText] = useState('Multimodal Diagnostic Transformers');
   const [explainLevel, setExplainLevel] = useState('beginner');
   const [explanationResult, setExplanationResult] = useState(null);
   const [explainLoading, setExplainLoading] = useState(false);
@@ -391,7 +391,7 @@ export default function App() {
         {
           id: 'vision-welcome',
           sender: 'assistant',
-          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence_score * 100).toFixed(0)}% confidence. You can now ask questions about trends, methodology, or observations.`,
+          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence * 100).toFixed(0)}% confidence. You can now ask questions about trends, methodology, or observations.`,
         },
       ]);
     } catch (err) {
@@ -563,12 +563,18 @@ export default function App() {
               style={{ backgroundColor: backendHealth ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}
             />
             <span>
-              {backendHealth ? 'Local Engine Connected' : 'Engine Disconnected'}
+              {backendHealth ? (
+                backendHealth.provider_backend === 'qualcomm' ? 'Qualcomm NPU Connected' : 'Local Host Engine Connected'
+              ) : 'Engine Disconnected'}
             </span>
           </div>
-          <div style={{ marginTop: '8px', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Cpu size={14} />
-            <span>Target: Snapdragon AI / 8GB RAM</span>
+          <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Cpu size={13} />
+            <span>Mode: {backendHealth?.external_providers_enabled ? 'External (Opt-In)' : 'Local-First (Zero Cloud)'}</span>
+          </div>
+          <div style={{ marginTop: '4px', fontSize: '0.70rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ShieldCheck size={13} style={{ color: 'var(--accent-emerald)' }} />
+            <span>Target: Snapdragon X Elite (Pending HW Val)</span>
           </div>
         </div>
       </aside>
@@ -922,30 +928,30 @@ export default function App() {
 
                   {/* Prompt Suggestion Chips */}
                   <div className="prompt-chips">
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Quick queries:</span>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Evaluation queries:</span>
                     <button
                       className="chip-btn"
-                      onClick={() => handleSendChat('What are the latency benefits of on-device NPU inference?')}
+                      onClick={() => handleSendChat('What diagnostic accuracy and AUC did the multimodal model achieve for pneumonia detection in chest radiography?')}
                     >
-                      Latency benefits on NPU?
+                      Pneumonia AUC? (Direct)
                     </button>
                     <button
                       className="chip-btn"
-                      onClick={() => handleSendChat('How is citation traceability verified in RAG?')}
+                      onClick={() => handleSendChat('Why is on-device inference critical for clinical language models handling electronic health records?')}
                     >
-                      Citation traceability?
+                      Clinical Privacy? (Direct)
                     </button>
                     <button
                       className="chip-btn"
-                      onClick={() => handleSendChat('What were the student test results for quiz generation?')}
+                      onClick={() => handleSendChat('What were the study retention findings for active recall in medical education?')}
                     >
-                      Quiz retention results?
+                      Medical Retention? (Direct)
                     </button>
                     <button
                       className="chip-btn"
-                      onClick={() => handleSendChat('What is the weather like on Mars today?')}
+                      onClick={() => handleSendChat('What is the recommended pediatric dosage of oral amoxicillin for acute otitis media in infants under two years old?')}
                     >
-                      Test refusal (Mars weather)
+                      Pediatric dosage? (Refusal Test)
                     </button>
                   </div>
 
@@ -1564,16 +1570,16 @@ export default function App() {
                       </div>
                       <div className="telemetry-item">
                         <div className="telemetry-label">Aspect Ratio</div>
-                        <div className="telemetry-value">{visionImage.aspect_ratio.toFixed(2)} : 1</div>
+                        <div className="telemetry-value">{visionImage.aspectRatio.toFixed(2)} : 1</div>
                       </div>
                       <div className="telemetry-item">
                         <div className="telemetry-label">Format / Mode</div>
-                        <div className="telemetry-value">{visionImage.format} ({visionImage.mode})</div>
+                        <div className="telemetry-value">{visionImage.mimeType}</div>
                       </div>
                       <div className="telemetry-item">
                         <div className="telemetry-label">Confidence</div>
                         <div className="telemetry-value" style={{ color: 'var(--accent-emerald)' }}>
-                          {((visionAnalysis?.confidence_score || 0.85) * 100).toFixed(0)}%
+                          {((visionAnalysis?.confidence || 0.85) * 100).toFixed(0)}%
                         </div>
                       </div>
                     </div>
@@ -1586,7 +1592,7 @@ export default function App() {
                       </h4>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {visionAnalysis?.key_observations?.map((obs, idx) => (
+                        {visionAnalysis?.observations?.map((obs, idx) => (
                           <div key={idx} className="observation-row">
                             <span className="observation-bullet">✦</span>
                             <span>{obs}</span>
@@ -1594,20 +1600,6 @@ export default function App() {
                         ))}
                       </div>
 
-                      {visionAnalysis?.axes_or_labels?.length > 0 && (
-                        <div style={{ marginTop: '10px' }}>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Extracted Axes, Labels & Headers
-                          </div>
-                          <div className="labels-tag-cloud">
-                            {visionAnalysis.axes_or_labels.map((lbl, idx) => (
-                              <span key={idx} className="label-tag">
-                                {lbl}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 

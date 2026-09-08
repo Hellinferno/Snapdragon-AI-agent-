@@ -1,4 +1,3 @@
-import os
 import re
 from app.providers.base import GenerationResult, LLMProvider
 
@@ -15,11 +14,6 @@ class DevelopmentLLMProvider(LLMProvider):
         return "development-grounded-synthesizer"
 
     async def generate(self, prompt: str, system_prompt: str | None = None) -> GenerationResult:
-        # Check if external API is configured
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key:
-            return await self._call_external_openai(prompt, system_prompt, api_key)
-
         return self._synthesize_grounded_answer(prompt)
 
     def _synthesize_grounded_answer(self, prompt: str) -> GenerationResult:
@@ -34,6 +28,23 @@ class DevelopmentLLMProvider(LLMProvider):
 
         # Check for insufficient evidence marker
         if not context_text or "NO_RELEVANT_EVIDENCE" in context_text:
+            refusal_text = (
+                "Insufficient evidence in the indexed documents to answer this question. "
+                "The documents in your library do not contain information directly addressing this query."
+            )
+            return GenerationResult(text=refusal_text, prompt_tokens=len(prompt.split()), completion_tokens=len(refusal_text.split()))
+
+        # Check semantic alignment: does the context contain substantive terms from the question?
+        question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{4,}\b", question.lower()))
+        query_framing = {
+            "what", "which", "where", "when", "does", "have", "with", "from",
+            "that", "this", "these", "those", "about", "regarding", "indicate",
+            "demonstrate", "discuss", "explain", "model", "paper", "study", "research",
+        }
+        key_query_terms = question_words - query_framing
+        content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{4,}\b", context_text.lower()))
+
+        if key_query_terms and not (key_query_terms & content_words):
             refusal_text = (
                 "Insufficient evidence in the indexed documents to answer this question. "
                 "The documents in your library do not contain information directly addressing this query."
@@ -81,38 +92,6 @@ class DevelopmentLLMProvider(LLMProvider):
             prompt_tokens=len(prompt.split()),
             completion_tokens=len(answer_text.split()),
         )
-
-    async def _call_external_openai(self, prompt: str, system_prompt: str | None, api_key: str) -> GenerationResult:
-        import httpx
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt or "You are ScholarEdge, a strict grounded research copilot."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.1,
-        }
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            choice = data["choices"][0]["message"]["content"]
-            usage = data.get("usage", {})
-            return GenerationResult(
-                text=choice,
-                prompt_tokens=usage.get("prompt_tokens", 0),
-                completion_tokens=usage.get("completion_tokens", 0),
-            )
-
 
 # Global singleton instance
 llm_provider: LLMProvider = DevelopmentLLMProvider()
