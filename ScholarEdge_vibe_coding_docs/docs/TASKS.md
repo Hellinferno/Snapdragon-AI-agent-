@@ -38,10 +38,10 @@
 - [x] Evidence display
 
 ## M4 Learning
-- [ ] Explanation workflow
-- [ ] Quiz schema
-- [ ] Quiz generation
-- [ ] Flashcard schema
+- [x] Explanation workflow
+- [x] Quiz schema
+- [x] Quiz generation
+- [x] Flashcard schema
 
 ## M5 Vision
 - [ ] Image upload

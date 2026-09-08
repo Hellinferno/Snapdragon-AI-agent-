@@ -92,3 +92,41 @@ export async function compareDocuments(documentIds, dimensions = null) {
   }
   return res.json();
 }
+
+export async function explainConcept(concept, documentIds = null, level = 'beginner') {
+  const res = await fetch(`${API_BASE}/learning/explain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ concept, document_ids: documentIds, level }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Explanation request failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function generateQuiz(documentIds = null, questionCount = 4, difficulty = 'medium') {
+  const res = await fetch(`${API_BASE}/learning/quiz`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document_ids: documentIds, question_count: questionCount, difficulty }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Quiz generation failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function generateFlashcards() {
+  const res = await fetch(`${API_BASE}/learning/flashcards`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Flashcards generation failed: ${res.statusText}`);
+  }
+  return res.json();
+}

@@ -2,23 +2,42 @@
 Generates 3 synthetic academic papers for ScholarEdge demonstration and benchmarking.
 """
 from pathlib import Path
-from pypdf import PageObject, PdfWriter
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 
 def create_demo_pdf(output_path: Path, title: str, author: str, pages_content: list[str]):
-    writer = PdfWriter()
-    for text in pages_content:
-        # Create page
-        page = PageObject.create_blank_page(width=612, height=792)
-        writer.add_page(page)
+    c = canvas.Canvas(str(output_path), pagesize=letter)
+    c.setTitle(title)
+    c.setAuthor(author)
 
-    writer.add_metadata({
-        "/Title": title,
-        "/Author": author,
-    })
+    for content in pages_content:
+        lines = content.split("\n")
+        y = 720
+        # Title/header
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(72, y, lines[0])
+        y -= 25
 
-    with open(output_path, "wb") as f:
-        writer.write(f)
+        c.setFont("Helvetica", 10)
+        for line in lines[1:]:
+            # Simple text wrap
+            words = line.split(" ")
+            current_line = ""
+            for word in words:
+                if len(current_line) + len(word) + 1 > 80:
+                    c.drawString(72, y, current_line)
+                    y -= 14
+                    current_line = word
+                else:
+                    current_line = f"{current_line} {word}".strip()
+            if current_line:
+                c.drawString(72, y, current_line)
+                y -= 14
+            y -= 6
+        c.showPage()
+
+    c.save()
     print(f"Generated demo paper: {output_path.name}")
 
 

@@ -22,6 +22,11 @@ import {
   CheckSquare,
   Square,
   ArrowRight,
+  HelpCircle,
+  Award,
+  RotateCw,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   fetchDocuments,
@@ -32,6 +37,9 @@ import {
   sendChatQuestion,
   searchDocuments,
   compareDocuments,
+  explainConcept,
+  generateQuiz,
+  generateFlashcards,
 } from './api';
 
 const ALL_DIMENSIONS = [
@@ -54,7 +62,7 @@ export default function App() {
   const [successToast, setSuccessToast] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Research mode state
+  // Research mode state (M2)
   const [selectedScope, setSelectedScope] = useState('ALL');
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -78,6 +86,22 @@ export default function App() {
   const [comparisonResult, setComparisonResult] = useState(null);
   const [compareLoading, setCompareLoading] = useState(false);
 
+  // Learn mode state (M4)
+  const [learnSubTab, setLearnSubTab] = useState('explain'); // 'explain' | 'quiz' | 'flashcards'
+  const [explainConceptText, setExplainConceptText] = useState('Quantized Transformer Inference');
+  const [explainLevel, setExplainLevel] = useState('beginner');
+  const [explanationResult, setExplanationResult] = useState(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+
+  const [quizData, setQuizData] = useState(null);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [quizLoading, setQuizLoading] = useState(false);
+
+  const [flashcardDeck, setFlashcardDeck] = useState([]);
+  const [currentFcIdx, setCurrentFcIdx] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [flashcardsLoading, setFlashcardsLoading] = useState(false);
+
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
@@ -93,7 +117,6 @@ export default function App() {
     }
   }, [chatMessages, activeTab]);
 
-  // Pre-select first 2 documents for comparison if available and none selected
   useEffect(() => {
     if (documents.length >= 2 && selectedCompareDocs.length === 0) {
       setSelectedCompareDocs([documents[0].id, documents[1].id]);
@@ -272,6 +295,50 @@ export default function App() {
     }
   }
 
+  async function handleExplain() {
+    if (!explainConceptText.trim() || explainLoading) return;
+    try {
+      setExplainLoading(true);
+      const scopeIds = selectedScope === 'ALL' ? null : [selectedScope];
+      const res = await explainConcept(explainConceptText, scopeIds, explainLevel);
+      setExplanationResult(res);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setExplainLoading(false);
+    }
+  }
+
+  async function handleGenerateQuiz() {
+    try {
+      setQuizLoading(true);
+      setUserAnswers({});
+      const scopeIds = selectedScope === 'ALL' ? null : [selectedScope];
+      const res = await generateQuiz(scopeIds, 4, 'medium');
+      setQuizData(res);
+      showSuccess('Quiz generated with source citations.');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setQuizLoading(false);
+    }
+  }
+
+  async function handleLoadFlashcards() {
+    try {
+      setFlashcardsLoading(true);
+      setIsFlipped(false);
+      setCurrentFcIdx(0);
+      const res = await generateFlashcards();
+      setFlashcardDeck(res.flashcards || []);
+      showSuccess('Loaded study flashcard deck.');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setFlashcardsLoading(false);
+    }
+  }
+
   function formatBytes(bytes) {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -370,7 +437,7 @@ export default function App() {
           >
             <GraduationCap size={18} />
             Learn
-            <span className="nav-badge" style={{ color: 'var(--accent-amber)' }}>M4</span>
+            <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>Active</span>
           </button>
         </nav>
 
@@ -418,7 +485,40 @@ export default function App() {
               </div>
             )}
             {activeTab === 'compare' && <>Cross-Paper Comparison Studio (M3)</>}
-            {activeTab === 'learn' && <>Interactive Learning & Quizzes</>}
+            {activeTab === 'learn' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span>Learning & Formative Assessment Studio (M4)</span>
+                <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-tertiary)', padding: '3px', borderRadius: '8px' }}>
+                  <button
+                    className={`tab-btn ${learnSubTab === 'explain' ? 'active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    onClick={() => setLearnSubTab('explain')}
+                  >
+                    Concept Explainer
+                  </button>
+                  <button
+                    className={`tab-btn ${learnSubTab === 'quiz' ? 'active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    onClick={() => {
+                      setLearnSubTab('quiz');
+                      if (!quizData) handleGenerateQuiz();
+                    }}
+                  >
+                    Interactive Quiz
+                  </button>
+                  <button
+                    className={`tab-btn ${learnSubTab === 'flashcards' ? 'active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    onClick={() => {
+                      setLearnSubTab('flashcards');
+                      if (flashcardDeck.length === 0) handleLoadFlashcards();
+                    }}
+                  >
+                    Flashcards Deck
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button className="btn-icon" onClick={loadDocs} title="Refresh documents">
@@ -906,12 +1006,261 @@ export default function App() {
 
           {/* LEARN TAB (M4) */}
           {activeTab === 'learn' && (
-            <div className="empty-state">
-              <GraduationCap size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-              <h3>Interactive Learning & Study Mode</h3>
-              <p style={{ marginTop: '8px', maxWidth: '480px', marginInline: 'auto' }}>
-                Conceptual explanations, automated quiz generation, and active recall assistance (Coming in Phase 4 / M4).
-              </p>
+            <div className="learn-container">
+              {/* SUBTAB 1: CONCEPT EXPLAINER */}
+              {learnSubTab === 'explain' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="learn-setup-card">
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Source-Grounded Concept Explainer</h3>
+                    <p className="section-desc">
+                      Demystify complex technical mechanisms using your indexed papers. Select your target depth.
+                    </p>
+
+                    <div className="depth-selector">
+                      <button
+                        className={`depth-btn ${explainLevel === 'beginner' ? 'active' : ''}`}
+                        onClick={() => setExplainLevel('beginner')}
+                      >
+                        <div className="depth-title">Beginner</div>
+                        <div className="depth-desc">Intuitive analogies & simple conceptual frameworks</div>
+                      </button>
+                      <button
+                        className={`depth-btn ${explainLevel === 'intermediate' ? 'active' : ''}`}
+                        onClick={() => setExplainLevel('intermediate')}
+                      >
+                        <div className="depth-title">Intermediate</div>
+                        <div className="depth-desc">Core architectures, equations, and engineering flow</div>
+                      </button>
+                      <button
+                        className={`depth-btn ${explainLevel === 'deep_dive' ? 'active' : ''}`}
+                        onClick={() => setExplainLevel('deep_dive')}
+                      >
+                        <div className="depth-title">Deep Dive</div>
+                        <div className="depth-desc">Optimization nuances, hardware constraints, metrics</div>
+                      </button>
+                    </div>
+
+                    <div className="chat-input-bar" style={{ marginTop: '14px' }}>
+                      <input
+                        type="text"
+                        className="chat-input-field"
+                        placeholder="Enter concept (e.g. INT4 Quantization, Vector Retrieval)..."
+                        value={explainConceptText}
+                        onChange={(e) => setExplainConceptText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleExplain()}
+                      />
+                      <button
+                        className="send-btn"
+                        onClick={handleExplain}
+                        disabled={explainLoading || !explainConceptText.trim()}
+                      >
+                        <Sparkles size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {explainLoading && <div className="empty-state">Synthesizing grounded explanation...</div>}
+
+                  {explanationResult && (
+                    <div className="assistant-card">
+                      <div className="assistant-header">
+                        <Award size={16} />
+                        <span>Pedagogical Breakdown ({explanationResult.level.toUpperCase()})</span>
+                      </div>
+                      <div className="assistant-text">{explanationResult.explanation}</div>
+
+                      {explanationResult.key_takeaways.length > 0 && (
+                        <div className="takeaways-box">
+                          <div className="takeaways-title">
+                            <CheckCircle2 size={15} />
+                            <span>Key Takeaways</span>
+                          </div>
+                          <ul style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {explanationResult.key_takeaways.map((takeaway, i) => (
+                              <li key={i} style={{ fontSize: '0.86rem', color: '#e2e8f0' }}>{takeaway}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {explanationResult.sources.length > 0 && (
+                        <div className="sources-panel">
+                          <div className="sources-label">
+                            <BookOpen size={14} />
+                            <span>Supporting Evidence</span>
+                          </div>
+                          <div className="source-cards-grid">
+                            {explanationResult.sources.map((src, i) => (
+                              <div
+                                key={i}
+                                className="source-card"
+                                onClick={() => {
+                                  const docMatch = documents.find((d) => d.id === src.document_id);
+                                  if (docMatch) handleOpenDoc(docMatch);
+                                }}
+                              >
+                                <div className="source-card-top">
+                                  <span>PAGE {src.page_number}</span>
+                                  <span className="source-score">sim: {src.relevance_score}</span>
+                                </div>
+                                <div className="source-card-title">{src.document_title}</div>
+                                <div className="source-card-snippet">"{src.excerpt}"</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUBTAB 2: INTERACTIVE QUIZ */}
+              {learnSubTab === 'quiz' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="learn-setup-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Interactive Formative Assessment</h3>
+                      <p className="section-desc">
+                        Active recall questions automatically generated from your library's peer-reviewed papers.
+                      </p>
+                    </div>
+                    <button
+                      className="compare-btn-primary"
+                      onClick={handleGenerateQuiz}
+                      disabled={quizLoading}
+                    >
+                      <RotateCw size={17} className={quizLoading ? 'spin' : ''} />
+                      {quizLoading ? 'Generating...' : 'Regenerate Quiz'}
+                    </button>
+                  </div>
+
+                  {quizData && quizData.questions && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {quizData.questions.map((q, qIdx) => {
+                        const selectedAns = userAnswers[qIdx];
+                        const isAnswered = selectedAns !== undefined;
+
+                        return (
+                          <div key={q.id} className="quiz-question-box">
+                            <div className="quiz-header-row">
+                              <span>QUESTION #{qIdx + 1} OF {quizData.questions.length}</span>
+                              <span className="badge badge-indexed">{quizData.difficulty.toUpperCase()}</span>
+                            </div>
+                            <div className="quiz-question-text">{q.question}</div>
+
+                            <div className="quiz-options-list">
+                              {q.options.map((opt, optIdx) => {
+                                let btnClass = 'quiz-option-btn';
+                                if (isAnswered) {
+                                  if (optIdx === q.correct_answer_index) {
+                                    btnClass += ' correct';
+                                  } else if (selectedAns === optIdx) {
+                                    btnClass += ' incorrect';
+                                  }
+                                }
+
+                                return (
+                                  <button
+                                    key={optIdx}
+                                    className={btnClass}
+                                    disabled={isAnswered}
+                                    onClick={() => setUserAnswers((prev) => ({ ...prev, [qIdx]: optIdx }))}
+                                  >
+                                    <span style={{ fontWeight: 700, minWidth: '20px' }}>
+                                      {String.fromCharCode(65 + optIdx)}.
+                                    </span>
+                                    <span>{opt}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {isAnswered && (
+                              <div className="quiz-explanation-box">
+                                <div style={{ fontWeight: 700, marginBottom: '4px', color: selectedAns === q.correct_answer_index ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                                  {selectedAns === q.correct_answer_index ? '✓ Correct Answer' : '✗ Incorrect'}
+                                </div>
+                                <div>{q.explanation}</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUBTAB 3: FLASHCARDS */}
+              {learnSubTab === 'flashcards' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="learn-setup-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Active Recall Flashcard Deck</h3>
+                      <p className="section-desc">
+                        Spaced repetition cards generated from indexed findings. Click card to flip.
+                      </p>
+                    </div>
+                    <button
+                      className="compare-btn-primary"
+                      onClick={handleLoadFlashcards}
+                      disabled={flashcardsLoading}
+                    >
+                      <RotateCw size={17} className={flashcardsLoading ? 'spin' : ''} />
+                      {flashcardsLoading ? 'Loading...' : 'Refresh Deck'}
+                    </button>
+                  </div>
+
+                  {flashcardDeck.length > 0 && (
+                    <div>
+                      <div
+                        className="flashcard-card"
+                        onClick={() => setIsFlipped((prev) => !prev)}
+                      >
+                        <div className="flashcard-tag">
+                          {isFlipped ? 'Answer (Verified Finding)' : 'Prompt (Active Recall)'}
+                        </div>
+                        <div className="flashcard-content">
+                          {isFlipped
+                            ? flashcardDeck[currentFcIdx].back_answer
+                            : flashcardDeck[currentFcIdx].front_prompt}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          {isFlipped ? `Source: ${flashcardDeck[currentFcIdx].source_hint}` : 'Click card to flip ↺'}
+                        </div>
+                      </div>
+
+                      {/* Flashcard Navigation */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                        <button
+                          className="chip-btn"
+                          disabled={currentFcIdx === 0}
+                          onClick={() => {
+                            setIsFlipped(false);
+                            setCurrentFcIdx((i) => Math.max(0, i - 1));
+                          }}
+                        >
+                          <ChevronLeft size={16} /> Previous Card
+                        </button>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          Card {currentFcIdx + 1} of {flashcardDeck.length}
+                        </span>
+                        <button
+                          className="chip-btn"
+                          disabled={currentFcIdx >= flashcardDeck.length - 1}
+                          onClick={() => {
+                            setIsFlipped(false);
+                            setCurrentFcIdx((i) => Math.min(flashcardDeck.length - 1, i + 1));
+                          }}
+                        >
+                          Next Card <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
