@@ -19,6 +19,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Filter,
+  CheckSquare,
+  Square,
+  ArrowRight,
 } from 'lucide-react';
 import {
   fetchDocuments,
@@ -28,7 +31,15 @@ import {
   fetchHealth,
   sendChatQuestion,
   searchDocuments,
+  compareDocuments,
 } from './api';
+
+const ALL_DIMENSIONS = [
+  'Core Objective',
+  'Methodology & Architecture',
+  'Key Findings & Metrics',
+  'Limitations & Future Work',
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
@@ -61,6 +72,12 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  // Compare mode state (M3)
+  const [selectedCompareDocs, setSelectedCompareDocs] = useState([]);
+  const [selectedDimensions, setSelectedDimensions] = useState(ALL_DIMENSIONS);
+  const [comparisonResult, setComparisonResult] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
@@ -75,6 +92,13 @@ export default function App() {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, activeTab]);
+
+  // Pre-select first 2 documents for comparison if available and none selected
+  useEffect(() => {
+    if (documents.length >= 2 && selectedCompareDocs.length === 0) {
+      setSelectedCompareDocs([documents[0].id, documents[1].id]);
+    }
+  }, [documents]);
 
   async function checkHealth() {
     try {
@@ -149,6 +173,7 @@ export default function App() {
       await deleteDocument(id);
       showSuccess('Document deleted successfully.');
       if (selectedDoc?.id === id) setSelectedDoc(null);
+      setSelectedCompareDocs((prev) => prev.filter((dId) => dId !== id));
       await loadDocs();
     } catch (err) {
       showError(err.message);
@@ -211,6 +236,39 @@ export default function App() {
       showError(err.message);
     } finally {
       setSearchLoading(false);
+    }
+  }
+
+  function handleToggleCompareDoc(docId) {
+    setSelectedCompareDocs((prev) =>
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    );
+  }
+
+  function handleToggleDimension(dim) {
+    setSelectedDimensions((prev) =>
+      prev.includes(dim)
+        ? prev.length > 1
+          ? prev.filter((d) => d !== dim)
+          : prev
+        : [...prev, dim]
+    );
+  }
+
+  async function handleRunComparison() {
+    if (selectedCompareDocs.length < 2) {
+      showError('Please select at least two research papers to compare.');
+      return;
+    }
+    try {
+      setCompareLoading(true);
+      const res = await compareDocuments(selectedCompareDocs, selectedDimensions);
+      setComparisonResult(res);
+      showSuccess(`Successfully compared ${res.comparisons.length} documents.`);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setCompareLoading(false);
     }
   }
 
@@ -303,7 +361,7 @@ export default function App() {
           >
             <Scale size={18} />
             Compare
-            <span className="nav-badge" style={{ color: 'var(--accent-amber)' }}>M3</span>
+            <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>Active</span>
           </button>
 
           <button
@@ -359,7 +417,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {activeTab === 'compare' && <>Cross-Paper Comparison</>}
+            {activeTab === 'compare' && <>Cross-Paper Comparison Studio (M3)</>}
             {activeTab === 'learn' && <>Interactive Learning & Quizzes</>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -700,12 +758,149 @@ export default function App() {
 
           {/* COMPARE TAB (M3) */}
           {activeTab === 'compare' && (
-            <div className="empty-state">
-              <Scale size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-              <h3>Cross-Paper Comparative Analysis</h3>
-              <p style={{ marginTop: '8px', maxWidth: '480px', marginInline: 'auto' }}>
-                Multi-paper comparison across methodologies, datasets, and conclusions (Coming in Phase 3 / M3).
-              </p>
+            <div className="compare-container">
+              {/* Setup / Configuration Panel */}
+              <div className="compare-setup-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Select Research Papers to Compare</h3>
+                    <p className="section-desc">
+                      Choose at least two indexed papers for side-by-side dimensional contrast and synthesis.
+                    </p>
+                  </div>
+                  <button
+                    className="compare-btn-primary"
+                    disabled={selectedCompareDocs.length < 2 || compareLoading}
+                    onClick={handleRunComparison}
+                  >
+                    <Scale size={18} />
+                    {compareLoading ? 'Synthesizing...' : `Compare Selected (${selectedCompareDocs.length})`}
+                  </button>
+                </div>
+
+                {/* Paper Selection Grid */}
+                {documents.length < 2 ? (
+                  <div className="empty-state" style={{ padding: '30px 0' }}>
+                    <p>At least two papers must be indexed in your library to compare.</p>
+                    <button
+                      className="chip-btn"
+                      style={{ marginTop: '12px', padding: '6px 14px' }}
+                      onClick={() => setActiveTab('library')}
+                    >
+                      Go to Library to upload more papers
+                    </button>
+                  </div>
+                ) : (
+                  <div className="paper-checklist-grid">
+                    {documents.map((doc) => {
+                      const isSelected = selectedCompareDocs.includes(doc.id);
+                      return (
+                        <div
+                          key={doc.id}
+                          className={`paper-check-card ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleToggleCompareDoc(doc.id)}
+                        >
+                          <div style={{ color: isSelected ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
+                            {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                          </div>
+                          <div style={{ overflow: 'hidden' }}>
+                            <div className="doc-title" style={{ fontSize: '0.86rem' }}>
+                              {doc.title || doc.filename}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              {doc.page_count} pages • {doc.chunk_count} chunks
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Dimensions Selector */}
+                <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
+                    Active Comparison Dimensions:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {ALL_DIMENSIONS.map((dim) => {
+                      const isActive = selectedDimensions.includes(dim);
+                      return (
+                        <button
+                          key={dim}
+                          className={`chip-btn ${isActive ? 'active' : ''}`}
+                          style={{
+                            background: isActive ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                            borderColor: isActive ? 'var(--accent-cyan)' : 'var(--border-subtle)',
+                            color: isActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                          }}
+                          onClick={() => handleToggleDimension(dim)}
+                        >
+                          {dim}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparison Results */}
+              {comparisonResult && (
+                <>
+                  {/* Synthesis Callout Card */}
+                  <div className="synthesis-card">
+                    <div className="synthesis-header">
+                      <Sparkles size={20} />
+                      <span>Comparative Synthesis & Trade-off Analysis</span>
+                    </div>
+                    <div className="synthesis-body">{comparisonResult.synthesis}</div>
+                  </div>
+
+                  {/* Side-by-Side Matrix Table */}
+                  <div className="matrix-container">
+                    <table className="matrix-table">
+                      <thead>
+                        <tr>
+                          <th className="matrix-th matrix-dim-col">Dimension</th>
+                          {comparisonResult.comparisons.map((c) => (
+                            <th key={c.document_id} className="matrix-th">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText size={16} style={{ color: 'var(--accent-cyan)' }} />
+                                <span>{c.document_title}</span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonResult.dimensions.map((dim) => (
+                          <tr key={dim}>
+                            <td className="matrix-td matrix-dim-col">{dim}</td>
+                            {comparisonResult.comparisons.map((c) => {
+                              const cellValue = c.dimension_values[dim] || 'N/A';
+                              return (
+                                <td key={c.document_id + dim} className="matrix-td">
+                                  <div>{cellValue}</div>
+                                  <div
+                                    className="citation-pill"
+                                    onClick={() => {
+                                      const fullDoc = documents.find((d) => d.id === c.document_id);
+                                      if (fullDoc) handleOpenDoc(fullDoc);
+                                    }}
+                                    title="Open document inspector"
+                                  >
+                                    Inspect Source Excerpt →
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

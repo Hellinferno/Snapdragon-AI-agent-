@@ -79,3 +79,16 @@ export async function sendChatQuestion(question, documentIds = null, topK = 5) {
   }
   return res.json();
 }
+
+export async function compareDocuments(documentIds, dimensions = null) {
+  const res = await fetch(`${API_BASE}/research/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document_ids: documentIds, dimensions }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Comparison failed with status ${res.status}`);
+  }
+  return res.json();
+}

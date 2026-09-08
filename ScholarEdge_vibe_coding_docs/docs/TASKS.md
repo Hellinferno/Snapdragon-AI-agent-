@@ -31,11 +31,11 @@
 - [x] Chat endpoint
 
 ## M3 Research
-- [ ] Multi-document retrieval
-- [ ] Paper comparison schema
-- [ ] Comparison workflow
-- [ ] Research synthesis
-- [ ] Evidence display
+- [x] Multi-document retrieval
+- [x] Paper comparison schema
+- [x] Comparison workflow
+- [x] Research synthesis
+- [x] Evidence display
 
 ## M4 Learning
 - [ ] Explanation workflow
