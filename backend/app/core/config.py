@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     ALLOW_EXTERNAL_PROVIDERS: bool = False
     GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    OPENROUTER_API_KEY: str | None = None
+    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
+
 
     # Qualcomm Deployment Settings
     QUALCOMM_DEVICE_TARGET: str = "auto"  # "Snapdragon X Elite" | "Snapdragon 8 Gen 3" | "auto"

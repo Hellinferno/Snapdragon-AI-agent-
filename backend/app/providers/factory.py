@@ -6,6 +6,7 @@ from app.core.logging import get_logger
 from app.providers.base import EmbeddingProvider, LLMProvider, VisionProvider, OCRProvider
 from app.providers.embedding_provider import DevelopmentEmbeddingProvider
 from app.providers.gemini_provider import GeminiLLMProvider
+from app.providers.openrouter_provider import OpenRouterProvider
 from app.providers.llm_provider import DevelopmentLLMProvider
 from app.providers.vision_provider import DevelopmentVisionProvider, DevelopmentOCRProvider
 from app.providers.qualcomm.qualcomm_config import QualcommConfig
@@ -36,6 +37,13 @@ def get_embedding_provider(backend: Optional[str] = None) -> EmbeddingProvider:
 def get_llm_provider(backend: Optional[str] = None) -> LLMProvider:
     """Return the configured LLMProvider."""
     effective_backend = (backend or settings.LLM_PROVIDER or settings.PROVIDER_BACKEND).lower()
+    if effective_backend in ("openrouter", "openrouter_api"):
+        if not settings.ALLOW_EXTERNAL_PROVIDERS:
+            raise ValueError(
+                "External cloud providers are disabled by default to guarantee local privacy. "
+                "Set ALLOW_EXTERNAL_PROVIDERS=true in your environment to explicitly opt-in."
+            )
+        return OpenRouterProvider()
     if effective_backend == "gemini":
         if not settings.ALLOW_EXTERNAL_PROVIDERS:
             raise ValueError(
@@ -43,6 +51,7 @@ def get_llm_provider(backend: Optional[str] = None) -> LLMProvider:
                 "Set ALLOW_EXTERNAL_PROVIDERS=true in your environment to explicitly opt-in."
             )
         return GeminiLLMProvider()
+
     if effective_backend == "qualcomm":
         logger.info("Instantiating QualcommLLMProvider (Snapdragon target).")
         cfg = QualcommConfig(
