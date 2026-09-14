@@ -38,7 +38,7 @@ class VectorStore(ABC):
     async def search(
         self,
         query_vector: list[float],
-        top_k: int = 5,
+        top_k: int | None = 5,
         document_ids: list[str] | None = None,
     ) -> list[tuple[str, float]]:
         """
@@ -72,7 +72,7 @@ class SQLiteVectorStore(VectorStore):
     async def search(
         self,
         query_vector: list[float],
-        top_k: int = 5,
+        top_k: int | None = 5,
         document_ids: list[str] | None = None,
     ) -> list[tuple[str, float]]:
         stmt = select(ChunkEmbedding)
@@ -91,9 +91,9 @@ class SQLiteVectorStore(VectorStore):
             sim = cosine_similarity(query_vector, chunk_vec)
             scored_results.append((record.chunk_id, round(sim, 4)))
 
-        # Sort descending by similarity score
+        # Sort descending by similarity score; top_k=None returns every scored chunk
         scored_results.sort(key=lambda x: x[1], reverse=True)
-        return scored_results[:top_k]
+        return scored_results if top_k is None else scored_results[:top_k]
 
     async def delete_by_document(self, document_id: str) -> None:
         await self.db.execute(

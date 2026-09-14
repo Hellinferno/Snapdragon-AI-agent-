@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from pypdf import PdfReader
@@ -17,6 +18,9 @@ class ParsedPDF:
     authors: str | None = None
     page_count: int = 0
     pages: list[ParsedPage] = field(default_factory=list)
+
+
+SOFT_HYPHEN_BREAK = re.compile(r"(?<=\w)[‐­]\n(?=\w)")
 
 
 def clean_extracted_text(text: str) -> str:
@@ -58,6 +62,8 @@ def parse_pdf(file_path: Path | str) -> ParsedPDF:
         normalized_text = "\n".join(
             line.strip() for line in page_text.splitlines() if line.strip()
         )
+        # Re-join words split by typeset soft hyphens at line ends ("super‐\nvised")
+        normalized_text = SOFT_HYPHEN_BREAK.sub("", normalized_text)
         parsed_pages.append(
             ParsedPage(
                 page_number=page_num,

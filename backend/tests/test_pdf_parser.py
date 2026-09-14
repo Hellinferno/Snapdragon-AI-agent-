@@ -58,3 +58,10 @@ def test_clean_extracted_text_repairs_surrogates():
     assert cleaned == "broken � glyph"
     cleaned.encode("utf-8")
     assert clean_extracted_text("plain text") == "plain text"
+
+
+def test_soft_hyphen_line_breaks_are_rejoined():
+    from app.services.pdf_parser import SOFT_HYPHEN_BREAK
+
+    text = "a super‐\nvised problem\nstrawberry Pop-\nTarts"
+    assert SOFT_HYPHEN_BREAK.sub("", text) == "a supervised problem\nstrawberry Pop-\nTarts"

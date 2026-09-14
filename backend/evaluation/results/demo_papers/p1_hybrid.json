@@ -1,0 +1,1321 @@
+{
+  "dataset": "demo_papers",
+  "label": "p1_hybrid",
+  "mode": "full",
+  "created_at": "2026-09-14T05:11:07+00:00",
+  "config": {
+    "git": {
+      "commit": "e5aecde",
+      "dirty": true
+    },
+    "python": "3.12.10",
+    "dataset_sha256": "c7bbbf209c3820d5485ed33fec65afa38a833732473883a5aed2a150537d3332",
+    "corpus": [
+      {
+        "title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+        "sha256": "e61cd13fde0c9db40fd842da39ae383876d0e8e62fe498dbebc39cbd8924955a"
+      },
+      {
+        "title": "Privacy-Preserving On-Device Clinical Language Models",
+        "sha256": "cbe6536470b7c4d9c417b2258f0d29f4e7b59ddb9e60b3637e7a3c0324fc116d"
+      },
+      {
+        "title": "Formative Assessment and Active Recall in Medical Education",
+        "sha256": "533e1c32180e79e75ea103a93b69e823ca4b85971d939ff194bfd005660ad58f"
+      }
+    ],
+    "embedding_provider": "development-feature-hash-384",
+    "llm_provider": "openrouter-qwen/qwen-2.5-72b-instruct",
+    "top_k": 5,
+    "min_score_threshold": 0.08,
+    "chunk_size_chars": 600,
+    "chunk_overlap_chars": 100
+  },
+  "counts": {
+    "questions": 15,
+    "answerable": 13,
+    "unanswerable": 2
+  },
+  "retrieval": {
+    "doc_hit_at_k": {
+      "percent": 100.0,
+      "numerator": 13,
+      "denominator": 13
+    },
+    "page_hit_at_k": {
+      "percent": 100.0,
+      "numerator": 13,
+      "denominator": 13
+    },
+    "evidence_hit_at_k": {
+      "percent": 100.0,
+      "numerator": 13,
+      "denominator": 13
+    },
+    "page_recall_at_k": {
+      "mean": 0.75,
+      "count": 13
+    },
+    "mrr": {
+      "mean": 0.8718,
+      "count": 13
+    }
+  },
+  "generation": {
+    "answer_correctness": {
+      "percent": 46.15,
+      "numerator": 6,
+      "denominator": 13
+    },
+    "false_refusal_rate": {
+      "percent": 38.46,
+      "numerator": 5,
+      "denominator": 13
+    },
+    "abstention_accuracy": {
+      "percent": 100.0,
+      "numerator": 2,
+      "denominator": 2
+    },
+    "groundedness": {
+      "percent": 100.0,
+      "numerator": 8,
+      "denominator": 8
+    }
+  },
+  "citation": {
+    "citation_rate": {
+      "percent": 100.0,
+      "numerator": 8,
+      "denominator": 8
+    },
+    "cited_page_accuracy": {
+      "percent": 100.0,
+      "numerator": 8,
+      "denominator": 8
+    },
+    "cited_doc_accuracy": {
+      "percent": 100.0,
+      "numerator": 10,
+      "denominator": 10
+    },
+    "citation_faithfulness": {
+      "percent": 100.0,
+      "numerator": 10,
+      "denominator": 10
+    }
+  },
+  "by_category": {
+    "beginner_explanation": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      }
+    },
+    "citation": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      }
+    },
+    "comparison": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "correct": {
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 2
+      }
+    },
+    "conflicting_evidence": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "correct": {
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 1
+      }
+    },
+    "cross_document": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "correct": {
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 2
+      }
+    },
+    "multi_page": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "correct": {
+        "percent": 0.0,
+        "numerator": 0,
+        "denominator": 2
+      }
+    },
+    "page_citation": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 1,
+        "denominator": 1
+      }
+    },
+    "single_document": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      }
+    }
+  },
+  "top1_score": {
+    "answerable": {
+      "min": 0.042,
+      "median": 0.1406,
+      "max": 0.3661
+    },
+    "unanswerable": {
+      "min": 0.0263,
+      "median": 0.0263,
+      "max": 0.0599
+    }
+  },
+  "latency": {
+    "search": {
+      "count": 15,
+      "mean_ms": 28.2,
+      "p50_ms": 29.1,
+      "p95_ms": 40.6
+    },
+    "chat": {
+      "count": 15,
+      "mean_ms": 2569.1,
+      "p50_ms": 2558.4,
+      "p95_ms": 5846.1
+    }
+  },
+  "tokens": {
+    "prompt": 6127,
+    "completion": 802
+  },
+  "results": [
+    {
+      "id": "Q01",
+      "category": "single_document",
+      "question": "What AUC did the multimodal model achieve for pneumonia detection?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.1594,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.1421,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.0806,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 1,
+          "score": 0.0787,
+          "excerpt": "Abstract Explores quantized 4-bit transformer deployment on clinical workstations for automated patient history summarization and discharge note generation. St…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 2,
+          "score": 0.0348,
+          "excerpt": "Introduction Hospital diagnostic workflows require automated radiograph triage without transmitting sensitive diagnostic imaging over insecure external network…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The multimodal model achieved an AUC of 91.4% for pneumonia detection [Doc: \"Clinical Multimodal Transformers for Diagnostic Radiology\", Page 4].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          4,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "Q02",
+      "category": "single_document",
+      "question": "What quantization method was implemented for the clinical language model?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            3
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.1214,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 3,
+          "score": 0.1433,
+          "excerpt": "Methodology & Architecture Implemented 4-bit INT4 quantization paired with strict page-level citation tracking. Every clinical summary sentence must map to an …"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.1368,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.0996,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0996,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "The quantization method implemented for the clinical language model was 4-bit INT4 quantization [Doc: \"Privacy-Preserving On-Device Clinical Language Models\", Page 3, Section: \"Methodology\"].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Privacy-Preserving On-Device Clinical Language Models",
+            "page": 3
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          2,
+          3,
+          5,
+          4,
+          1
+        ]
+      }
+    },
+    {
+      "id": "Q03",
+      "category": "single_document",
+      "question": "What improvement in clinical guideline retention scores was observed in the medical education study?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Formative Assessment and Active Recall in Medical Education",
+          "pages": [
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.3661,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.1176,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.1122,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.0955,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 1,
+          "score": 0.0998,
+          "excerpt": "Abstract Explores quantized 4-bit transformer deployment on clinical workstations for automated patient history summarization and discharge note generation. St…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "A 34% improvement in 30-day clinical guideline retention scores was observed in the medical education study compared to passive textbook review [Doc: \"Formative Assessment and Active Recall in Medical Education\", Page 4].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Formative Assessment and Active Recall in Medical Education",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          4,
+          1,
+          2,
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "Q04",
+      "category": "multi_page",
+      "question": "What are the key findings and limitations of the multimodal radiology study?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            4,
+            5
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.1692,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.1494,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.1001,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 5,
+          "score": 0.1068,
+          "excerpt": "Limitations & Future Work Relies on high-quality guideline indexing; rare genetic pathology differentials remain undersampled in the training distribution."
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0511,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 3
+      },
+      "generation": {
+        "answer": "The key findings of the multimodal radiology study include achieving a 91.4% AUC on pneumonia detection and reducing diagnostic report latency to 420 ms per radiograph with zero cloud leakage of patient telemetry [Doc: \"Clinical Multimodal Transformers for Diagnostic Radiology\", Page 4].\n\nThe limitations of the study are not explicitly stated in the provided context. Therefore, the answer is: Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [
+          {
+            "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q05",
+      "category": "multi_page",
+      "question": "What methodology and key metrics are reported for the privacy-preserving clinical language model?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            3,
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.1307,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.123,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.111,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.0708,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0797,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The methodology and key metrics reported for the privacy-preserving clinical language model include achieving 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications, and reducing factual errors to 1.8% [Doc: \"Privacy-Preserving On-Device Clinical Language Models\", Page 4].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": false,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Privacy-Preserving On-Device Clinical Language Models",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          4,
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "id": "Q06",
+      "category": "cross_document",
+      "question": "How do the radiology and clinical language model papers differ in their approach to on-device inference?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            3,
+            4
+          ]
+        },
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            3,
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 2,
+          "score": 0.1406,
+          "excerpt": "Introduction Hospital diagnostic workflows require automated radiograph triage without transmitting sensitive diagnostic imaging over insecure external network…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 3,
+          "score": 0.0622,
+          "excerpt": "Methodology & Architecture Evaluated a cross-attention vision-language backbone trained on multi-view chest X-rays. Document chunks and diagnostic bounding box…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0686,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.0917,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 3,
+          "score": 0.0387,
+          "excerpt": "Methodology & Architecture Our system constructs case-grounded multiple-choice questions from peer-reviewed clinical guidelines, dynamically generating distrac…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.25,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "The provided context does not contain sufficient information to compare the approaches to on-device inference between radiology and clinical language model papers. Both sources discuss on-device inference in the context of protecting sensitive health information, but they do not provide specific details on how the approaches differ. Therefore, the answer is:\n\nInsufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q07",
+      "category": "cross_document",
+      "question": "What privacy concerns do both the radiology and clinical language model papers address?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            1,
+            2
+          ]
+        },
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            1,
+            2
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.191,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0784,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.0392,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0717,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.0304,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Both the radiology and clinical language model papers address the privacy concerns related to the transmission of sensitive health information over external networks. Specifically:\n\n- The clinical language model paper highlights the risk of protected patient records and clinical trial dossiers being exposed when using centralized cloud models, emphasizing the need to prevent proprietary health information from crossing hospital perimeter firewalls [Doc: \"Privacy-Preserving On-Device Clinical Language Models\", Page 2].\n- The radiology paper focuses on the need to avoid transmitting sensitive diagnostic imaging over insecure external networks, advocating for local inference on edge clinical workstations to ensure absolute data residency [Doc: \"Clinical Multimodal Transformers for Diagnostic Radiology\", Page 2].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": false,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Privacy-Preserving On-Device Clinical Language Models",
+            "page": 2
+          },
+          {
+            "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "page": 2
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "Q08",
+      "category": "comparison",
+      "question": "Compare the diagnostic accuracy metrics between the multimodal radiology model and the clinical language model citation precision.",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            4
+          ]
+        },
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.1383,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.0651,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 2,
+          "score": 0.1038,
+          "excerpt": "Introduction Hospital diagnostic workflows require automated radiograph triage without transmitting sensitive diagnostic imaging over insecure external network…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 1,
+          "score": 0.0587,
+          "excerpt": "Abstract Explores quantized 4-bit transformer deployment on clinical workstations for automated patient history summarization and discharge note generation. St…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.1202,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q09",
+      "category": "comparison",
+      "question": "Compare the limitations mentioned in the radiology paper versus the medical education paper.",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            5
+          ]
+        },
+        {
+          "document": "Formative Assessment and Active Recall in Medical Education",
+          "pages": [
+            5
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 5,
+          "score": 0.042,
+          "excerpt": "Limitations & Future Work Relies on high-quality guideline indexing; rare genetic pathology differentials remain undersampled in the training distribution."
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0784,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0359,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.0333,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.0262,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q10",
+      "category": "beginner_explanation",
+      "question": "Explain in simple terms what a multimodal vision-language transformer does for chest X-ray analysis.",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            1,
+            3
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.124,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 1,
+          "score": 0.0333,
+          "excerpt": "Abstract Explores quantized 4-bit transformer deployment on clinical workstations for automated patient history summarization and discharge note generation. St…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 3,
+          "score": 0.1305,
+          "excerpt": "Methodology & Architecture Evaluated a cross-attention vision-language backbone trained on multi-view chest X-rays. Document chunks and diagnostic bounding box…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 5,
+          "score": 0.0699,
+          "excerpt": "Limitations & Future Work Limited generalization on low-dose portable bedside radiography units and pediatric cohorts under 12 years old. Multi-center validati…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0359,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "A multimodal vision-language transformer for chest X-ray analysis combines both image and text data to improve the accuracy of diagnosing conditions like pneumonia. Specifically, it uses a model that can understand and correlate visual information from chest X-rays with textual information from radiological reports. This helps in accurately locating lesions and detecting pneumonia, while also ensuring that patient health information is protected by performing all computations on the device without sending data to external cloud services [Doc: \"Clinical Multimodal Transformers for Diagnostic Radiology\", Page 1, Section: \"Abstract\"]. The model is trained on multi-view chest X-rays and uses document chunks and diagnostic bounding boxes to maintain the exact context and provenance of the data [Doc: \"Clinical Multimodal Transformers for Diagnostic Radiology\", Page 3, Section: \"Methodology\"].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "page": 1
+          },
+          {
+            "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+            "page": 3
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "id": "Q11",
+      "category": "missing_evidence",
+      "question": "What is the recommended surgical resection margin for stage IV glioblastoma multiforme recurrence according to these papers?",
+      "answerable": false,
+      "expected_sources": [],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0263,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.1176,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 5,
+          "score": 0.0349,
+          "excerpt": "Limitations & Future Work Limited generalization on low-dose portable bedside radiography units and pediatric cohorts under 12 years old. Multi-center validati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 3,
+          "score": 0.0325,
+          "excerpt": "Methodology & Architecture Evaluated a cross-attention vision-language backbone trained on multi-view chest X-rays. Document chunks and diagnostic bounding box…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.0294,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        }
+      ],
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": null,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q12",
+      "category": "ambiguous",
+      "question": "What is the best model for medical AI?",
+      "answerable": false,
+      "expected_sources": [],
+      "retrieved": [
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0599,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.0525,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.0504,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 5,
+          "score": 0.0548,
+          "excerpt": "Limitations & Future Work Requires minimum 8 GB memory on physician edge workstations. Complex multi-specialty surgical notes require further clinical annotati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 5,
+          "score": 0.0534,
+          "excerpt": "Limitations & Future Work Limited generalization on low-dose portable bedside radiography units and pediatric cohorts under 12 years old. Multi-center validati…"
+        }
+      ],
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": null,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "Q13",
+      "category": "citation",
+      "question": "Which paper reports 94.2% citation precision for clinical summaries?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 4,
+          "score": 0.293,
+          "excerpt": "Key Findings & Metrics Achieved 94.2% citation precision across 200 clinical summaries, eliminating hallucinated contraindications and reducing factual errors …"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 2,
+          "score": 0.0942,
+          "excerpt": "Introduction Medical students face cognitive overload when synthesizing dense clinical practice guidelines and pharmacological trial reports. Interactive forma…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.1759,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.051,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 3,
+          "score": 0.1256,
+          "excerpt": "Methodology & Architecture Implemented 4-bit INT4 quantization paired with strict page-level citation tracking. Every clinical summary sentence must map to an …"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The paper \"Privacy-Preserving On-Device Clinical Language Models\" reports 94.2% citation precision for clinical summaries [Doc: \"Privacy-Preserving On-Device Clinical Language Models\", Page 4].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Privacy-Preserving On-Device Clinical Language Models",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          4,
+          2,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "id": "Q14",
+      "category": "page_citation",
+      "question": "On which page does the medical education paper report the 34% improvement in retention scores?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Formative Assessment and Active Recall in Medical Education",
+          "pages": [
+            4
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 4,
+          "score": 0.1997,
+          "excerpt": "Key Findings & Metrics Double-blind study across 60 medical residents showed a 34% improvement in 30-day clinical guideline retention scores compared to passiv…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0784,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 3,
+          "score": 0.067,
+          "excerpt": "Methodology & Architecture Implemented 4-bit INT4 quantization paired with strict page-level citation tracking. Every clinical summary sentence must map to an …"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.0243,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 3,
+          "score": 0.0217,
+          "excerpt": "Methodology & Architecture Evaluated a cross-attention vision-language backbone trained on multi-view chest X-rays. Document chunks and diagnostic bounding box…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The medical education paper reports the 34% improvement in retention scores on Page 4 [Doc: \"Formative Assessment and Active Recall in Medical Education\", Page: 4].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Formative Assessment and Active Recall in Medical Education",
+            "page": 4
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          4,
+          2
+        ]
+      }
+    },
+    {
+      "id": "Q15",
+      "category": "conflicting_evidence",
+      "question": "Do the papers agree on whether on-device inference eliminates all privacy risks?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "pages": [
+            1,
+            5
+          ]
+        },
+        {
+          "document": "Privacy-Preserving On-Device Clinical Language Models",
+          "pages": [
+            2,
+            5
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Privacy-Preserving On-Device Clinical Language Models",
+          "page_number": 2,
+          "score": 0.1061,
+          "excerpt": "Introduction Centralized cloud clinical LLMs present unacceptable privacy risks for protected patient records and clinical trial dossiers. Local execution prev…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 1,
+          "score": 0.0665,
+          "excerpt": "Abstract Investigates multimodal vision-language transformers for chest radiograph lesion localization and pneumonia detection. Demonstrates on-device edge inf…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 2,
+          "score": 0.0327,
+          "excerpt": "Introduction Hospital diagnostic workflows require automated radiograph triage without transmitting sensitive diagnostic imaging over insecure external network…"
+        },
+        {
+          "document_title": "Formative Assessment and Active Recall in Medical Education",
+          "page_number": 1,
+          "score": 0.0436,
+          "excerpt": "Abstract Assesses the efficacy of automated clinical vignette synthesis, active-recall flashcards, and multiple-choice formative quizzes for medical resident t…"
+        },
+        {
+          "document_title": "Clinical Multimodal Transformers for Diagnostic Radiology",
+          "page_number": 4,
+          "score": 0.041,
+          "excerpt": "Key Findings & Metrics Achieved 91.4% AUC on pneumonia detection and reduced diagnostic report latency to 420 ms per radiograph with zero cloud leakage of pati…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    }
+  ]
+}
