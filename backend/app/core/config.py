@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
     OPENROUTER_API_KEY: str | None = None
-    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
+    OPENROUTER_MODEL: str = "qwen/qwen-2.5-72b-instruct"
+    OPENROUTER_MAX_TOKENS: int = 1024
+
 
 
     # Qualcomm Deployment Settings

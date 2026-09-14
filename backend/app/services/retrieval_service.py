@@ -124,4 +124,6 @@ class RetrievalService:
             answer=gen_result.text,
             sources=sources if has_sufficient else [],
             has_sufficient_evidence=has_sufficient,
+            prompt_tokens=gen_result.prompt_tokens,
+            completion_tokens=gen_result.completion_tokens,
         )

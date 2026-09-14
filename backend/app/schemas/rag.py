@@ -33,3 +33,5 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[SourceReference]
     has_sufficient_evidence: bool
+    prompt_tokens: int = 0
+    completion_tokens: int = 0

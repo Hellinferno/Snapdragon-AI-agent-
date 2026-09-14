@@ -27,8 +27,9 @@ class OpenRouterProvider(LLMProvider):
             "model": settings.OPENROUTER_MODEL,
             "messages": messages,
             "temperature": 0.1,
-            "max_tokens": 1024,
+            "max_tokens": settings.OPENROUTER_MAX_TOKENS,
         }
+
 
 
         headers = {
