@@ -83,3 +83,7 @@ backend/benchmarks/*.json
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# RAG evaluation scratch index and the copyrighted benchmark book (never commit)
+backend/evaluation/.cache/
+datapot.vn-Data-Science-for-Business.pdf

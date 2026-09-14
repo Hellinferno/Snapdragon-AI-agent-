@@ -1,6 +1,8 @@
 """Explicit OpenRouter-backed generation provider."""
 
 import os
+import ssl
+
 import httpx
 from app.core.config import settings
 from app.providers.base import GenerationResult, LLMProvider
@@ -40,7 +42,9 @@ class OpenRouterProvider(LLMProvider):
         }
 
         url = "https://openrouter.ai/api/v1/chat/completions"
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        # Verify against the OS trust store rather than certifi's bundle, so machines whose
+        # antivirus or corporate proxy re-signs TLS (trusted by the OS) can still connect.
+        async with httpx.AsyncClient(timeout=45.0, verify=ssl.create_default_context()) as client:
             response = await client.post(
                 url,
                 headers=headers,

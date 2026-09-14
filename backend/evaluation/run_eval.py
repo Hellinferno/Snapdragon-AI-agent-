@@ -1,389 +1,330 @@
 #!/usr/bin/env python3
-"""
-ScholarEdge RAG Evaluation Script
+"""ScholarEdge RAG evaluation runner.
 
-Runs the evaluation dataset through the ScholarEdge pipeline and computes:
-- Retrieval accuracy
-- Groundedness
-- Citation accuracy
-- Page accuracy
-- Abstention accuracy
-- Latency metrics
-- Token usage
+Builds a fresh, isolated index of a dataset's corpus, then scores the pipeline with the
+pure metrics in evaluation/metrics.py.
+
+    # Retrieval only: deterministic, no LLM calls, no API cost
+    python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. --mode retrieval
+
+    # Retrieval + generation + citations through the configured LLM provider
+    python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. --mode full --label baseline
+
+Run from the backend/ directory. Results go to evaluation/results/<dataset>/<label>.json.
 """
 
+from __future__ import annotations
+
+import argparse
 import asyncio
+import hashlib
 import json
-import time
+import platform
+import shutil
+import subprocess
 import sys
+import time
+from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import datetime
-from dataclasses import dataclass, asdict
-from typing import Any
 
-# Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BACKEND_DIR))
 
-from app.core.config import settings
-from app.core.database import async_session_factory
-from app.services.retrieval_service import RetrievalService
-from app.providers.factory import get_embedding_provider, get_llm_provider
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
 
+from app.core.config import settings  # noqa: E402
+from app.core.database import Base  # noqa: E402
+from app.providers.factory import get_embedding_provider, get_llm_provider  # noqa: E402
+from app.services.document_service import DocumentService  # noqa: E402
+from app.services.retrieval_service import RetrievalService  # noqa: E402
+from evaluation.metrics import (  # noqa: E402
+    GenerationSummary,
+    Ratio,
+    RetrievalSummary,
+    judge_generation,
+    judge_retrieval,
+    percentile,
+    validate_question,
+)
 
-@dataclass
-class EvalResult:
-    question_id: str
-    category: str
-    question: str
-    expected_answer: str
-    expected_sources: list[dict]
-    actual_answer: str
-    actual_sources: list[dict]
-    retrieved_chunks: list[dict]
-    has_sufficient_evidence: bool
-    latency_ms: float
-    prompt_tokens: int
-    completion_tokens: int
-    retrieval_accuracy: bool
-    groundedness: bool
-    citation_accuracy: bool
-    page_accuracy: bool
-    abstention_accuracy: bool
+EVAL_DIR = Path(__file__).resolve().parent
+DATASETS_DIR = EVAL_DIR / "datasets"
+RESULTS_DIR = EVAL_DIR / "results"
+CACHE_DIR = EVAL_DIR / ".cache"
+EXCERPT_CHARS = 160  # the repository is public: keep copyrighted corpus text in results short
+DEFAULT_CORPUS_DIRS = {"demo_papers": BACKEND_DIR / "data" / "demo_papers"}
 
 
-def load_eval_dataset(path: Path) -> list[dict]:
-    with open(path, 'r') as f:
-        return json.load(f)
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def normalize_text(text: str) -> str:
-    """Normalize text for comparison."""
-    return text.lower().strip()
+def git_state() -> dict:
+    def run(*args: str) -> str:
+        try:
+            return subprocess.run(["git", *args], cwd=BACKEND_DIR, capture_output=True, text=True, check=True).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            return ""
+
+    return {"commit": run("rev-parse", "--short", "HEAD") or None, "dirty": bool(run("status", "--porcelain", "--", "app", "evaluation"))}
 
 
-def doc_title_match(expected: str, actual: str) -> bool:
-    """Check if document titles match (fuzzy)."""
-    exp = expected.lower()
-    act = actual.lower()
-    # Check if key words overlap
-    exp_words = set(exp.split())
-    act_words = set(act.split())
-    # Remove common words
-    stop_words = {'the', 'and', 'for', 'on', 'in', 'of', 'a', 'to', 'with', 'by', 'or', 'as', 'is', 'from'}
-    exp_words = exp_words - stop_words
-    act_words = act_words - stop_words
-    # Check significant overlap
-    overlap = len(exp_words & act_words)
-    return overlap >= 2 or exp in act or act in exp
+def load_dataset(name_or_path: str) -> tuple[dict, Path]:
+    path = Path(name_or_path)
+    if not path.suffix:
+        path = DATASETS_DIR / f"{name_or_path}.json"
+    dataset = json.loads(path.read_text(encoding="utf-8"))
+    ids = [q["id"] for q in dataset["questions"]]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate question ids in dataset")
+    for question in dataset["questions"]:
+        validate_question(question)
+    return dataset, path
 
 
-def check_retrieval_accuracy(expected_sources: list[dict], actual_sources: list[dict]) -> bool:
-    """Check if the expected document and page were retrieved."""
-    if not expected_sources:
-        return True  # No expected sources means unanswerable question
-    
-    for exp in expected_sources:
-        exp_doc = exp.get('document', '')
-        exp_page = exp.get('page')
-        
-        found = False
-        for act in actual_sources:
-            act_doc = act.get('document_title', '')
-            act_page = act.get('page_number')
-            
-            if doc_title_match(exp_doc, act_doc):
-                if exp_page is None or act_page == exp_page:
-                    found = True
-                    break
-        if not found:
-            return False
-    return True
+def resolve_corpus(dataset: dict, corpus_dir: Path | None) -> list[tuple[dict, Path]]:
+    base = corpus_dir or DEFAULT_CORPUS_DIRS.get(dataset["name"])
+    if base is None:
+        raise SystemExit(f"Dataset '{dataset['name']}' needs --corpus-dir pointing at its PDFs")
+    resolved = []
+    for entry in dataset["corpus"]:
+        pdf = Path(base) / entry["filename"]
+        if not pdf.exists():
+            raise SystemExit(f"Corpus file not found: {pdf}")
+        if entry.get("sha256") and sha256_file(pdf) != entry["sha256"]:
+            raise SystemExit(f"{pdf.name} does not match the dataset's sha256; page labels would be wrong")
+        resolved.append((entry, pdf))
+    return resolved
 
 
-def check_groundedness(answer: str, sources: list[dict], expected_answer: str) -> bool:
-    """Check if answer is grounded in retrieved sources."""
-    if not sources:
-        return "insufficient evidence" in answer.lower()
-    
-    answer_lower = answer.lower()
-    expected_lower = expected_answer.lower()
-    
-    # For unanswerable questions
-    if "insufficient evidence" in expected_lower:
-        return "insufficient evidence" in answer_lower
-    
-    # Check if answer cites sources properly
-    has_citation = "[doc:" in answer_lower or "[source" in answer_lower
-    
-    # Check if expected key content appears in answer
-    expected_keywords = set(expected_lower.split())
-    answer_keywords = set(answer_lower.split())
-    overlap = len(expected_keywords & answer_keywords) / max(len(expected_keywords), 1)
-    
-    return has_citation and overlap > 0.2
+def excerpt(text: str) -> str:
+    flat = " ".join(text.split())
+    return flat if len(flat) <= EXCERPT_CHARS else flat[: EXCERPT_CHARS - 1] + "…"
 
 
-def check_citation_accuracy(answer: str, expected_sources: list[dict], actual_sources: list[dict]) -> bool:
-    """Check if cited documents match expected sources."""
-    if not expected_sources:
-        return "insufficient evidence" in answer.lower() or len(actual_sources) == 0
-    
-    answer_lower = answer.lower()
-    
-    # Check if answer cites the expected document
-    for exp in expected_sources:
-        exp_doc = exp.get('document', '')
-        if exp_doc:
-            exp_lower = exp_doc.lower()
-            if exp_lower not in answer_lower:
-                # Check if any actual source matches
-                found = False
-                for act in actual_sources:
-                    act_doc = act.get('document_title', '')
-                    if doc_title_match(exp_doc, act_doc):
-                        found = True
-                        break
-                if not found:
-                    return False
-    return True
+def source_dict(src) -> dict:
+    return {
+        "document_title": src.document_title,
+        "page_number": src.page_number,
+        "chunk_id": src.chunk_id,
+        "score": src.relevance_score,
+        "text": src.excerpt,
+    }
 
 
-def check_page_accuracy(answer: str, expected_sources: list[dict], actual_sources: list[dict]) -> bool:
-    """Check if cited pages match expected pages."""
-    if not expected_sources:
-        return True
-    
-    answer_lower = answer.lower()
-    
-    for exp in expected_sources:
-        exp_page = exp.get('page')
-        exp_doc = exp.get('document', '')
-        
-        if exp_page is None:
-            continue
-            
-        # Check if the page is mentioned in the answer for this document
-        page_mentioned = f"page {exp_page}" in answer_lower or f"page: {exp_page}" in answer_lower
-        
-        # Also check actual sources
-        found_in_sources = False
-        for act in actual_sources:
-            act_doc = act.get('document_title', '')
-            act_page = act.get('page_number')
-            if doc_title_match(exp_doc, act_doc) and act_page == exp_page:
-                found_in_sources = True
-                break
-        
-        if not (page_mentioned or found_in_sources):
-            return False
-    return True
+async def build_index(session: AsyncSession, corpus: list[tuple[dict, Path]], embedding) -> None:
+    service = DocumentService(session, embedding)
+    for entry, pdf in corpus:
+        t0 = time.perf_counter()
+        result = await service.process_local_pdf(pdf, title=entry["title"])
+        print(f"Indexed {entry['title']!r}: {result.status} in {time.perf_counter() - t0:.1f}s")
 
 
-def check_abstention_accuracy(expected_answer: str, actual_answer: str, has_sufficient_evidence: bool) -> bool:
-    """Check if the system correctly refuses unanswerable questions."""
-    expected_lower = expected_answer.lower()
-    actual_lower = actual_answer.lower()
-    
-    expected_refusal = "insufficient evidence" in expected_lower
-    actual_refusal = "insufficient evidence" in actual_lower or not has_sufficient_evidence
-    
-    return expected_refusal == actual_refusal
+def summarize_latencies(values: list[float]) -> dict:
+    if not values:
+        return {"count": 0}
+    return {
+        "count": len(values),
+        "mean_ms": round(sum(values) / len(values), 1),
+        "p50_ms": round(percentile(values, 50), 1),
+        "p95_ms": round(percentile(values, 95), 1),
+    }
 
 
-async def run_evaluation():
-    # Load dataset
-    eval_path = Path(__file__).parent / "rag_eval.json"
-    dataset = load_eval_dataset(eval_path)
-    
-    # Initialize services
-    async with async_session_factory() as db:
-        embedding_provider = get_embedding_provider()
-        llm_provider = get_llm_provider()
-        retrieval_service = RetrievalService(db, embedding_provider, llm_provider)
-        
-        results = []
-        total_latency = 0
-        latencies = []
-        total_prompt_tokens = 0
-        total_completion_tokens = 0
-        
-        print(f"Running evaluation on {len(dataset)} questions...")
-        print("=" * 60)
-        
-        for item in dataset:
-            qid = item['id']
-            question = item['question']
-            expected_answer = item['expected_answer']
-            expected_sources = item['expected_sources']
-            category = item['category']
-            
-            print(f"\n{qid} ({category}): {question[:60]}...")
-            
-            # Run the query
-            start_time = time.perf_counter()
-            chat_response = await retrieval_service.chat(
-                question=question,
-                top_k=5,
-                min_score_threshold=0.08
-            )
-            latency_ms = (time.perf_counter() - start_time) * 1000
-            
-            total_latency += latency_ms
-            latencies.append(latency_ms)
-            
-            # Capture token usage from LLM provider if available
-            prompt_tokens = getattr(chat_response, 'prompt_tokens', 0)
-            completion_tokens = getattr(chat_response, 'completion_tokens', 0)
-            total_prompt_tokens += prompt_tokens
-            total_completion_tokens += completion_tokens
-            
-            # Extract actual sources
-            actual_sources = []
-            for src in chat_response.sources:
-                actual_sources.append({
-                    'document_title': src.document_title,
-                    'page_number': src.page_number,
-                    'chunk_id': src.chunk_id,
-                    'relevance_score': src.relevance_score,
-                    'excerpt': src.excerpt[:200] if src.excerpt else ''
-                })
-            
-            # Extract retrieved chunks (full)
-            retrieved_chunks = []
-            for src in chat_response.sources:
-                retrieved_chunks.append({
-                    'document_title': src.document_title,
-                    'page_number': src.page_number,
-                    'chunk_id': src.chunk_id,
-                    'relevance_score': src.relevance_score,
-                    'excerpt': src.excerpt
-                })
-            
-            # Score metrics
-            retrieval_acc = check_retrieval_accuracy(expected_sources, actual_sources)
-            grounded = check_groundedness(chat_response.answer, actual_sources, expected_answer)
-            citation_acc = check_citation_accuracy(chat_response.answer, expected_sources, actual_sources)
-            page_acc = check_page_accuracy(chat_response.answer, expected_sources, actual_sources)
-            abstention_acc = check_abstention_accuracy(expected_answer, chat_response.answer, chat_response.has_sufficient_evidence)
-            
-            result = EvalResult(
-                question_id=qid,
-                category=category,
-                question=question,
-                expected_answer=expected_answer,
-                expected_sources=expected_sources,
-                actual_answer=chat_response.answer,
-                actual_sources=actual_sources,
-                retrieved_chunks=retrieved_chunks,
-                has_sufficient_evidence=chat_response.has_sufficient_evidence,
-                latency_ms=latency_ms,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                retrieval_accuracy=retrieval_acc,
-                groundedness=grounded,
-                citation_accuracy=citation_acc,
-                page_accuracy=page_acc,
-                abstention_accuracy=abstention_acc
-            )
-            
-            results.append(result)
-            
-            # Print status
-            status_icons = {
-                True: "[OK]",
-                False: "[FAIL]"
+async def evaluate(args: argparse.Namespace) -> dict:
+    dataset, dataset_path = load_dataset(args.dataset)
+    corpus = resolve_corpus(dataset, args.corpus_dir)
+    questions = [q for q in dataset["questions"] if not args.only or q["id"] in args.only]
+
+    # Isolated storage: never touches the app database or its uploads
+    work_dir = CACHE_DIR / dataset["name"]
+    shutil.rmtree(work_dir, ignore_errors=True)
+    (work_dir / "uploads").mkdir(parents=True)
+    settings.UPLOAD_DIR = work_dir / "uploads"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{work_dir / 'eval.db'}", connect_args={"check_same_thread": False})
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+
+    embedding = get_embedding_provider()
+    llm = get_llm_provider() if args.mode == "full" else None
+
+    retrieval = RetrievalSummary()
+    generation = GenerationSummary()
+    by_category: dict[str, dict[str, Ratio]] = defaultdict(lambda: {"evidence_hit": Ratio(), "page_hit": Ratio(), "correct": Ratio()})
+    records: list[dict] = []
+    search_latencies: list[float] = []
+    chat_latencies: list[float] = []
+    top_scores = {"answerable": [], "unanswerable": []}
+    tokens = {"prompt": 0, "completion": 0}
+
+    async with session_factory() as session:
+        await build_index(session, corpus, embedding)
+        service = RetrievalService(session, embedding, llm)
+
+        for q in questions:
+            t0 = time.perf_counter()
+            # Retrieval is measured without the evidence threshold so it is not confounded with abstention
+            search = await service.search(q["question"], top_k=args.top_k, min_score=float("-inf"))
+            search_latencies.append((time.perf_counter() - t0) * 1000)
+            retrieved = [source_dict(s) for s in search.results]
+            top_score = retrieved[0]["score"] if retrieved else None
+            top_scores["answerable" if q["answerable"] else "unanswerable"].append(top_score)
+
+            record: dict = {
+                "id": q["id"],
+                "category": q["category"],
+                "question": q["question"],
+                "answerable": q["answerable"],
+                "expected_sources": q["expected_sources"],
+                "retrieved": [
+                    {**{k: r[k] for k in ("document_title", "page_number", "score")}, "excerpt": excerpt(r["text"])}
+                    for r in retrieved
+                ],
             }
-            print(f"  Retrieval: {status_icons[retrieval_acc]} | Grounded: {status_icons[grounded]} | Citation: {status_icons[citation_acc]} | Page: {status_icons[page_acc]} | Abstention: {status_icons[abstention_acc]} | Latency: {latency_ms:.0f}ms")
-        
-        # Calculate summary metrics
-        total = len(results)
-        retrieval_acc_count = sum(1 for r in results if r.retrieval_accuracy)
-        grounded_count = sum(1 for r in results if r.groundedness)
-        citation_acc_count = sum(1 for r in results if r.citation_accuracy)
-        page_acc_count = sum(1 for r in results if r.page_accuracy)
-        abstention_acc_count = sum(1 for r in results if r.abstention_accuracy)
-        
-        # Answerable questions (those with expected sources)
-        answerable = [r for r in results if r.expected_sources]
-        unanswerable = [r for r in results if not r.expected_sources]
-        
-        # Metrics calculated on appropriate subsets
-        retrieval_acc_pct = retrieval_acc_count / total * 100
-        grounded_pct = sum(1 for r in answerable if r.groundedness) / len(answerable) * 100 if answerable else 100
-        citation_acc_pct = citation_acc_count / total * 100
-        page_acc_pct = page_acc_count / total * 100
-        abstention_acc_pct = sum(1 for r in unanswerable if r.abstention_accuracy) / len(unanswerable) * 100 if unanswerable else 100
-        
-        avg_latency = total_latency / total
-        p95_latency = sorted(latencies)[int(len(latencies) * 0.95)]
-        
-        # Print summary
-        print("\n" + "=" * 60)
-        print("ScholarEdge RAG Evaluation Summary")
-        print("=" * 60)
-        print(f"Questions:              {total}")
-        print(f"Retrieval accuracy:     {retrieval_acc_pct:.1f}%")
-        print(f"Groundedness:           {grounded_pct:.1f}%")
-        print(f"Citation accuracy:      {citation_acc_pct:.1f}%")
-        print(f"Page accuracy:          {page_acc_pct:.1f}%")
-        print(f"Abstention accuracy:    {abstention_acc_pct:.1f}%")
-        print(f"\nAverage latency:        {avg_latency:.2f}ms")
-        print(f"P95 latency:            {p95_latency:.2f}ms")
-        print(f"Total prompt tokens:    {total_prompt_tokens}")
-        print(f"Total completion tokens: {total_completion_tokens}")
-        
-        # Failed questions
-        print("\nFAILED:")
-        for r in results:
-            failures = []
-            if not r.retrieval_accuracy:
-                failures.append("retrieval")
-            if not r.groundedness:
-                failures.append("groundedness")
-            if not r.citation_accuracy:
-                failures.append("citation")
-            if not r.page_accuracy:
-                failures.append("page citation")
-            if not r.abstention_accuracy:
-                failures.append("abstention")
-            if failures:
-                print(f"  {r.question_id} - {', '.join(failures)}")
-        
-        # Save detailed results
-        results_dir = Path(__file__).parent / "results"
-        results_dir.mkdir(exist_ok=True)
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = results_dir / f"eval_{timestamp}.json"
-        
-        output_data = {
-            "timestamp": timestamp,
-            "summary": {
-                "total_questions": total,
-                "retrieval_accuracy": retrieval_acc_pct,
-                "groundedness": grounded_pct,
-                "citation_accuracy": citation_acc_pct,
-                "page_accuracy": page_acc_pct,
-                "abstention_accuracy": abstention_acc_pct,
-                "avg_latency_ms": avg_latency,
-                "p95_latency_ms": p95_latency,
-                "total_prompt_tokens": total_prompt_tokens,
-                "total_completion_tokens": total_completion_tokens
-            },
-            "results": [asdict(r) for r in results]
-        }
-        
-        with open(output_file, 'w') as f:
-            json.dump(output_data, f, indent=2)
-        
-        # Also save as latest.json
-        latest_file = results_dir / "latest.json"
-        with open(latest_file, 'w') as f:
-            json.dump(output_data, f, indent=2)
-        
-        print(f"\nDetailed results saved to: {output_file}")
-        print(f"Latest results saved to: {latest_file}")
+
+            if q["answerable"]:
+                rj = judge_retrieval(q, retrieved)
+                retrieval.add(rj)
+                if rj.evidence_hit is not None:
+                    by_category[q["category"]]["evidence_hit"].add(rj.evidence_hit)
+                by_category[q["category"]]["page_hit"].add(rj.page_hit)
+                record["retrieval"] = {
+                    "doc_hit": rj.doc_hit,
+                    "page_hit": rj.page_hit,
+                    "page_recall": round(rj.page_recall, 4),
+                    "evidence_hit": rj.evidence_hit,
+                    "first_relevant_rank": rj.first_relevant_rank,
+                }
+
+            if llm is not None:
+                t0 = time.perf_counter()
+                chat = await service.chat(q["question"], top_k=args.top_k, min_score_threshold=args.min_score)
+                chat_latencies.append((time.perf_counter() - t0) * 1000)
+                tokens["prompt"] += chat.prompt_tokens
+                tokens["completion"] += chat.completion_tokens
+                context = [source_dict(s) for s in chat.sources]
+                gj = judge_generation(q, chat.answer, context)
+                generation.add(q, gj)
+                if q["answerable"]:
+                    by_category[q["category"]]["correct"].add(bool(gj.correct))
+                record["generation"] = {
+                    "answer": chat.answer,
+                    "has_sufficient_evidence": chat.has_sufficient_evidence,
+                    "refused": gj.refused,
+                    "correct": gj.correct,
+                    "grounded": gj.grounded if q["answerable"] and not gj.refused else None,
+                    "citations": [{"document": d, "page": p} for d, p in gj.citations],
+                    "cited_expected_page": gj.cited_expected_page if q["answerable"] and not gj.refused else None,
+                    "context_pages": [c["page_number"] for c in context],
+                }
+            records.append(record)
+            print_question(record)
+
+    await engine.dispose()
+
+    def score_stats(values: list[float | None]) -> dict:
+        present = [v for v in values if v is not None]
+        return {"min": min(present, default=None), "median": percentile(present, 50), "max": max(present, default=None)}
+
+    gen = generation.to_dict() if llm is not None else None
+    return {
+        "dataset": dataset["name"],
+        "label": args.label,
+        "mode": args.mode,
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "config": {
+            "git": git_state(),
+            "python": platform.python_version(),
+            "dataset_sha256": sha256_file(dataset_path),
+            "corpus": [{"title": e["title"], "sha256": sha256_file(p)} for e, p in corpus],
+            "embedding_provider": embedding.name,
+            "llm_provider": llm.name if llm else None,
+            "top_k": args.top_k,
+            "min_score_threshold": args.min_score if llm else None,
+            "chunk_size_chars": settings.CHUNK_SIZE_CHARS,
+            "chunk_overlap_chars": settings.CHUNK_OVERLAP_CHARS,
+        },
+        "counts": {
+            "questions": len(questions),
+            "answerable": sum(q["answerable"] for q in questions),
+            "unanswerable": sum(not q["answerable"] for q in questions),
+        },
+        "retrieval": retrieval.to_dict(),
+        "generation": gen["generation"] if gen else None,
+        "citation": gen["citation"] if gen else None,
+        "by_category": {
+            cat: {k: v.to_dict() for k, v in ratios.items() if v.denominator}
+            for cat, ratios in sorted(by_category.items())
+        },
+        "top1_score": {k: score_stats(v) for k, v in top_scores.items()},
+        "latency": {"search": summarize_latencies(search_latencies), "chat": summarize_latencies(chat_latencies)},
+        "tokens": tokens if llm else None,
+        "results": records,
+    }
+
+
+def fmt(metric: dict | None) -> str:
+    if metric is None:
+        return "n/a"
+    if "percent" in metric:
+        p = metric["percent"]
+        return f"{'n/a' if p is None else f'{p:5.1f}%'} ({metric['numerator']}/{metric['denominator']})"
+    m = metric["mean"]
+    return f"{'n/a' if m is None else f'{m:.3f}'} (n={metric['count']})"
+
+
+def print_question(record: dict) -> None:
+    parts = [record["id"], record["category"]]
+    if "retrieval" in record:
+        r = record["retrieval"]
+        parts.append(f"evidence={r['evidence_hit']} page={r['page_hit']} rank={r['first_relevant_rank']}")
+    if "generation" in record:
+        g = record["generation"]
+        parts.append(f"refused={g['refused']} correct={g['correct']} grounded={g['grounded']}")
+    print("  " + " | ".join(str(p) for p in parts))
+
+
+def print_summary(report: dict) -> None:
+    print("\n" + "=" * 72)
+    print(f"{report['dataset']} [{report['label']}] mode={report['mode']}  "
+          f"embedding={report['config']['embedding_provider']}  llm={report['config']['llm_provider']}")
+    print("=" * 72)
+    for group in ("retrieval", "generation", "citation"):
+        if report[group]:
+            print(f"{group.upper()}")
+            for name, metric in report[group].items():
+                print(f"  {name:24s} {fmt(metric)}")
+    print("BY CATEGORY")
+    for cat, metrics in report["by_category"].items():
+        print(f"  {cat:16s} " + "  ".join(f"{k}={fmt(v)}" for k, v in metrics.items()))
+    print(f"TOP-1 SCORE  {report['top1_score']}")
+    print(f"LATENCY      {report['latency']}")
+    if report["tokens"]:
+        print(f"TOKENS       {report['tokens']}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dataset", default="data_science_for_business", help="dataset name in evaluation/datasets or a path")
+    parser.add_argument("--corpus-dir", type=Path, help="directory containing the dataset's corpus PDFs")
+    parser.add_argument("--mode", choices=["retrieval", "full"], default="retrieval")
+    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--min-score", type=float, default=0.08, help="evidence threshold passed to chat() in full mode")
+    parser.add_argument("--label", default=None, help="result file name (default: <mode>_<timestamp>)")
+    parser.add_argument("--only", nargs="*", help="restrict to these question ids")
+    args = parser.parse_args()
+    args.label = args.label or f"{args.mode}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    report = asyncio.run(evaluate(args))
+    print_summary(report)
+
+    out = RESULTS_DIR / report["dataset"] / f"{args.label}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"\nSaved {out.relative_to(BACKEND_DIR)}")
 
 
 if __name__ == "__main__":
-    asyncio.run(run_evaluation())
+    main()

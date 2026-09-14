@@ -19,6 +19,15 @@ class ParsedPDF:
     pages: list[ParsedPage] = field(default_factory=list)
 
 
+def clean_extracted_text(text: str) -> str:
+    """Repairs surrogate code points pypdf emits for astral glyphs (e.g. math symbols).
+
+    Valid surrogate pairs are recombined; lone surrogates become U+FFFD. Without this,
+    SQLite rejects the text with UnicodeEncodeError and the whole document fails to index.
+    """
+    return text.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
+
+
 def parse_pdf(file_path: Path | str) -> ParsedPDF:
     """
     Extracts text page-by-page from a PDF file.
@@ -44,7 +53,7 @@ def parse_pdf(file_path: Path | str) -> ParsedPDF:
 
     for idx, page in enumerate(reader.pages):
         page_num = idx + 1
-        page_text = page.extract_text() or ""
+        page_text = clean_extracted_text(page.extract_text() or "")
         # Normalize whitespace while preserving line structure
         normalized_text = "\n".join(
             line.strip() for line in page_text.splitlines() if line.strip()

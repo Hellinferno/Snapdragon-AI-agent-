@@ -46,3 +46,15 @@ def test_pdf_parser_metadata_and_pages():
 def test_pdf_parser_nonexistent_file():
     with pytest.raises(FileNotFoundError):
         parse_pdf("non_existent_file_xyz.pdf")
+
+
+def test_clean_extracted_text_repairs_surrogates():
+    from app.services.pdf_parser import clean_extracted_text
+
+    # Surrogate pair for U+1D465 (mathematical italic x), as pypdf emits it
+    assert clean_extracted_text("f(𝑥) = 1") == "f(\U0001d465) = 1"
+    # Lone surrogate becomes the replacement character and is UTF-8 encodable
+    cleaned = clean_extracted_text("broken \ud835 glyph")
+    assert cleaned == "broken � glyph"
+    cleaned.encode("utf-8")
+    assert clean_extracted_text("plain text") == "plain text"

@@ -1,0 +1,583 @@
+{
+  "name": "data_science_for_business",
+  "description": "Primary retrieval benchmark over Provost & Fawcett, Data Science for Business (O'Reilly, 2013). Page numbers are 1-based PDF page indices as stored by ScholarEdge; printed page = PDF page - 24 in the main matter. The PDF is copyrighted and is not committed: pass its location with --corpus-dir.",
+  "corpus": [
+    {
+      "title": "Data Science for Business",
+      "filename": "datapot.vn-Data-Science-for-Business.pdf",
+      "sha256": "5414cc78e6b8a6c6ba16f7263ac9d9d61fd2dafeab28be3e4b1e1801ef561867"
+    }
+  ],
+  "questions": [
+    {
+      "id": "B01",
+      "category": "direct_factual",
+      "question": "In the Wal-Mart Hurricane Frances example, which product's sales increased to about seven times their normal rate ahead of a hurricane?",
+      "answerable": true,
+      "expected_answer": "Strawberry Pop-Tarts (and the top-selling pre-hurricane item was beer).",
+      "answer_keywords": [
+        [
+          "pop-tarts",
+          "pop tarts",
+          "poptarts"
+        ]
+      ],
+      "evidence": [
+        "seven times their normal sales rate"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "category": "direct_factual",
+      "question": "In the MegaTelCo churn example, what percentage of cell phone customers leave when their contracts expire?",
+      "answerable": true,
+      "expected_answer": "20% of cell phone customers in the mid-Atlantic region leave when their contracts expire.",
+      "answer_keywords": [
+        [
+          "20%",
+          "20 percent",
+          "twenty percent"
+        ]
+      ],
+      "evidence": [
+        "20% of cell phone customers leave when their contracts expire"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B03",
+      "category": "direct_factual",
+      "question": "What does CRISP-DM stand for?",
+      "answerable": true,
+      "expected_answer": "Cross Industry Standard Process for Data Mining.",
+      "answer_keywords": [
+        [
+          "cross industry standard process",
+          "cross-industry standard process"
+        ]
+      ],
+      "evidence": [
+        "cross industry standard process for data mining"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            51
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B04",
+      "category": "direct_factual",
+      "question": "How much higher is productivity for a firm that is one standard deviation higher on the data-driven decision-making (DDD) scale?",
+      "answerable": true,
+      "expected_answer": "One standard deviation higher on the DDD scale is associated with a 4%-6% increase in productivity.",
+      "answer_keywords": [
+        [
+          "4%",
+          "4 %",
+          "four percent"
+        ],
+        [
+          "6%",
+          "6 %",
+          "six percent"
+        ]
+      ],
+      "evidence": [
+        "one standard deviation higher on the ddd scale"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B05",
+      "category": "direct_factual",
+      "question": "When cross-validation splits a labeled dataset into k folds, what values of k does the book say are typical?",
+      "answerable": true,
+      "expected_answer": "Typically k is five or ten.",
+      "answer_keywords": [
+        [
+          "five",
+          "k=5",
+          "k = 5",
+          "5-fold",
+          "5 folds"
+        ],
+        [
+          "ten",
+          "k=10",
+          "k = 10",
+          "10-fold",
+          "10 folds"
+        ]
+      ],
+      "evidence": [
+        "typically, k will be five or ten"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            151
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B06",
+      "category": "conceptual",
+      "question": "How does the book distinguish a supervised data mining problem from an unsupervised one?",
+      "answerable": true,
+      "expected_answer": "A supervised problem has a specific target to predict (e.g., will a customer churn), and data on that target must exist; an unsupervised problem has no specified target or purpose, as in clustering.",
+      "answer_keywords": [
+        [
+          "target"
+        ],
+        [
+          "unsupervised"
+        ]
+      ],
+      "evidence": [
+        "when there is no such target, the data mining problem is referred to as unsupervised"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            48
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B07",
+      "category": "conceptual",
+      "question": "How does the book define overfitting?",
+      "answerable": true,
+      "expected_answer": "Overfitting is the tendency of data mining procedures to tailor models to the training data at the expense of generalization to previously unseen data points.",
+      "answer_keywords": [
+        [
+          "training data"
+        ],
+        [
+          "generaliz",
+          "unseen"
+        ]
+      ],
+      "evidence": [
+        "overfitting is the tendency of data mining procedures to tailor models to the training data"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            137
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B08",
+      "category": "conceptual",
+      "question": "What does information gain measure when segmenting data on an attribute?",
+      "answerable": true,
+      "expected_answer": "Information gain measures how much an attribute improves (decreases) entropy over the whole segmentation it creates: parent entropy minus the proportion-weighted entropy of the children.",
+      "answer_keywords": [
+        [
+          "entropy"
+        ],
+        [
+          "attribute",
+          "split",
+          "children"
+        ]
+      ],
+      "evidence": [
+        "to measure how much an attribute improves (decreases) entropy"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            76,
+            77
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B09",
+      "category": "conceptual",
+      "question": "Why does the book call the name 'logistic regression' a misnomer?",
+      "answerable": true,
+      "expected_answer": "Although it produces a numeric estimate (the log-odds), the target variable is categorical; logistic regression estimates the probability of class membership, so it is a class probability estimation model rather than a regression model.",
+      "answer_keywords": [
+        [
+          "categorical"
+        ],
+        [
+          "class probability",
+          "class membership",
+          "log-odds",
+          "numeric"
+        ]
+      ],
+      "evidence": [
+        "logistic regression is a misnomer"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            123
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B10",
+      "category": "conceptual",
+      "question": "What is a leak in data preparation, according to the book?",
+      "answerable": true,
+      "expected_answer": "A leak is a variable in historical data that gives information about the target variable but is not actually available when the decision has to be made.",
+      "answer_keywords": [
+        [
+          "target"
+        ],
+        [
+          "not actually available",
+          "not available",
+          "not be available",
+          "not known",
+          "unavailable",
+          "would not be known",
+          "after the fact"
+        ]
+      ],
+      "evidence": [
+        "a leak is a situation where a variable collected in historical data gives information on the target variable"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            54
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B11",
+      "category": "multi_page",
+      "question": "What are the stages of the CRISP-DM data mining process described in the book?",
+      "answerable": true,
+      "expected_answer": "Business Understanding, Data Understanding, Data Preparation, Modeling, Evaluation, and Deployment, performed iteratively.",
+      "answer_keywords": [
+        [
+          "business understanding"
+        ],
+        [
+          "data understanding"
+        ],
+        [
+          "data preparation"
+        ],
+        [
+          "modeling",
+          "modelling"
+        ],
+        [
+          "evaluation"
+        ],
+        [
+          "deployment"
+        ]
+      ],
+      "evidence": [
+        "iteration is the rule rather than the exception",
+        "a critical part of the data understanding phase",
+        "the modeling stage is the primary place where data mining techniques are applied",
+        "in deployment the results of data mining"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            51,
+            52,
+            53,
+            54,
+            55,
+            56
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B12",
+      "category": "multi_page",
+      "question": "How does the book calculate a classifier's expected profit from a confusion matrix?",
+      "answerable": true,
+      "expected_answer": "Convert confusion-matrix counts into rates p(h,a) = count(h,a)/T, pair each (predicted, actual) cell with a benefit or cost from a cost-benefit matrix, and sum the probability-weighted values.",
+      "answer_keywords": [
+        [
+          "confusion matrix",
+          "confusion-matrix"
+        ],
+        [
+          "cost-benefit",
+          "cost benefit",
+          "costs and benefits",
+          "benefit"
+        ],
+        [
+          "probabilit",
+          "rate"
+        ]
+      ],
+      "evidence": [
+        "can be estimated from the tallies in the confusion matrix",
+        "the cost-benefit matrix specifies, for each (predicted,actual) pair",
+        "multiplied cell-wise against the matrix of probabilities"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            222,
+            223,
+            224,
+            225
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B13",
+      "category": "multi_page",
+      "question": "How does five-fold cross-validation work, and what does it produce?",
+      "answerable": true,
+      "expected_answer": "The labeled data are split into five folds; each fold is used in turn as the test set while the other four train the model, giving five accuracy results whose average and variance are computed.",
+      "answer_keywords": [
+        [
+          "fold"
+        ],
+        [
+          "test"
+        ],
+        [
+          "average",
+          "mean",
+          "variance"
+        ]
+      ],
+      "evidence": [
+        "cross-validation begins by splitting a labeled dataset into k partitions called folds",
+        "each piece is used in turn as the test set"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            151,
+            152
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B14",
+      "category": "cross_section",
+      "question": "How does the book's approach to the churn problem change from the tree induction example in Chapter 3 to the expected value analysis in Chapter 11?",
+      "answerable": true,
+      "expected_answer": "Chapter 3 induces a classification tree from 20,000 historical customers to estimate who will churn; Chapter 11 argues we should not simply target the customers most likely to leave but those with the greatest expected benefit from targeting, accounting for customer value and the incentive's influence.",
+      "answer_keywords": [
+        [
+          "tree"
+        ],
+        [
+          "expected benefit",
+          "expected value"
+        ]
+      ],
+      "evidence": [
+        "we have a historical data set of 20,000 customers",
+        "greatest expected benefit from targeting them"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            97,
+            98,
+            305,
+            306,
+            307
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B15",
+      "category": "cross_section",
+      "question": "How is the idea of lift used both to evaluate classifiers and to combine evidence in Naive Bayes-style models?",
+      "answerable": true,
+      "expected_answer": "For evaluation, lift is the advantage a classifier's ranking gives over random targeting (e.g., cumulative response/lift curves). In the evidence model, the class probability is the prior multiplied by the lift of each piece of evidence (Naive-Naive Bayes).",
+      "answer_keywords": [
+        [
+          "lift"
+        ],
+        [
+          "random"
+        ],
+        [
+          "evidence"
+        ]
+      ],
+      "evidence": [
+        "the lift of a classifier represents the advantage it provides over random guessing",
+        "probability as a product of evidence lifts"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            244,
+            268
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B16",
+      "category": "cross_section",
+      "question": "What is the difference between a fitting graph and a learning curve, and why can logistic regression beat tree induction on small training sets?",
+      "answerable": true,
+      "expected_answer": "A fitting graph plots training and holdout performance against model complexity; a learning curve plots generalization performance against the amount of training data. Trees are more flexible, so on small data they overfit more and logistic regression often generalizes better.",
+      "answer_keywords": [
+        [
+          "complexity"
+        ],
+        [
+          "amount of training data",
+          "training data",
+          "training-set size",
+          "training set size"
+        ],
+        [
+          "overfit",
+          "flexib"
+        ]
+      ],
+      "evidence": [
+        "a fitting graph shows the accuracy of a model as a function of complexity",
+        "it is important to understand the difference between learning curves and fitting graphs"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            137,
+            155
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B17",
+      "category": "page_citation",
+      "question": "On which page does the book note that the AUC is equivalent to the Mann-Whitney-Wilcoxon measure?",
+      "answerable": true,
+      "expected_answer": "PDF page 243 (printed page 219), in 'The Area Under the ROC Curve (AUC)'.",
+      "answer_keywords": [
+        [
+          "243",
+          "219"
+        ]
+      ],
+      "evidence": [
+        "the auc is equivalent to the mann-whitney"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            243
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B18",
+      "category": "page_citation",
+      "question": "On which page is the equation for inverse document frequency (IDF) given?",
+      "answerable": true,
+      "expected_answer": "PDF page 279 (printed page 255), Equation 10-1.",
+      "answer_keywords": [
+        [
+          "279",
+          "255"
+        ]
+      ],
+      "evidence": [
+        "equation 10-1. inverse document frequency (idf) of a term"
+      ],
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            279
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B19",
+      "category": "unanswerable",
+      "question": "What does the book recommend for fine-tuning large language models such as GPT-4?",
+      "answerable": false,
+      "expected_answer": "Insufficient evidence in the indexed documents to answer this question.",
+      "answer_keywords": [],
+      "evidence": [],
+      "expected_sources": []
+    },
+    {
+      "id": "B20",
+      "category": "unanswerable",
+      "question": "How does the book suggest deploying models with Docker containers on Kubernetes?",
+      "answerable": false,
+      "expected_answer": "Insufficient evidence in the indexed documents to answer this question.",
+      "answer_keywords": [],
+      "evidence": [],
+      "expected_sources": []
+    }
+  ],
+  "changelog": [
+    "2026-09-14 v1: initial 20 questions; evidence phrases verified against PDF text.",
+    "2026-09-14 v2 (after manual review of the first baseline, before any retrieval change): B12 expected pages widened to 222-225 because p224-225 contain the expected-profit computation; B09 keywords accept the book's stated reason (numeric log-odds estimate vs categorical target) instead of requiring the phrase 'class probability'."
+  ]
+}
