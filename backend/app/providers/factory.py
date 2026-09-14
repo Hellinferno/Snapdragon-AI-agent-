@@ -31,6 +31,10 @@ def get_embedding_provider(backend: Optional[str] = None) -> EmbeddingProvider:
             htp_performance_mode=settings.QUALCOMM_PERFORMANCE_MODE,
         )
         return QualcommEmbeddingProvider(cfg)
+    if effective_backend == "onnx_minilm":
+        from app.providers.onnx_embedding_provider import OnnxMiniLMEmbeddingProvider
+
+        return OnnxMiniLMEmbeddingProvider(settings.EMBEDDING_MODEL_DIR)
     return DevelopmentEmbeddingProvider()
 
 

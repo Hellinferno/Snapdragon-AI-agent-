@@ -55,22 +55,29 @@ questions refused), `groundedness` (non-refused answers with ≥1 citation, all 
 
 ## Results
 
-Book, top-k = 5, Qwen 2.5 72B via OpenRouter, development hash embeddings.
+Book, top-k = 5, Qwen 2.5 72B via OpenRouter.
 
-| Metric | `baseline` | `p1_hybrid` |
-|---|---|---|
-| Evidence hit@5 | 9/18 (50.0%) | 12/18 (66.7%) |
-| Page hit@5 | 12/18 (66.7%) | 17/18 (94.4%) |
-| Page recall@5 | 0.493 | 0.729 |
-| MRR | 0.431 | 0.509 |
-| **Answer correctness** | **8/18 (44.4%)** | **13/18 (72.2%)** |
-| **False refusal rate** | **8/18 (44.4%)** | **1/18 (5.6%)** |
-| Abstention accuracy | 2/2 | 2/2 |
-| Groundedness | 10/10 | 17/17 |
-| Cited page accuracy | 10/10 | 15/17 |
-| Citation faithfulness | 13/13 | 24/24 |
+| Metric | `baseline` (hash vectors) | `p1_hybrid` (hash + BM25) | **`p1b_minilm` (MiniLM, vector only)** | `p1b_minilm_hybrid` |
+|---|---|---|---|---|
+| Evidence hit@5 | 9/18 (50.0%) | 12/18 (66.7%) | **17/18 (94.4%)** | 16/18 (88.9%) |
+| Page hit@5 | 12/18 (66.7%) | 17/18 (94.4%) | **18/18 (100%)** | 18/18 (100%) |
+| Page recall@5 | 0.493 | 0.729 | **0.812** | 0.784 |
+| MRR | 0.431 | 0.509 | **0.681** | 0.630 |
+| **Answer correctness** | 8/18 (44.4%) | 13/18 (72.2%) | **17/18 (94.4%)** | 15/18 (83.3%) |
+| **False refusal rate** | 8/18 (44.4%) | 1/18 (5.6%) | 1/18 (5.6%) | 1/18 (5.6%) |
+| Abstention accuracy | 2/2 | 2/2 | 2/2 | 2/2 |
+| Groundedness | 10/10 | 17/17 | 17/17 | 17/17 |
+| Cited page accuracy | 10/10 | 15/17 | 16/17 | 16/17 |
+| Citation faithfulness | 13/13 | 24/24 | 33/33 | 29/29 |
 
-Demo papers: evidence hit 12/13 → 13/13, MRR 0.718 → 0.872, correctness 4/13 → 6/13, false refusals 7/13 → 5/13.
+Demo papers, answer correctness: 4/13 → 6/13 → **12/13** (MiniLM, either mode), false refusals 7/13 → 5/13 → 0/13.
+
+**Recommended configuration:** `EMBEDDING_PROVIDER=onnx_minilm`, `HYBRID_RETRIEVAL=false` (see `.env.example`).
+The code defaults stay on the development hash embeddings + hybrid so CI and machines without the
+downloaded model still work. With hash embeddings, hybrid is clearly better (72.2% vs 44.4%).
+
+Cost of MiniLM on CPU (fp32 ONNX): indexing the 409-page book takes ~100 s (vs ~13 s for hash vectors).
+Search latency is ~550 ms, dominated by the SQLite vector scan rather than the model.
 
 ## Retrieval experiment log (book, retrieval mode)
 
@@ -82,25 +89,32 @@ Demo papers: evidence hit 12/13 → 13/13, MRR 0.718 → 0.872, correctness 4/13
 | E3: E2 + demote TOC/index chunks | 13/18 | 88.9% | 0.656 | 0.479 | **reverted**, identical numbers |
 | E2b: E2 with chunk-overlap bug fixed | 12/18 | 94.4% | 0.729 | 0.474 | no |
 | Ablation: hybrid + original chunker | 12/18 | 94.4% | **0.740** | **0.546** | — |
-| **Final:** hybrid + original chunker + soft-hyphen rejoin | 12/18 | 94.4% | 0.729 | 0.509 | **yes** |
+| P1 final: hybrid + original chunker + soft-hyphen rejoin | 12/18 | 94.4% | 0.729 | 0.509 | yes (hash embeddings) |
+| MiniLM (real all-MiniLM-L6-v2), vector only | **17/18** | **100%** | **0.812** | **0.681** | **yes (recommended)** |
+| MiniLM + BM25 hybrid | 16/18 | 100% | 0.784 | 0.630 | no, B07 drops out of the top 5 |
 
-Hybrid retrieval is the only change with a clear effect. The chunking variants sit within ±1
+Real semantic embeddings are the largest single gain; with them, BM25 fusion costs one retrieval
+hit and two correct answers (B07 "define overfitting" drops out of the top 5). With hash embeddings,
+hybrid retrieval is the only change with a clear effect. The chunking variants sit within ±1
 question of each other, so the existing chunker was kept rather than tuning to 18 questions.
 The E2 sentence chunker carried almost no overlap (a bug), which likely inflated its single extra hit.
 
 ## Findings for the next iteration
 
-1. **Remaining misses are vocabulary gaps** hash/lexical retrieval can't bridge ("define overfitting" →
-   "tendency … to tailor models to the training data"). Real semantic embeddings are the next lever.
-   The bundled `models/qualcomm/all-MiniLM-L6-v2/model.onnx` is **not** MiniLM: `scripts/setup_qualcomm_onnx_models.py`
-   builds a single random-weight `Gather` node.
+1. **The remaining book failure is multi-hop** (B14: Chapter 3 tree induction vs Chapter 11 expected value).
+   Top-5 covers one side (page recall 0.2) and Qwen correctly refuses. Candidate levers: larger top-k
+   for comparison questions, or per-sub-question retrieval.
+   Separately, the bundled `models/qualcomm/all-MiniLM-L6-v2/model.onnx` is **not** MiniLM:
+   `scripts/setup_qualcomm_onnx_models.py` builds a single random-weight `Gather` node (P2 work).
 2. **Partial refusals:** `RetrievalService.chat` drops all sources when the answer contains
    "Insufficient evidence" anywhere. That hides legitimate cited partial answers (demo Q04), but it also
    hides answers with ungrounded content: in book B11, Qwen listed the CRISP-DM stages from training
    data, then refused. Decide a policy (e.g. keep sources and flag `partial`) before changing it.
-3. **The score threshold is a poor abstention signal.** Unanswerable top-1 scores overlap answerable
-   ones on the book, and it causes demo Q09's refusal. Qwen abstained correctly on 4/4 unanswerable
-   questions, but that is too few to justify removing the gate. Add more unanswerable questions first.
+3. **The score threshold is a poor abstention signal with hash embeddings.** Unanswerable top-1 scores
+   overlap answerable ones, and it causes demo Q09's refusal. With MiniLM the book separates cleanly
+   (answerable top-1 ≥ 0.498, unanswerable ≤ 0.401), but that rests on two unanswerable questions.
+   Qwen abstained correctly on every unanswerable question in every run, but four questions are too
+   few to justify removing or retuning the gate. Add more unanswerable questions first.
 4. **Math glyphs are lost at extraction.** pypdf emits only half of each surrogate pair for math italic
    symbols, so formulas become `p(� | �)`. Fixing that needs a different extractor.
 5. The academic section-header regex mislabels book chunks (e.g. "Results" on p54).

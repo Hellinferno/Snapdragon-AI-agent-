@@ -241,6 +241,7 @@ async def evaluate(args: argparse.Namespace) -> dict:
             "corpus": [{"title": e["title"], "sha256": sha256_file(p)} for e, p in corpus],
             "embedding_provider": embedding.name,
             "llm_provider": llm.name if llm else None,
+            "hybrid_retrieval": settings.HYBRID_RETRIEVAL,
             "top_k": args.top_k,
             "min_score_threshold": args.min_score if llm else None,
             "chunk_size_chars": settings.CHUNK_SIZE_CHARS,

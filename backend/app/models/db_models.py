@@ -83,3 +83,12 @@ class ChunkEmbedding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     chunk: Mapped["Chunk"] = relationship("Chunk", back_populates="embedding")
+
+
+class IndexSetting(Base):
+    """Key/value facts about the local index, e.g. which embedding model produced its vectors."""
+
+    __tablename__ = "index_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)

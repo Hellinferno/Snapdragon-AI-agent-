@@ -4,10 +4,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.models.db_models import Chunk, Document
 from app.providers.base import EmbeddingProvider, LLMProvider
 from app.providers.factory import get_embedding_provider, get_llm_provider
 from app.providers.vector_store import SQLiteVectorStore
+from app.services.embedding_index import ensure_index_matches
 from app.services.lexical_index import get_bm25_index
 from app.schemas.rag import ChatResponse, SearchResponse, SourceReference
 from app.services.context_builder import (
@@ -48,6 +50,7 @@ class RetrievalService:
         so an exact keyword match is not discarded by a low embedding similarity.
         Chunks with identical text (e.g. the same PDF indexed twice) are returned once.
         """
+        await ensure_index_matches(self.db, self.embedding_provider)
         query_vec = await self.embedding_provider.embed_text(query)
         vector_ranked = await self.vector_store.search(
             query_vector=query_vec,
@@ -58,8 +61,10 @@ class RetrievalService:
             return SearchResponse(query=query, results=[])
 
         pool = max(top_k * CANDIDATE_MULTIPLIER, MIN_CANDIDATES)
-        lexical_index = await get_bm25_index(self.db)
-        lexical_ranked = lexical_index.search(query, limit=pool, document_ids=document_ids)
+        lexical_ranked: list[tuple[str, float, float]] = []
+        if settings.HYBRID_RETRIEVAL:
+            lexical_index = await get_bm25_index(self.db)
+            lexical_ranked = lexical_index.search(query, limit=pool, document_ids=document_ids)
 
         cosine = dict(vector_ranked)
         coverage = {cid: cov for cid, _, cov in lexical_ranked}

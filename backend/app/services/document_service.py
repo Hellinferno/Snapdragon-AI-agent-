@@ -21,6 +21,7 @@ from app.schemas.document import (
     PageResponse,
 )
 from app.services.chunker import chunk_pages
+from app.services.embedding_index import ensure_index_matches, record_index_provider
 from app.services.pdf_parser import parse_pdf
 
 
@@ -193,12 +194,14 @@ class DocumentService:
             await self.db.flush()
 
             # Generate and persist embeddings in vector store
+            await ensure_index_matches(self.db, self.embedding_provider)
             if created_chunks:
                 chunk_texts = [c.text for c in created_chunks]
                 vectors = await self.embedding_provider.embed_batch(chunk_texts)
                 vector_entries = [
                     (c.id, doc.id, vec) for c, vec in zip(created_chunks, vectors, strict=False)
                 ]
+                await record_index_provider(self.db, self.embedding_provider)
                 vector_store = SQLiteVectorStore(self.db)
                 await vector_store.add_vectors(vector_entries)
 
