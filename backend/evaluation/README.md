@@ -55,6 +55,84 @@ questions refused), `groundedness` (non-refused answers with ≥1 citation, all 
 
 ## Results
 
+### Frozen RAG baseline (HEAD `1e78440`, 2026-09-15)
+
+Book benchmark, recommended configuration: `EMBEDDING_PROVIDER=onnx_minilm`, `HYBRID_RETRIEVAL=false`,
+top-k = 5, chunk 600/100 chars, evidence threshold 0.08, Qwen 2.5 72B Instruct via OpenRouter.
+Result files: `results/data_science_for_business/head_retrieval_k*.json` and `head_full_k5.json`.
+Dataset v3 (B03 expected pages widened to [38, 51], see changelog).
+
+| Metric | Baseline | Notes |
+|---|---:|---|
+| Doc hit@5 | 18/18 (100%) | single-document corpus, so trivially satisfied |
+| Page hit@5 | 18/18 (100%) | |
+| Evidence hit@5 | 17/18 (94.4%) | miss: B06 (see per-question table) |
+| Page recall@5 | 0.812 | multi-page questions cap this: B11 0.17, B14 0.20 |
+| MRR | 0.681 | first evidence chunk at rank 1 for 10/18, rank <= 3 for 17/18 |
+| Answer correctness | 17/18 (94.4%) | miss: B14 |
+| False refusal rate | 1/18 (5.6%) | B14 |
+| Abstention accuracy | 2/2 (100%) | |
+| Groundedness | 17/17 (100%) | citation-level only (see limitations) |
+| Citation rate | 17/17 (100%) | |
+| Cited page accuracy | 17/17 (100%) | 16/17 before the B03 ground-truth fix |
+| Citation faithfulness | 35/35 (100%) | |
+| Search P50 / P95 | 603 ms / 695 ms | MiniLM fp32 on CPU + SQLite full vector scan, ~1,900 chunks |
+| Generation P50 / P95 | 4,164 ms / 21,470 ms | `chat()` end to end: search + OpenRouter round trip; not an on-device number |
+| Tokens (20 questions) | 19,208 prompt / 2,774 completion | |
+
+Retrieval and generation numbers reproduce the `p1b_minilm` run from commit `b717c88` exactly
+(same 17/18, 0.812, 0.681), so the pipeline is deterministic across re-indexing.
+
+### Top-k sweep (retrieval mode, MiniLM, HEAD)
+
+| k | hybrid | Evidence hit | Page hit | Page recall | MRR | Search P50 / P95 |
+|---|---|---|---|---|---|---|
+| 3 | no | 16/18 (88.9%) | 17/18 | 0.773 | 0.667 | 692 / 784 ms |
+| **5** | **no** | **17/18 (94.4%)** | **18/18** | **0.812** | **0.681** | 624 / 661 ms |
+| 8 | no | 17/18 (94.4%) | 18/18 | 0.840 | 0.681 | 567 / 629 ms |
+| 10 | no | 17/18 (94.4%) | 18/18 | 0.868 | 0.681 | 557 / 593 ms |
+| 10 | yes | 18/18 (100%) | 18/18 | 0.809 | 0.649 | 555 / 714 ms |
+
+- k=3 loses B14's only Chapter 3 hit (rank 4) and B12 drops to one of four pages.
+- k=8 and k=10 change nothing above rank 5 (MRR identical). The extra page recall comes from B08
+  (p77 enters at rank 6-10) and B15 (p244 at rank 7); both were already answered correctly at k=5.
+- **B14's Chapter 11 pages (305-307) are absent from the vector top-10 entirely.** Hybrid k=10 places
+  p306 at rank 8 but costs B07 (rank 1 -> 4) and B15 (rank 1 -> 3). A reranker over the top-10 therefore
+  has no failing question to fix in vector-only mode: the missing candidate never reaches the reranker.
+- Search latency differences between k values are noise; the SQLite scan dominates regardless of k.
+- 29 of the 100 top-5 slots (20 questions x 5) are taken by a second or later chunk from a page already
+  in the list (B01: p27 x5, B16: p155 x4, B15: p268 x4, B10: p54 x4). `search()` de-duplicates identical
+  text but has no per-page cap, so multi-page questions get fewer distinct pages than k suggests.
+
+### Per-question review of the baseline (full mode, k = 5)
+
+Every answerable question was checked against this taxonomy: (1) PDF parsing, (2) chunking,
+(3) embedding, (4) retrieval ranking, (5) insufficient top-k, (6) evidence threshold, (7) LLM generation,
+(8) citation generation, (9) evaluation-dataset problem.
+
+| id | category | retrieval | generation | classification |
+|---|---|---|---|---|
+| B01, B02, B04, B05 | direct_factual | evidence rank 1, 3, 1, 2 | correct, cited expected page | pass |
+| B03 | direct_factual | rank 1 = p38, rank 2 = p51 | correct, cited p38 | **was scored as a wrong citation: dataset problem (9).** p38 (Chapter 1) also spells out the acronym. Fixed in dataset v3. |
+| B06 | conceptual | page hit (p48 at rank 3), **evidence miss** | correct, cited p48 twice | **chunking (2) plus a conservative metric.** The retrieved p48 chunk starts just after the evidence sentence ("...ferent techniques than unsupervised tasks do"); the neighbouring chunk with the exact phrase is outside the top-10. Not a user-visible failure. |
+| B07-B10 | conceptual | evidence rank 1, 1, 2, 2 | correct | pass |
+| B11 | multi_page | evidence rank 1; page recall 0.17 (p51 only) | correct: Qwen lists all six stages from the p51 overview chunk | pass; low recall is built into the question (6 expected pages, 5 slots) |
+| B12 | multi_page | rank 3; 3 of 4 pages | correct | pass |
+| B13 | multi_page | rank 1; both pages | correct | pass |
+| B14 | cross_section | p97 at rank 4-5 (Chapter 3 side); **Chapter 11 side never retrieved** (absent from top-10; rank 8 with hybrid) | refused: "Insufficient evidence" | **retrieval ranking failure on a compound query (4).** Not top-k (5): still missing at k=10. Not LLM (7): refusing was right for the context it got. Fix belongs in retrieval: decompose the question into per-chapter sub-queries and merge, or run hybrid with a larger pool for comparison questions. |
+| B15 | cross_section | p268 at rank 1, 3, 4, 5; p244 at rank 7 | correct | pass; four slots on one page |
+| B16 | cross_section | p155 at rank 1, 3, 4, 5; p137 absent from top-10 | correct (answered from p155/156) | pass; the p137 evidence check is conservative |
+| B17, B18 | page_citation | rank 1, 2 | correct page numbers | pass |
+| B19, B20 | unanswerable | top-1 score 0.40 / 0.40 vs answerable min 0.498 | refused | pass |
+
+Failure-class totals for the baseline: 1 retrieval ranking (B14), 1 chunking/metric (B06, answer still
+correct), 1 dataset problem (B03, fixed). No PDF-parsing, embedding, threshold, LLM or citation failures
+on this benchmark. For reference, the non-recommended MiniLM + hybrid run (`p1b_minilm_hybrid`) adds
+three more: B07 (BM25 promotes generic p11 chunks over the definition: evidence miss), B13 (LLM omits
+"average/variance": generation), B15 (p244 pushed out of the top-5: ranking).
+
+### Earlier runs (commit `b717c88`, dataset v2)
+
 Book, top-k = 5, Qwen 2.5 72B via OpenRouter.
 
 | Metric | `baseline` (hash vectors) | `p1_hybrid` (hash + BM25) | **`p1b_minilm` (MiniLM, vector only)** | `p1b_minilm_hybrid` |
@@ -101,20 +179,27 @@ The E2 sentence chunker carried almost no overlap (a bug), which likely inflated
 
 ## Findings for the next iteration
 
-1. **The remaining book failure is multi-hop** (B14: Chapter 3 tree induction vs Chapter 11 expected value).
-   Top-5 covers one side (page recall 0.2) and Qwen correctly refuses. Candidate levers: larger top-k
-   for comparison questions, or per-sub-question retrieval.
-   Separately, the bundled `models/qualcomm/all-MiniLM-L6-v2/model.onnx` is **not** MiniLM:
+1. **The only failing question is multi-hop retrieval** (B14: Chapter 3 tree induction vs Chapter 11 expected
+   value). The top-k sweep shows the Chapter 11 side is not in the vector top-10 at all, so neither a larger k
+   nor a reranker over the current candidates fixes it. Candidate levers, in order: (a) query decomposition
+   for comparison questions (retrieve per sub-question, merge), (b) hybrid retrieval with a larger pool
+   only when the query names several chapters/sections, (c) a per-page cap in `search()` so the 29% of
+   slots spent on repeated pages go to distinct pages. Each is one retrieval-mode run to test.
+2. **Reranking is not the next move.** With MiniLM the first relevant chunk is at rank <= 3 for 17/18
+   questions (MRR 0.681); the two pages a reranker could pull up from ranks 6-10 (B08 p77, B15 p244)
+   belong to questions that are already answered correctly.
+3. **Search latency is the SQLite vector scan (~550-600 ms), not the model.** An in-memory matrix or an
+   ANN index is the lever if search latency matters for the demo; it does not affect quality.
+4. The bundled `models/qualcomm/all-MiniLM-L6-v2/model.onnx` is **not** MiniLM:
    `scripts/setup_qualcomm_onnx_models.py` builds a single random-weight `Gather` node (P2 work).
-2. **Partial refusals:** `RetrievalService.chat` drops all sources when the answer contains
+5. **Partial refusals:** `RetrievalService.chat` drops all sources when the answer contains
    "Insufficient evidence" anywhere. That hides legitimate cited partial answers (demo Q04), but it also
-   hides answers with ungrounded content: in book B11, Qwen listed the CRISP-DM stages from training
-   data, then refused. Decide a policy (e.g. keep sources and flag `partial`) before changing it.
-3. **The score threshold is a poor abstention signal with hash embeddings.** Unanswerable top-1 scores
-   overlap answerable ones, and it causes demo Q09's refusal. With MiniLM the book separates cleanly
-   (answerable top-1 ≥ 0.498, unanswerable ≤ 0.401), but that rests on two unanswerable questions.
-   Qwen abstained correctly on every unanswerable question in every run, but four questions are too
-   few to justify removing or retuning the gate. Add more unanswerable questions first.
-4. **Math glyphs are lost at extraction.** pypdf emits only half of each surrogate pair for math italic
-   symbols, so formulas become `p(� | �)`. Fixing that needs a different extractor.
-5. The academic section-header regex mislabels book chunks (e.g. "Results" on p54).
+   hides answers with ungrounded content: in the hash-embedding book run, Qwen listed the CRISP-DM stages
+   from training data, then refused. Decide a policy (e.g. keep sources and flag `partial`) before changing it.
+6. **The score threshold is a poor abstention signal with hash embeddings.** With MiniLM the book separates
+   cleanly (answerable top-1 >= 0.498, unanswerable <= 0.401), but that rests on two unanswerable questions.
+   Qwen abstained correctly on every unanswerable question in every run. Add more unanswerable questions
+   before removing or retuning the gate.
+7. **Math glyphs are lost at extraction.** pypdf emits only half of each surrogate pair for math italic
+   symbols, so formulas become `p(? | ?)`. Fixing that needs a different extractor.
+8. The academic section-header regex mislabels book chunks (e.g. "Results" on p54).

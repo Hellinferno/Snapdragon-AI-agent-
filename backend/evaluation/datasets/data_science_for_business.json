@@ -64,7 +64,7 @@
       "category": "direct_factual",
       "question": "What does CRISP-DM stand for?",
       "answerable": true,
-      "expected_answer": "Cross Industry Standard Process for Data Mining.",
+      "expected_answer": "Cross Industry Standard Process for Data Mining (expanded on PDF p38 in Chapter 1 and again on p51 where the process is introduced).",
       "answer_keywords": [
         [
           "cross industry standard process",
@@ -78,6 +78,7 @@
         {
           "document": "Data Science for Business",
           "pages": [
+            38,
             51
           ]
         }
@@ -578,6 +579,7 @@
   ],
   "changelog": [
     "2026-09-14 v1: initial 20 questions; evidence phrases verified against PDF text.",
-    "2026-09-14 v2 (after manual review of the first baseline, before any retrieval change): B12 expected pages widened to 222-225 because p224-225 contain the expected-profit computation; B09 keywords accept the book's stated reason (numeric log-odds estimate vs categorical target) instead of requiring the phrase 'class probability'."
+    "2026-09-14 v2 (after manual review of the first baseline, before any retrieval change): B12 expected pages widened to 222-225 because p224-225 contain the expected-profit computation; B09 keywords accept the book's stated reason (numeric log-odds estimate vs categorical target) instead of requiring the phrase 'class probability'.",
+    "2026-09-15 v3 (from the HEAD baseline review): B03 expected pages widened to [38, 51]; p38 (Chapter 1) also spells out 'Cross Industry Standard Process for Data Mining', and citing it was being scored as a wrong page."
   ]
 }
