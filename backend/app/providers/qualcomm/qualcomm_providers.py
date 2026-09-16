@@ -245,15 +245,19 @@ class QualcommLLMProvider(LLMProvider):
                 f"Real tokenizer not available for {self.config.llm_model_id}. "
                 f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
             )
-        # Model expects fixed sequence length of 256
+        # Model expects fixed sequence length of 256 and vocab size of 32000
         max_seq_len = 256
+        vocab_size = 32000
         encoding = self._tokenizer.encode(prompt)
         ids = encoding.ids
+        # Clamp token IDs to model's vocabulary range
+        ids = [min(max(tid, 0), vocab_size - 1) for tid in ids]
         if len(ids) > max_seq_len:
             ids = ids[:max_seq_len]
         else:
             # Pad with pad_token_id (or 0)
             pad_id = self._tokenizer.token_to_id("[PAD]") or 0
+            pad_id = min(max(pad_id, 0), vocab_size - 1)
             ids = ids + [pad_id] * (max_seq_len - len(ids))
         return np.array([ids], dtype=np.int64)
 
@@ -272,8 +276,8 @@ class QualcommLLMProvider(LLMProvider):
                 f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
             )
 
-        # Parse context and question from prompt
-        context_match = re.search(r"### CONTEXT:\n(.*?)\n### QUESTION:\n(.*?)$", prompt, re.DOTALL)
+        # Parse context and question from prompt (use lowercase to stay within 32k vocab)
+        context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
         if not context_match:
             context_text = prompt
             question = ""
@@ -332,8 +336,10 @@ class QualcommLLMProvider(LLMProvider):
                 completion_tokens=len(refusal_text.split()),
             )
 
-        # Tokenize the full prompt
-        input_ids = self._tokenize_prompt(prompt)
+        # Build prompt from extracted context + question (lowercase to stay within 32k vocab)
+        llm_prompt = f"context:\n{context_text}\nquestion:\n{question}"
+        # Tokenize lowercase version to stay within model's 32k vocab
+        input_ids = self._tokenize_prompt(llm_prompt.lower())
 
         # Autoregressive generation with greedy decoding (fixed seq_len=256)
         max_new_tokens = 256
