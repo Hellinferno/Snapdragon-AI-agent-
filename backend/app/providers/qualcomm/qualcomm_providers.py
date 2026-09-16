@@ -372,9 +372,9 @@ class QualcommLLMProvider(LLMProvider):
 
 class QualcommVisionProvider(VisionProvider):
     """
-    Qualcomm AI Hub Vision Provider (MobileNet-v2).
+    Qualcomm AI Hub Vision Provider (MobileNet-v2 fine-tuned for figure classification).
     Preprocesses images into [1, 3, 224, 224] tensors, executes genuine ONNX vision classifier,
-    and performs visual feature extraction for scientific figures.
+    and returns actual model classification with visual metrics.
     """
 
     def __init__(self, config: Optional[QualcommConfig] = None):
@@ -403,31 +403,32 @@ class QualcommVisionProvider(VisionProvider):
 
     def _initialize(self) -> None:
         model_path = self.config.model_dir / self.config.vision_model_id / "model.onnx"
-        if model_path.exists():
-            try:
-                import onnxruntime as ort
-                providers = self.config.get_effective_providers()
-                self._session = ort.InferenceSession(str(model_path), providers=providers)
-                active_providers = self._session.get_providers()
-                self.telemetry["active_provider"] = active_providers[0] if active_providers else "Unknown"
-                self.telemetry["hardware_npu_active"] = "QNNExecutionProvider" in active_providers
-                self.telemetry["runtime_status"] = (
-                    "Hexagon NPU Active"
-                    if self.telemetry["hardware_npu_active"]
-                    else "Development Host (CPU Simulation)"
-                )
-                logger.info(
-                    "Initialized Qualcomm Vision ONNX session for %s with providers: %s (NPU active: %s)",
-                    self.config.vision_model_id,
-                    active_providers,
-                    self.telemetry["hardware_npu_active"],
-                )
-            except Exception as e:
-                logger.warning("Failed to initialize ONNX session for Qualcomm vision: %s", e)
-                self._session = None
-                self.telemetry["runtime_status"] = "Fallback Mode (Session Load Failed)"
-        else:
-            self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
+        if not model_path.exists():
+            raise FileNotFoundError(
+                f"Vision model not found at {model_path}. "
+                f"Snapdragon mode requires valid ONNX model artifact."
+            )
+        try:
+            import onnxruntime as ort
+            providers = self.config.get_effective_providers()
+            self._session = ort.InferenceSession(str(model_path), providers=providers)
+            active_providers = self._session.get_providers()
+            self.telemetry["active_provider"] = active_providers[0] if active_providers else "Unknown"
+            self.telemetry["hardware_npu_active"] = "QNNExecutionProvider" in active_providers
+            self.telemetry["runtime_status"] = (
+                "Hexagon NPU Active"
+                if self.telemetry["hardware_npu_active"]
+                else "Development Host (CPU Simulation)"
+            )
+            logger.info(
+                "Initialized Qualcomm Vision ONNX session for %s with providers: %s (NPU active: %s)",
+                self.config.vision_model_id,
+                active_providers,
+                self.telemetry["hardware_npu_active"],
+            )
+        except Exception as e:
+            logger.error("Failed to initialize ONNX session for Qualcomm vision: %s", e)
+            raise RuntimeError(f"Failed to initialize vision ONNX session: {e}")
 
     def _preprocess_image(self, image_bytes: bytes) -> tuple[np.ndarray, dict]:
         """Preprocesses image bytes into normalized [1, 3, 224, 224] float32 tensor."""
@@ -460,63 +461,55 @@ class QualcommVisionProvider(VisionProvider):
             return tensor, stats
 
     async def analyze_figure(self, image_bytes: bytes, filename: str) -> VisionAnalysisResult:
+        if self._session is None:
+            raise RuntimeError(
+                f"Vision ONNX session not initialized for {self.config.vision_model_id}. "
+                f"Snapdragon mode requires valid ONNX model and execution provider."
+            )
+
         tensor, stats = self._preprocess_image(image_bytes)
 
-        fig_type = "architecture_diagram"
-        confidence = 0.88
+        # Run actual ONNX inference
+        try:
+            outputs = self._session.run(["logits"], {"pixel_values": tensor})
+            logits = outputs[0][0]
+            exp_logits = np.exp(logits - np.max(logits))
+            probs = exp_logits / np.sum(exp_logits)
+            predicted_idx = int(np.argmax(probs))
+            fig_type = self.classes[predicted_idx]
+            confidence = round(float(probs[predicted_idx]), 3)
+        except Exception as e:
+            logger.error("ONNX Vision classification failed: %s", e)
+            raise RuntimeError(f"ONNX vision inference failed: {e}")
 
-        if self._session is not None:
-            try:
-                outputs = self._session.run(["logits"], {"pixel_values": tensor})
-                logits = outputs[0][0]
-                exp_logits = np.exp(logits - np.max(logits))
-                probs = exp_logits / np.sum(exp_logits)
-                predicted_idx = int(np.argmax(probs))
-                fig_type = self.classes[predicted_idx]
-                confidence = round(float(probs[predicted_idx]), 3)
-            except Exception as e:
-                logger.error("ONNX Vision classification failed: %s", e)
-
-        # Generate structural research observations based on model inference and visual metrics
+        # Generate observations based on actual visual metrics and classification
         w, h = stats["width"], stats["height"]
         ar = stats["aspect_ratio"]
         br = stats["brightness"]
         ct = stats["contrast"]
+        fig_type = self.classes[predicted_idx]
+
+        # Build observations from actual visual metrics + classification
+        obs = [
+            f"Image classified as '{fig_type}' with {confidence*100:.1f}% confidence.",
+            f"Resolution: {w}x{h} (aspect ratio {ar}:1). Mean brightness: {br:.1f}, contrast: {ct:.1f}.",
+            f"MobileNet-v2 fine-tuned logits: {probs[predicted_idx]:.4f} for class '{fig_type}'.",
+        ]
 
         if fig_type == "architecture_diagram":
-            title = "Neural Pipeline Architecture Diagram"
-            obs = [
-                f"Multi-stage pipeline topology at {w}x{h} resolution (Aspect ratio: {ar}:1).",
-                f"Structural visual density (contrast index: {ct}) indicates discrete interconnected functional modules.",
-                "Sequential processing stages identified with directional information flow across computational blocks.",
-                "Suitable for research pipeline walkthrough and hardware mapping analysis.",
-            ]
+            title = "System Architecture Diagram"
+            obs.append("Detected pipeline topology with sequential processing stages.")
         elif fig_type == "bar_chart":
-            title = "Comparative Performance Benchmark Plot"
-            obs = [
-                f"Quantitative experimental evaluation plot ({w}x{h}, aspect {ar}:1).",
-                f"Discrete categorical series and metric comparison detected (luminance variance: {ct}).",
-                "Relative bar heights represent comparative accuracy, throughput, or latency across benchmark conditions.",
-                "High contrast axes and interval ticks facilitate quantitative extraction.",
-            ]
+            title = "Performance Benchmark Chart"
+            obs.append("Detected categorical comparison with discrete bars.")
         elif fig_type == "data_table":
-            title = "Structured Experimental Results Table"
-            obs = [
-                f"Tabular matrix layout with rows and columns ({w}x{h}).",
-                "Grid cell density indicates multi-attribute performance data and baseline comparisons.",
-                f"Even distribution of character blocks across high-contrast background (brightness: {br}).",
-                "Extractable numeric metrics and evaluation indicators present.",
-            ]
+            title = "Structured Data Table"
+            obs.append("Detected grid layout with row/column structure.")
         else:  # medical_radiograph
-            title = "Biomedical Scientific Imaging Scan"
-            obs = [
-                f"Scientific visual scan with anatomical/microscopic density contrast ({w}x{h}).",
-                f"Grayscale luminance profile (mean: {br}, contrast: {ct}) characteristic of diagnostic imaging.",
-                "Observable anatomical tissue structures and localized attenuation patterns present.",
-                "Note: Observation recorded for research review only; clinical diagnosis requires certified medical evaluation.",
-            ]
+            title = "Biomedical Imaging Scan"
+            obs.append("High-contrast grayscale density patterns consistent with medical imaging.")
 
-        summary = f"Qualcomm AI Hub {self.config.vision_model_id} visual decomposition of '{filename}' ({w}x{h}, {fig_type})."
+        summary = f"Qualcomm AI Hub {self.config.vision_model_id} classified '{filename}' as {fig_type} ({confidence*100:.1f}%)."
 
         return VisionAnalysisResult(
             figure_type=fig_type,
@@ -527,29 +520,38 @@ class QualcommVisionProvider(VisionProvider):
         )
 
     async def answer_question(self, image_bytes: bytes, question: str, filename: str) -> VisualQAResult:
+        if self._session is None:
+            raise RuntimeError(
+                f"Vision ONNX session not initialized for {self.config.vision_model_id}. "
+                f"Snapdragon mode requires valid ONNX model and execution provider."
+            )
+
         analysis = await self.analyze_figure(image_bytes, filename)
         q_lower = question.lower()
 
+        # Answer based on actual classification and visual metrics
         if "architecture" in q_lower or "pipeline" in q_lower or "flow" in q_lower:
             ans_body = (
-                f"The diagram '{filename}' demonstrates an architectural pipeline ({analysis.title}). "
-                f"{analysis.observations[0]} {analysis.observations[2]}"
+                f"The image '{filename}' is classified as '{analysis.figure_type}' "
+                f"({analysis.confidence*100:.1f}% confidence). "
+                f"{analysis.observations[0]}"
             )
         elif "metric" in q_lower or "number" in q_lower or "data" in q_lower or "table" in q_lower:
             ans_body = (
-                f"Regarding quantitative metrics in '{filename}': {analysis.observations[1]} "
-                f"{analysis.observations[2]}"
+                f"Regarding quantitative metrics in '{filename}': "
+                f"Classified as {analysis.figure_type} with {analysis.confidence*100:.1f}% confidence. "
+                f"{analysis.observations[1]}"
             )
         elif "trend" in q_lower or "graph" in q_lower or "plot" in q_lower or "show" in q_lower:
             ans_body = (
-                f"Based on visual analysis of '{filename}': {analysis.observations[0]} "
-                f"{analysis.observations[1]}"
+                f"Visual analysis of '{filename}': "
+                f"{analysis.observations[0]} {analysis.observations[1]}"
             )
         else:
             ans_body = (
-                f"Visual assessment of '{filename}': Classified as a {analysis.figure_type.upper()} "
-                f"titled '{analysis.title}' (confidence: {analysis.confidence * 100:.0f}%). "
-                f"Key structural indicators: {'; '.join(analysis.observations[:2])}."
+                f"Visual assessment of '{filename}': Classified as {analysis.figure_type.upper()} "
+                f"({analysis.confidence*100:.1f}% confidence). "
+                f"{analysis.observations[0]}"
             )
 
         npu_status = (
