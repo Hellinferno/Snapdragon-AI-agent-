@@ -239,14 +239,23 @@ class QualcommLLMProvider(LLMProvider):
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
 
     def _tokenize_prompt(self, prompt: str) -> np.ndarray:
-        """Tokenize prompt using real tokenizer."""
+        """Tokenize prompt using real tokenizer, padded/truncated to model's max sequence length."""
         if self._tokenizer is None:
             raise RuntimeError(
                 f"Real tokenizer not available for {self.config.llm_model_id}. "
                 f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
             )
+        # Model expects fixed sequence length of 256
+        max_seq_len = 256
         encoding = self._tokenizer.encode(prompt)
-        return np.array([encoding.ids], dtype=np.int64)
+        ids = encoding.ids
+        if len(ids) > max_seq_len:
+            ids = ids[:max_seq_len]
+        else:
+            # Pad with pad_token_id (or 0)
+            pad_id = self._tokenizer.token_to_id("[PAD]") or 0
+            ids = ids + [pad_id] * (max_seq_len - len(ids))
+        return np.array([ids], dtype=np.int64)
 
     async def generate(self, prompt: str, system_prompt: str | None = None) -> GenerationResult:
         """Generate text using real autoregressive Qwen ONNX inference."""
@@ -471,7 +480,7 @@ class QualcommVisionProvider(VisionProvider):
 
         # Run actual ONNX inference
         try:
-            outputs = self._session.run(["logits"], {"pixel_values": tensor})
+            outputs = self._session.run(["output_0"], {"pixel_values": tensor})
             logits = outputs[0][0]
             exp_logits = np.exp(logits - np.max(logits))
             probs = exp_logits / np.sum(exp_logits)
