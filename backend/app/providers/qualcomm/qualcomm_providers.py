@@ -33,6 +33,23 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _load_tokenizer(model_dir: Path, model_name: str):
+    """Load tokenizer from model directory."""
+    tokenizer_path = model_dir / "tokenizer.json"
+    if tokenizer_path.exists():
+        try:
+            from tokenizers import Tokenizer
+            tokenizer = Tokenizer.from_file(str(tokenizer_path))
+            tokenizer.enable_truncation(max_length=256)
+            tokenizer.enable_padding(pad_id=tokenizer.token_to_id("[PAD]") or 0, pad_token="[PAD]")
+            logger.info("Loaded tokenizer for %s from %s", model_name, tokenizer_path)
+            return tokenizer
+        except Exception as e:
+            logger.warning("Failed to load tokenizer for %s: %s", model_name, e)
+    logger.warning("No tokenizer found for %s at %s", model_name, tokenizer_path)
+    return None
+
+
 class QualcommEmbeddingProvider(EmbeddingProvider):
     """
     Qualcomm AI Hub Sentence Embedding Provider (all-MiniLM-L6-v2).
@@ -44,6 +61,7 @@ class QualcommEmbeddingProvider(EmbeddingProvider):
         self._dim = 384
         self._vocab_size = 30522
         self._session = None
+        self._tokenizer = None
         self._cold_run = True
         self.telemetry: Dict[str, Any] = {
             "model_id": self.config.embedding_model_id,
@@ -68,6 +86,10 @@ class QualcommEmbeddingProvider(EmbeddingProvider):
 
     def _initialize(self) -> None:
         model_path = self.config.model_dir / self.config.embedding_model_id / "model.onnx"
+        model_dir = self.config.model_dir / self.config.embedding_model_id
+
+        # Load real tokenizer
+        self._tokenizer = _load_tokenizer(model_dir, self.config.embedding_model_id)
 
         if model_path.exists():
             try:
@@ -100,7 +122,14 @@ class QualcommEmbeddingProvider(EmbeddingProvider):
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
 
     def _tokenize(self, text: str) -> tuple[np.ndarray, np.ndarray]:
-        """Maps input string to token IDs and attention mask for ONNX graph input."""
+        """Maps input string to token IDs and attention mask for ONNX graph input using real tokenizer."""
+        if self._tokenizer is not None:
+            encoding = self._tokenizer.encode(text)
+            input_ids = np.array([encoding.ids], dtype=np.int64)
+            attention_mask = np.array([encoding.attention_mask], dtype=np.int64)
+            return input_ids, attention_mask
+
+        # Fallback to hash-based tokenization if tokenizer not available
         words = re.findall(r"\b[a-zA-Z0-9_\-]+\b", text.lower())
         token_ids = [101]  # [CLS]
         for w in words[:126]:
@@ -179,8 +208,8 @@ class QualcommLLMProvider(LLMProvider):
     def __init__(self, config: Optional[QualcommConfig] = None):
         self.config = config or QualcommConfig()
         self._session = None
+        self._tokenizer = None
         self._cold_run = True
-        self._vocab_size = 32000
         self.telemetry: Dict[str, Any] = {
             "model_id": self.config.llm_model_id,
             "target_device": self.config.device_target,
@@ -201,6 +230,11 @@ class QualcommLLMProvider(LLMProvider):
 
     def _initialize(self) -> None:
         model_path = self.config.model_dir / self.config.llm_model_id / "model.onnx"
+        model_dir = self.config.model_dir / self.config.llm_model_id
+
+        # Load real tokenizer
+        self._tokenizer = _load_tokenizer(model_dir, self.config.llm_model_id)
+
         if model_path.exists():
             try:
                 import onnxruntime as ort
@@ -228,10 +262,16 @@ class QualcommLLMProvider(LLMProvider):
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
 
     def _tokenize_prompt(self, prompt: str) -> np.ndarray:
+        """Tokenize prompt using real tokenizer if available."""
+        if self._tokenizer is not None:
+            encoding = self._tokenizer.encode(prompt)
+            return np.array([encoding.ids], dtype=np.int64)
+
+        # Fallback to hash-based tokenization
         words = re.findall(r"\b[a-zA-Z0-9_\-]+\b", prompt.lower())
         token_ids = [101]
         for w in words[:254]:
-            h = (hash(w) % (self._vocab_size - 1000)) + 1000
+            h = (hash(w) % 31000) + 1000
             token_ids.append(h)
         token_ids.append(102)
         return np.array([token_ids], dtype=np.int64)
