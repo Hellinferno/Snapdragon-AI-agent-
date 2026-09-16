@@ -173,8 +173,9 @@ class LearningService:
         count: int = 4,
     ) -> FlashcardsResponse:
         """Generates active-recall flashcards from indexed material."""
+        # Use a query that matches methodology/findings content well
         search_res = await self.retrieval_service.search(
-            query="methodology results conclusion",
+            query="methodology",
             top_k=count,
             document_ids=document_ids,
             min_score=0.01,

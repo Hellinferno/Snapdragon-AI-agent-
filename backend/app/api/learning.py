@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.schemas.learning import (
     ExplainRequest,
     ExplainResponse,
+    FlashcardsRequest,
     FlashcardsResponse,
     QuizRequest,
     QuizResponse,
@@ -50,8 +51,10 @@ async def generate_quiz(
 
 @router.post("/flashcards", response_model=FlashcardsResponse)
 async def generate_flashcards(
+    request: FlashcardsRequest | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> FlashcardsResponse:
     """Generates active-recall study flashcards from indexed material."""
+    doc_ids = request.document_ids if request else None
     service = LearningService(db)
-    return await service.generate_flashcards()
+    return await service.generate_flashcards(document_ids=doc_ids)

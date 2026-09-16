@@ -72,8 +72,8 @@ async def test_learning_endpoints(client: AsyncClient):
     assert len(q["explanation"]) > 0
     assert q["source"] is not None
 
-    # 4. Flashcards Generator
-    fc_res = await client.post("/api/learning/flashcards")
+# 4. Flashcards Generator
+    fc_res = await client.post("/api/learning/flashcards", json={"document_ids": [doc_id]})
     assert fc_res.status_code == 200
     fc_data = fc_res.json()
     assert "flashcards" in fc_data

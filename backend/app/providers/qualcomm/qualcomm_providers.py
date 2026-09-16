@@ -276,8 +276,12 @@ class QualcommLLMProvider(LLMProvider):
                 f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
             )
 
-        # Parse context and question from prompt (use lowercase to stay within 32k vocab)
-        context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
+        # Parse context and question from prompt (support both formats)
+        # Format 1: Original ### CONTEXT:/### QUESTION: format
+        context_match = re.search(r"### CONTEXT:\n(.*?)\n### QUESTION:\n(.*?)$", prompt, re.DOTALL)
+        if not context_match:
+            # Format 2: lowercase context:/question: format (for vocab compatibility)
+            context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
         if not context_match:
             context_text = prompt
             question = ""

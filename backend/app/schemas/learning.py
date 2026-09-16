@@ -55,3 +55,7 @@ class Flashcard(BaseModel):
 
 class FlashcardsResponse(BaseModel):
     flashcards: list[Flashcard]
+
+
+class FlashcardsRequest(BaseModel):
+    document_ids: list[str] | None = Field(None, description="Optional document IDs to scope flashcards")

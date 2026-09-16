@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.db_models import Chunk, Document, Page
 from app.providers.embedding_provider import embedding_provider
+from app.providers.factory import get_embedding_provider, get_llm_provider
 from app.providers.vector_store import SQLiteVectorStore
 from app.services.retrieval_service import RetrievalService
 
@@ -34,12 +35,15 @@ async def test_retrieval_service_search_and_chat(db_session: AsyncSession):
     db_session.add(chunk)
     await db_session.flush()
 
-    # Index embedding
+    # Index embedding using development provider (test default)
     vec = await embedding_provider.embed_text(chunk.text)
     store = SQLiteVectorStore(db_session)
     await store.add_vectors([(chunk.id, doc.id, vec)])
 
-    service = RetrievalService(db_session)
+    # Use development providers for test to match indexed embeddings
+    dev_embedding = embedding_provider
+    dev_llm = get_llm_provider("development")
+    service = RetrievalService(db_session, embedding=dev_embedding, llm=dev_llm)
 
     # 1. Search with matching query
     search_res = await service.search("quantized transformer latency", top_k=3)
