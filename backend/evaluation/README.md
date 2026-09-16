@@ -190,9 +190,7 @@ The E2 sentence chunker carried almost no overlap (a bug), which likely inflated
    belong to questions that are already answered correctly.
 3. **Search latency is the SQLite vector scan (~550-600 ms), not the model.** An in-memory matrix or an
    ANN index is the lever if search latency matters for the demo; it does not affect quality.
-4. The bundled `models/qualcomm/all-MiniLM-L6-v2/model.onnx` is **not** MiniLM:
-   `scripts/setup_qualcomm_onnx_models.py` builds a single random-weight `Gather` node (P2 work).
-5. **Partial refusals:** `RetrievalService.chat` drops all sources when the answer contains
+4. **Partial refusals:** `RetrievalService.chat` drops all sources when the answer contains
    "Insufficient evidence" anywhere. That hides legitimate cited partial answers (demo Q04), but it also
    hides answers with ungrounded content: in the hash-embedding book run, Qwen listed the CRISP-DM stages
    from training data, then refused. Decide a policy (e.g. keep sources and flag `partial`) before changing it.

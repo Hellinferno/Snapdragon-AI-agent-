@@ -335,17 +335,25 @@ class QualcommLLMProvider(LLMProvider):
         # Tokenize the full prompt
         input_ids = self._tokenize_prompt(prompt)
 
-        # Autoregressive generation with greedy decoding
+        # Autoregressive generation with greedy decoding (fixed seq_len=256)
         max_new_tokens = 256
         generated_tokens = []
         current_input_ids = input_ids.copy()
         eos_token_id = self._tokenizer.token_to_id("[EOS]") or self._tokenizer.token_to_id("</s>") or 102
 
         for step in range(max_new_tokens):
-            # Run ONNX inference
-            logits = self._session.run(["logits"], {"input_ids": current_input_ids})[0]
-            # logits shape: [1, seq_len, vocab_size]
-            next_token_logits = logits[0, -1, :]  # Last token's logits
+            # Run ONNX inference - model expects fixed [1, 256] input
+            logits = self._session.run(["output_0"], {"input_ids": current_input_ids})[0]
+            # logits shape: [1, 256, vocab_size]
+            # Get logits for the last valid (non-padded) position
+            # Find the last non-pad token position
+            pad_id = self._tokenizer.token_to_id("[PAD]") or 0
+            valid_positions = np.where(current_input_ids[0] != pad_id)[0]
+            if len(valid_positions) == 0:
+                last_pos = 0
+            else:
+                last_pos = valid_positions[-1]
+            next_token_logits = logits[0, last_pos, :]
             
             # Greedy decoding: pick token with highest logit
             next_token_id = int(np.argmax(next_token_logits))
@@ -354,8 +362,14 @@ class QualcommLLMProvider(LLMProvider):
                 break
             
             generated_tokens.append(next_token_id)
-            # Append to input_ids for next iteration
-            current_input_ids = np.concatenate([current_input_ids, [[next_token_id]]], axis=1)
+            # Replace the next position (or last+1) instead of concatenating
+            next_pos = last_pos + 1
+            if next_pos < 256:
+                current_input_ids[0, next_pos] = next_token_id
+            else:
+                # Shift left if at capacity (sliding window)
+                current_input_ids[0, :-1] = current_input_ids[0, 1:]
+                current_input_ids[0, -1] = next_token_id
 
         # Decode generated tokens
         generated_text = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)

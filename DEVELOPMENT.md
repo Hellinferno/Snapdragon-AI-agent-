@@ -30,11 +30,11 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Generate Real ONNX Models (Development & Local Testing)
+### Acquire Real ONNX Models (Development & Local Testing)
 ```powershell
-python scripts/setup_qualcomm_onnx_models.py
+python scripts/download_qualcomm_models.py
 ```
-This generates the genuine ONNX model graphs for `all-MiniLM-L6-v2`, `Qwen2.5-3B-Instruct`, and `MobileNet-v2` in `backend/models/qualcomm/`.
+This downloads and verifies real ONNX models from legitimate sources (Hugging Face, Qualcomm AI Hub) for `all-MiniLM-L6-v2`, `Qwen2.5-3B-Instruct`, and `MobileNet-v2` in `backend/models/qualcomm/`.
 
 ### Run Automated Backend Tests
 ```powershell
