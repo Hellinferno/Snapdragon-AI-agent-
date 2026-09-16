@@ -30,29 +30,55 @@ Research PDF ──► Semantic RAG ──► MiniLM Embedding ──► Qwen LL
 
 ## 🏛️ System Execution Architecture
 
-ScholarEdge implements genuine ONNX Runtime execution with explicit execution provider separation:
+ScholarEdge implements genuine ONNX Runtime execution with explicit execution provider separation for **two modes**:
+
+### Development Mode (Intel Host — Verified)
 
 ```text
                             ScholarEdge Application
                                        │
            ┌───────────────────────────┼───────────────────────────┐
            ↓                           ↓                           ↓
-   Embedding Engine                LLM Engine                Vision Engine
-  (all-MiniLM-L6-v2)          (Qwen2.5-3B-Instruct)          (MobileNet-v2)
+  Embedding Engine                LLM Engine                Vision Engine
+ (all-MiniLM-L6-v2 ONNX)      (OpenRouter: Qwen 2.5 72B)   (MobileNet-v2 ONNX)
            │                           │                           │
            └───────────────────────────┼───────────────────────────┘
                                        ↓
                                  ONNX Runtime
                          (ort.InferenceSession v1.20+)
                                        │
-                     ┌─────────────────┴─────────────────┐
-                     ▼                                   ▼
-          QNNExecutionProvider                 CPUExecutionProvider
-                     │                                   │
-                     ▼                                   ▼
-          Snapdragon Hexagon NPU                     Host CPU
-              (45 TOPS INT4)                     (Intel ThinkBook)
-        [Target Hardware Execution]           [Development Simulation]
+                           ┌───────────┴───────────┐
+                           ▼                       ▼
+                  CPUExecutionProvider        CPUExecutionProvider
+                           │                       │
+                           ▼                       ▼
+                     Intel Core i3              Intel Core i3
+                    (Development Host)        (Development Host)
+```
+
+### Snapdragon Mode (Target — Not Yet Physically Validated)
+
+```text
+                            ScholarEdge Application
+                                       │
+           ┌───────────────────────────┼───────────────────────────┐
+           ↓                           ↓                           ↓
+  Embedding Engine                LLM Engine                Vision Engine
+ (all-MiniLM-L6-v2 INT4 ONNX)  (Qwen2.5-3B-Instruct INT4)  (MobileNet-v2 INT4 ONNX)
+           │                           │                           │
+           └───────────────────────────┼───────────────────────────┘
+                                       ↓
+                                 ONNX Runtime
+                         (ort.InferenceSession v1.20+)
+                                       │
+                      ┌────────────────┴────────────────┐
+                      ▼                                 ▼
+           QNNExecutionProvider                   QNNExecutionProvider
+                      │                                 │
+                      ▼                                 ▼
+           Snapdragon Hexagon NPU                Snapdragon Hexagon NPU
+               (45 TOPS INT4)                       (45 TOPS INT4)
+         [Target Hardware Execution]           [Target Hardware Execution]
 ```
 
 ---
@@ -60,11 +86,20 @@ ScholarEdge implements genuine ONNX Runtime execution with explicit execution pr
 ## 🔍 Hardware Verification & Truth in Telemetry
 
 In accordance with strict scientific honesty:
-- **Verified Development Workflow**: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64). All 5 studios, vector indexing, citation tracking, and **37 automated backend tests** are physically verified passing.
-- **Snapdragon NPU Status**: Architecture, provider isolation, and candidate model ONNX graphs are fully implemented. On-device Qualcomm Hexagon NPU execution is **pending physical target-device validation**.
-- **Truthful Status Display**:
-  - Development Host: `Development Host (CPU Simulation)` or `Host CPU (Snapdragon Validation Pending)`.
-  - Snapdragon PC: Displays `Hexagon NPU Active` **only** when `QNNExecutionProvider` is physically loaded and executing.
+
+| Aspect | Development Host (Verified) | Snapdragon Target (Pending) |
+|--------|----------------------------|----------------------------|
+| **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
+| **Tests** | 37 backend tests passing, frontend build passing | Architecture implemented, ONNX graphs exported, provider isolation complete |
+| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen2.5-3B-Instruct INT4 → QNNExecutionProvider |
+| **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
+| **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
+| **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
+| **Status Badge** | ✅ Physically Verified | ❌ Not Physically Verified |
+
+**Truthful Status Display**:
+- Development Host UI shows: `Development Host (CPUExecutionProvider)`
+- Snapdragon PC UI shows: `Hexagon NPU (QNNExecutionProvider)` **only** when `QNNExecutionProvider` is physically loaded and executing
 
 *Read our detailed disclosure in [LIMITATIONS.md](LIMITATIONS.md).*
 
@@ -118,21 +153,40 @@ In accordance with strict scientific honesty:
 
 ---
 
-## 🛡️ Demonstrable Privacy Mode & Offline Capability
+## 🛡️ Privacy Modes: Development vs. Snapdragon
 
-ScholarEdge features a verifiable 6-point local-first security checklist visible directly within the **Hardware & Privacy Runtime Inspector Modal**:
+ScholarEdge operates in **two distinct modes**. The distinction is explicit and non-negotiable.
+
+### DEVELOPMENT MODE (Current Verified State)
 
 ```text
-Privacy Audit Checklist:
-✓ Documents stored locally (Local SQLite & filesystem)
-✓ Embeddings stored locally (384-dim vectors in local SQLite)
-✓ Vector search local (Zero network query egress)
-✓ AI inference local (ONNX Runtime / QNN Execution Provider)
-✓ No document upload (100% air-gapped safe)
-✓ External providers disabled (Zero external API dependencies)
+Inference:        OpenRouter (qwen/qwen-2.5-72b-instruct)
+Document retrieval: Local (SQLite + all-MiniLM-L6-v2 ONNX)
+Documents uploaded to cloud: No
+Embeddings uploaded to cloud: No
+Vector search:    Local (zero network egress)
+Air-gapped:       No (requires internet for LLM)
+Verified on:      Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB RAM, Windows 11)
+Tests:            37 backend tests passing | Frontend build passing
 ```
 
-**Air-Gapped Offline Guarantee**: Disconnect the internet or switch to airplane mode—ScholarEdge continues complete operation with zero interruption.
+### SNAPDRAGON MODE (Target — Not Yet Physically Validated)
+
+```text
+Inference:        Qwen2.5-3B-Instruct INT4 ONNX → QNNExecutionProvider → Hexagon NPU
+Document retrieval: Local (SQLite + all-MiniLM-L6-v2 INT4 ONNX → QNNExecutionProvider → Hexagon NPU)
+Documents uploaded to cloud: No
+Embeddings uploaded to cloud: No
+Vector search:    Local (zero network egress)
+Air-gapped:       Yes (fully offline capable)
+Target hardware:  Snapdragon X Elite / Hexagon NPU (45 TOPS)
+Status:           Architecture implemented, ONNX graphs exported, provider isolation complete
+                  PHYSICAL VALIDATION PENDING
+```
+
+**The UI Hardware Inspector displays `Host CPU (Development)` or `Hexagon NPU (Verified)` — never assumes Snapdragon execution without `QNNExecutionProvider` physically loaded.**
+
+**Air-Gapped Offline Guarantee (Snapdragon Mode only)**: Disconnect the internet or switch to airplane mode—ScholarEdge continues complete operation with zero interruption.
 
 ---
 

@@ -5,7 +5,23 @@
 
 ---
 
-## 1. Hardware Execution & Host Environment
+## 1. Two Execution Modes — Explicit & Non-Negotiable
+
+| Aspect | **DEVELOPMENT MODE** (Physically Verified) | **SNAPDRAGON MODE** (Target — Not Verified) |
+|---|---|---|
+| **Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U) | Snapdragon X Elite / Copilot+ PC |
+| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen2.5-3B-Instruct INT4 → QNNExecutionProvider |
+| **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
+| **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
+| **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
+| **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (QNNExecutionProvider)` — only when loaded |
+| **Verification** | ✅ 37 tests passing, frontend build passing | ❌ Architecture complete, physical validation pending |
+
+**The UI and `/api/health` **never** display `Hexagon NPU Active` unless `QNNExecutionProvider` is physically loaded.**
+
+---
+
+## 2. Hardware Execution & Host Environment
 
 | Component | Development Machine (Verified) | Snapdragon PC (Target Architecture) |
 |---|---|---|
@@ -26,7 +42,7 @@
 
 ---
 
-## 2. Model Execution Boundaries
+## 3. Model Execution Boundaries
 
 ### Embedding Pipeline
 - **Target Implementation**: `all-MiniLM-L6-v2` (384-dimensional dense vectors) exported to ONNX and configured for Qualcomm AI Hub INT4 compilation on Hexagon HTP.
@@ -47,18 +63,37 @@
 
 ---
 
-## 3. Dataset & Document Support
+## 4. Dataset & Document Support
 - **Supported Formats**: Text-rich PDF documents (peer-reviewed papers, clinical reports, conference proceedings).
 - **OCR Capability**: PDF page parsing with fallback OCR triggers. Non-PDF files (e.g. raw `.docx`, `.pptx`) must be converted to PDF prior to ingestion.
 - **Storage Scope**: SQLite database and filesystem storage reside strictly on the local machine (`backend/data/`). Zero external network egress occurs during indexing, vector search, or synthesis.
 
 ---
 
-## 4. Path to Target Validation
+## 5. RAG Quality Baseline (Measured on Development Host)
+
+From `evaluation/results/data_science_for_business/baseline.json`:
+
+| Metric | Value | Notes |
+|---|---|---|
+| Doc Hit@K | 100% | 18/18 |
+| Page Hit@K | 66.7% | 12/18 |
+| Evidence Hit@K | 50% | 9/18 |
+| Answer Correctness | 44.4% | 8/18 |
+| False Refusal Rate | 44.4% | 8/18 |
+| Abstention Accuracy | 100% | 2/2 |
+| Groundedness | 100% | 10/10 |
+| Citation Accuracy | 100% | 13/13 |
+
+**Known gaps**: Multi-page (33% evidence hit), Cross-section (33%), Conceptual (40%), Page citations (66%).
+
+---
+
+## 6. Path to Target Validation
 
 To graduate from "Architecture Implemented & Simulation Verified" to "Physically Verified on Snapdragon Hardware":
 1. Deploy codebase to a Snapdragon X Elite Copilot+ PC running Windows 11 ARM64.
 2. Install Qualcomm Neural Processing SDK (`QNN`) and `onnxruntime-qnn`.
 3. Verify `QnnHtp.dll` initialization in `backend/app/providers/qualcomm/qualcomm_config.py`.
 4. Run `backend/scripts/benchmark_snapdragon.py` to record physical NPU cold and warm latencies, memory footprint, and TOPS utilization.
-5. Record physical validation metrics in `BENCHMARKS.md`.
+5. Record physical validation metrics in `BENCHMARKS.md` under **VERIFIED** section.

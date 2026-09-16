@@ -1,6 +1,8 @@
 # ScholarEdge Evaluation & Demo Walkthrough
 
 > **Step-by-Step Demonstration Script for Judges and Reviewers**
+>
+> ⚠️ **IMPORTANT**: This demo runs in **DEVELOPMENT MODE** (Intel host, OpenRouter LLM). The **SNAPDRAGON MODE** (fully air-gapped, on-device NPU) is architecturally implemented but **not physically validated**. See [LIMITATIONS.md](LIMITATIONS.md) for the complete disclosure.
 
 ---
 
@@ -23,12 +25,35 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-## 📑 2. Demo Evaluation Steps
+## 📋 2. Mode Verification (Do This First)
+
+Before evaluating features, verify the execution mode:
+
+1. Open `http://localhost:8000/api/health` — confirm:
+   ```json
+   {
+     "status": "healthy",
+     "provider_backend": "development",
+     "external_providers_enabled": true,
+     "hardware_provider": "CPUExecutionProvider",
+     "hardware_npu_active": false
+   }
+   ```
+2. In the UI, click the **Execution Badge** (top-right) — it should show:
+   ```
+   Host: Windows AMD64 | Provider: CPUExecutionProvider | Status: Development Host
+   ```
+
+**This confirms you are evaluating the Development Mode baseline. Snapdragon Mode is not yet physically validated.**
+
+---
+
+## 📑 3. Demo Evaluation Steps
 
 ### Step 1: 1-Click Seed Demo Papers
 1. Navigate to the **Document Library** (Tab 1).
 2. Click the green button **"Load Demo Papers (1-Click)"**.
-3. Three peer-reviewed-style papers and an architecture figure are ingested with zero external downloads:
+3. Three peer-reviewed-style papers and an architecture figure are ingested:
    - *Clinical Multimodal Transformers for Diagnostic Radiology*
    - *Privacy-Preserving On-Device Clinical Language Models*
    - *Formative Assessment and Active Recall in Medical Education*
@@ -96,5 +121,47 @@ Open `http://localhost:5173` in your browser.
    > `Host: Windows AMD64 | Provider: CPUExecutionProvider`
 2. The **ScholarEdge Hardware & Privacy Runtime Inspector Modal** opens:
    - **Active Environment**: Displays Host Machine, Architecture, Engine, Provider, and truthful NPU status (`Validation Pending`).
-   - **Demonstrable Privacy Checklist**: 6 green checkmarks verifying local storage, local embeddings, local search, local inference, zero uploads, and external providers disabled.
-   - **CPU vs Snapdragon NPU Benchmark Comparison Table**: Displays physically measured host CPU latencies alongside target Snapdragon Hexagon NPU profiles.
+   - **Demonstrable Privacy Checklist**: 6 checks — Development Mode shows 4 green (local storage, embeddings, search, no uploads) and 2 yellow (cloud LLM via OpenRouter, external providers enabled).
+   - **CPU vs Snapdragon NPU Benchmark Comparison Table**: Displays physically measured host CPU latencies alongside **target** (not verified) Snapdragon Hexagon NPU profiles.
+
+---
+
+## 📊 4. RAG Benchmark Evidence (Pre-Run)
+
+The repository includes a pre-run RAG evaluation on the "Data Science for Business" corpus:
+
+**Location**: `backend/evaluation/results/data_science_for_business/baseline.json`
+
+**Key Measured Metrics (Development Host)**:
+| Metric | Value |
+|---|---|
+| Doc Hit@K | 100% |
+| Page Hit@K | 66.7% |
+| Evidence Hit@K | 50% |
+| Answer Correctness | 44.4% |
+| False Refusal Rate | 44.4% |
+| Abstention Accuracy | 100% |
+| Groundedness | 100% |
+| Citation Accuracy | 100% |
+| Search Latency (P50) | 263 ms |
+| Chat Latency (P50) | 2,742 ms |
+
+**Known Gaps**: Multi-page questions (33% evidence hit), Cross-section (33%), Conceptual (40%), Page citations (66%).
+
+To re-run: `cd backend && python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. --mode full --label rerun`
+
+---
+
+## 🎯 5. What Judges Should Look For
+
+| Feature | Demo Verification | Competition Claim |
+|---|---|---|
+| **Grounded RAG with page citations** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
+| **Cross-paper comparison** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
+| **Formative learning loop** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
+| **Vision figure analysis** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
+| **Air-gapped privacy** | ❌ Dev Mode uses OpenRouter | 🎯 **Snapdragon Mode target** |
+| **On-device NPU inference** | ❌ Dev Mode uses CPU | 🎯 **Snapdragon Mode target** |
+| **Verified Snapdragon benchmarks** | ❌ Not yet run | 🎯 **Pending physical validation** |
+
+**Honest framing for judges**: "We've built the complete 5-studio application with grounded RAG, cross-paper synthesis, formative learning, and vision analysis. The architecture is fully isolated behind a provider factory so the *same application* can run on Intel (development) or Snapdragon NPU (target). Physical Snapdragon validation is the remaining milestone — see LIMITATIONS.md and SNAPDRAGON.md for the exact checklist."
