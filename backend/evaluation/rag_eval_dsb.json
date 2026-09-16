@@ -1,0 +1,236 @@
+[
+  {
+    "id": "DSB01",
+    "category": "single_document",
+    "question": "What are the two main types of data-driven decisions discussed in Chapter 1?",
+    "expected_answer": "The two main types are: (1) decisions for which discovering a pattern is the goal, and (2) decisions for which testing a hypothesis is the goal.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 30
+      }
+    ]
+  },
+  {
+    "id": "DSB02",
+    "category": "single_document",
+    "question": "What was Walmart's key finding about Pop-Tarts and beer before Hurricane Frances?",
+    "expected_answer": "Walmart found that strawberry Pop-Tarts and beer sales increase significantly before a hurricane, so they stocked up on both items.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 27
+      }
+    ]
+  },
+  {
+    "id": "DSB03",
+    "category": "single_document",
+    "question": "What is the churn rate mentioned for MegaTelCo in the mid-Atlantic region?",
+    "expected_answer": "20% of cell phone customers leave each month.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 28
+      }
+    ]
+  },
+  {
+    "id": "DSB04",
+    "category": "single_document",
+    "question": "What is information gain based on?",
+    "expected_answer": "Information gain is based on a purity measure called entropy, invented by Claude Shannon in 1948.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 75
+      }
+    ]
+  },
+  {
+    "id": "DSB05",
+    "category": "single_document",
+    "question": "Which attribute was found to be most informative for predicting mushroom edibility in the mushroom dataset?",
+    "expected_answer": "Odor was the most informative attribute for predicting mushroom edibility.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 86
+      }
+    ]
+  },
+  {
+    "id": "DSB06",
+    "category": "single_document",
+    "question": "What accuracy did the classification tree achieve on the cellular phone churn data?",
+    "expected_answer": "The tree achieved 73% accuracy on its decisions.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 101
+      }
+    ]
+  },
+  {
+    "id": "DSB07",
+    "category": "multi_page",
+    "question": "How does the book distinguish between data mining and statistical hypothesis testing?",
+    "expected_answer": "Data mining is hypothesis generation - finding patterns in data. Statistical hypothesis testing is complementary and should follow data mining on different data. Data mining procedures may produce numerical results that should be validated by hypothesis testing.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 61
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 62
+      }
+    ]
+  },
+  {
+    "id": "DSB08",
+    "category": "multi_page",
+    "question": "What is the difference between classification and regression in supervised data mining?",
+    "expected_answer": "Classification involves a categorical (often binary) target while regression involves a numeric target. Example: 'Will this customer purchase?' is classification; 'How much will they spend?' is regression.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 49
+      }
+    ]
+  },
+  {
+    "id": "DSB09",
+    "category": "multi_page",
+    "question": "How do classification trees and linear classifiers differ in partitioning instance space?",
+    "expected_answer": "Classification trees partition instance space with axis-parallel boundaries (horizontal/vertical), while linear classifiers use straight lines at any angle (weighted sum of attributes).",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 107
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 108
+      }
+    ]
+  },
+  {
+    "id": "DSB10",
+    "category": "comparison",
+    "question": "Compare the information gain of Balance vs Residence attributes for the write-off example in Chapter 3.",
+    "expected_answer": "Balance has IG ≈ 0.37, while Residence has IG ≈ 0.13. Balance is more informative because it creates purer children; Residence=OWN reduces entropy but RENT and OTHER don't.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 79
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 80
+      }
+    ]
+  },
+  {
+    "id": "DSB11",
+    "category": "comparison",
+    "question": "How does the book contrast supervised vs unsupervised data mining using customer grouping examples?",
+    "expected_answer": "Unsupervised: 'Do our customers naturally fall into different groups?' (no target specified). Supervised: 'Can we find groups of customers with high likelihood of canceling?' (specific target: will they leave).",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 48
+      }
+    ]
+  },
+  {
+    "id": "DSB12",
+    "category": "beginner_explanation",
+    "question": "Explain in simple terms what entropy means in the context of decision trees.",
+    "expected_answer": "Entropy measures how mixed or disordered a group is. A pure group (all same class) has entropy 0. A perfectly mixed group (50/50 split) has maximum entropy of 1. Decision trees try to split data to reduce entropy.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 75
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 76
+      }
+    ]
+  },
+  {
+    "id": "DSB13",
+    "category": "citation",
+    "question": "Which chapter introduces the concept of information gain and entropy for attribute selection?",
+    "expected_answer": "Chapter 3: Introduction to Predictive Modeling",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 75
+      }
+    ]
+  },
+  {
+    "id": "DSB14",
+    "category": "page_citation",
+    "question": "On which page does the book show the classification tree learned from the cellular phone churn data?",
+    "expected_answer": "Page 101 (Figure 3-18)",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 101
+      }
+    ]
+  },
+  {
+    "id": "DSB15",
+    "category": "missing_evidence",
+    "question": "What is the recommended sample size for training a support vector machine according to this book?",
+    "expected_answer": "Insufficient evidence in the indexed documents to answer this question.",
+    "expected_sources": []
+  },
+  {
+    "id": "DSB16",
+    "category": "ambiguous",
+    "question": "What is the best data mining algorithm?",
+    "expected_answer": "Insufficient evidence in the indexed documents to answer this question.",
+    "expected_sources": []
+  },
+  {
+    "id": "DSB17",
+    "category": "cross_document",
+    "question": "How does the MegaTelCo churn example from Chapter 1 connect to the classification tree in Chapter 3?",
+    "expected_answer": "The churn example from Chapter 1 (20% monthly churn rate, MegaTelCo) is used as the running example in Chapter 3, where a classification tree is built using attributes like OVERAGE, LEFTOVER, HOUSE to predict churn, achieving 73% accuracy.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 28
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 98
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 101
+      }
+    ]
+  },
+  {
+    "id": "DSB18",
+    "category": "conflicting_evidence",
+    "question": "Does the book suggest that a more accurate model is always better for business decisions?",
+    "expected_answer": "No. The book states that a less accurate model can be preferable if it's more intelligible. Descriptive models must be judged on intelligibility, and a less accurate model that is easier to understand may be more useful for communicating with stakeholders.",
+    "expected_sources": [
+      {
+        "document": "Data Science for Business",
+        "page": 100
+      },
+      {
+        "document": "Data Science for Business",
+        "page": 102
+      }
+    ]
+  }
+]
