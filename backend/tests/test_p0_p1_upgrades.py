@@ -51,7 +51,7 @@ async def test_qualcomm_onnx_llm_execution_and_telemetry():
     assert provider.telemetry["runtime_engine"] == "ONNX Runtime"
     assert provider.telemetry["hardware_npu_active"] is False
     status = provider.telemetry["runtime_status"]
-    assert "Hardware Validation Pending" in status or status == "Fallback Mode (Model Not Found)"
+    assert "Hardware Validation Pending" in status or status == "Fallback Mode (Model Not Found)" or "QAIRT Bundle Detected" in status
 
     # If tokenizer or session not available, skip generation test
     if provider._session is None or provider._tokenizer is None:

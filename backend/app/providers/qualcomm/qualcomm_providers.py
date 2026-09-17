@@ -248,13 +248,17 @@ class QualcommLLMProvider(LLMProvider):
                 self.telemetry["runtime_status"] = "Fallback Mode (Session Load Failed)"
         elif qairt_model_parts:
             # GenAI Inference Extensions (QAIRT) model - runs on Snapdragon NPU via GenAI Inference Extensions
-            self._session = "qairt"  # Marker for QAIRT model
-            self.telemetry["active_provider"] = "GenAI Inference Extensions (QAIRT)"
-            self.telemetry["hardware_npu_active"] = True  # QAIRT runs on Hexagon NPU
-            self.telemetry["runtime_status"] = "GenAI Inference Extensions (QAIRT) - Hexagon NPU"
+            # Requires GenAI Inference Extensions Python SDK and Snapdragon NPU hardware
+            # On non-Snapdragon hosts, we load tokenizer but cannot run inference
+            self._session = None  # QAIRT requires GenAI Inference Extensions SDK + Snapdragon NPU
+            self._qairt_model_dir = model_dir  # Store path for potential future use
+            self.telemetry["active_provider"] = "GenAI Inference Extensions (QAIRT) - Not Available on This Host"
+            self.telemetry["hardware_npu_active"] = False  # Not running on Snapdragon NPU
+            self.telemetry["runtime_status"] = "QAIRT Bundle Detected - Requires Snapdragon NPU + GenAI Inference Extensions SDK"
             logger.info(
-                "Initialized Qualcomm LLM with GenAI Inference Extensions (QAIRT) model for %s",
+                "Detected QAIRT bundle for %s at %s - Requires Snapdragon NPU + GenAI Inference Extensions SDK for inference",
                 self.config.llm_model_id,
+                model_dir,
             )
         else:
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
@@ -350,6 +354,13 @@ class QualcommLLMProvider(LLMProvider):
                 )
 
             # NOW check session and tokenizer (after refusal checks)
+            # Check if QAIRT bundle was detected but runtime not available
+            if hasattr(self, '_qairt_model_dir') and self._session is None:
+                raise RuntimeError(
+                    f"QAIRT bundle detected for {self.config.llm_model_id} but GenAI Inference Extensions SDK "
+                    f"and Snapdragon NPU hardware are required for inference. "
+                    f"Current host does not support QAIRT inference."
+                )
             if self._session is None:
                 raise RuntimeError(
                     f"ONNX session not initialized for {self.config.llm_model_id}. "
