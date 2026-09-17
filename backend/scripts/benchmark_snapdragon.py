@@ -186,28 +186,65 @@ def run_full_benchmark(output_dir: Path, dry_run: bool = False) -> Path:
     print("-" * 70)
 
     config = QualcommConfig()
-    embedding_prov = QualcommEmbeddingProvider(config)
+    
+    # Embedding provider may fail due to ONNX IR version mismatch
+    try:
+        embedding_prov = QualcommEmbeddingProvider(config)
+    except RuntimeError as e:
+        if "Unsupported model IR version" in str(e):
+            print("Embedding provider unavailable (ONNX IR version mismatch), skipping embedding benchmark")
+            embedding_prov = None
+        else:
+            raise
+    else:
+        # Check if session was initialized successfully
+        if embedding_prov is not None and embedding_prov._session is None:
+            print("Embedding provider unavailable (ONNX IR version mismatch), skipping embedding benchmark")
+            embedding_prov = None
+    
     llm_prov = QualcommLLMProvider(config)
-    vision_prov = QualcommVisionProvider(config)
+    
+    # Vision provider may fail due to ONNX IR version mismatch
+    try:
+        vision_prov = QualcommVisionProvider(config)
+    except RuntimeError as e:
+        if "Unsupported model IR version" in str(e):
+            print("Vision provider unavailable (ONNX IR version mismatch), skipping vision benchmark")
+            vision_prov = None
+        else:
+            raise
 
     print("\n[1/3] Benchmarking Qualcomm Embedding Pipeline (all-MiniLM-L6-v2)...")
-    emb_results = run_embedding_benchmark(embedding_prov, iterations=3 if dry_run else 5)
-    print(f"      Cold Latency:       {emb_results['cold_latency_ms']:.2f} ms")
-    print(f"      Warm Mean Latency:  {emb_results['warm_mean_latency_ms']:.2f} ms (10-chunk batch)")
-    print(f"      Peak Memory Delta:  {emb_results['peak_memory_delta_mb']:.3f} MB")
+    if embedding_prov is None:
+        print("      Skipped (ONNX IR version mismatch)")
+        emb_results = {"cold_latency_ms": 0, "warm_mean_latency_ms": 0, "peak_memory_delta_mb": 0}
+    else:
+        emb_results = run_embedding_benchmark(embedding_prov, iterations=3 if dry_run else 5)
+        print(f"      Cold Latency:       {emb_results['cold_latency_ms']:.2f} ms")
+        print(f"      Warm Mean Latency:  {emb_results['warm_mean_latency_ms']:.2f} ms (10-chunk batch)")
+        print(f"      Peak Memory Delta:  {emb_results['peak_memory_delta_mb']:.3f} MB")
 
-    print("\n[2/3] Benchmarking Qualcomm Grounded LLM Pipeline (Qwen2.5-3B-Instruct)...")
-    llm_results = run_llm_benchmark(llm_prov, iterations=2 if dry_run else 3)
-    print(f"      Cold Latency:       {llm_results['cold_latency_ms']:.2f} ms")
-    print(f"      Warm Mean Latency:  {llm_results['warm_mean_latency_ms']:.2f} ms")
-    print(f"      Throughput:         ~{llm_results['tokens_per_second']:.1f} tokens/sec")
-    print(f"      Peak Memory Delta:  {llm_results['peak_memory_delta_mb']:.3f} MB")
+    print("\n[2/3] Benchmarking Qualcomm Grounded LLM Pipeline (Qwen3-4B-Instruct-2507)...")
+    if llm_prov._session is None or llm_prov._tokenizer is None:
+        print("      Skipped (QAIRT bundle not available)")
+        llm_results = {"cold_latency_ms": 0, "warm_mean_latency_ms": 0, "tokens_per_second": 0, "peak_memory_delta_mb": 0}
+    else:
+        llm_results = run_llm_benchmark(llm_prov, iterations=2 if dry_run else 3)
+        print(f"      Cold Latency:       {llm_results['cold_latency_ms']:.2f} ms")
+        print(f"      Warm Mean Latency:  {llm_results['warm_mean_latency_ms']:.2f} ms")
+        print(f"      Throughput:         ~{llm_results['tokens_per_second']:.1f} tokens/sec")
+        print(f"      Peak Memory Delta:  {llm_results['peak_memory_delta_mb']:.3f} MB")
 
     print("\n[3/3] Benchmarking Application-Level Grounded Retrieval Latency...")
-    app_cold_ms = emb_results["cold_latency_ms"] + llm_results["cold_latency_ms"]
-    app_warm_ms = (emb_results["warm_mean_latency_ms"] / 10.0) + llm_results["warm_mean_latency_ms"]
-    print(f"      Cold End-to-End:    {app_cold_ms:.2f} ms")
-    print(f"      Warm End-to-End:    {app_warm_ms:.2f} ms")
+    if embedding_prov is not None and (llm_prov._session is not None and llm_prov._tokenizer is not None):
+        app_cold_ms = emb_results["cold_latency_ms"] + llm_results["cold_latency_ms"]
+        app_warm_ms = (emb_results["warm_mean_latency_ms"] / 10.0) + llm_results["warm_mean_latency_ms"]
+        print(f"      Cold End-to-End:    {app_cold_ms:.2f} ms")
+        print(f"      Warm End-to-End:    {app_warm_ms:.2f} ms")
+    else:
+        print("      Skipped (components unavailable)")
+        app_cold_ms = 0
+        app_warm_ms = 0
 
     # Determine execution mode and target device checklist status
     is_target_snapdragon = system_info.get("is_target_snapdragon", False)

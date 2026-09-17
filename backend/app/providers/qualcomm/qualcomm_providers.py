@@ -282,145 +282,146 @@ class QualcommLLMProvider(LLMProvider):
         return np.array([ids], dtype=np.int64)
 
     async def generate(self, prompt: str, system_prompt: str | None = None) -> GenerationResult:
-        """Generate text using real autoregressive Qwen ONNX inference."""
-        t0 = time.perf_counter()
+            """Generate text using real autoregressive Qwen ONNX inference."""
+            t0 = time.perf_counter()
 
-        if self._session is None:
-            raise RuntimeError(
-                f"ONNX session not initialized for {self.config.llm_model_id}. "
-                f"Snapdragon mode requires valid ONNX model and execution provider."
-            )
-        if self._tokenizer is None:
-            raise RuntimeError(
-                f"Real tokenizer not available for {self.config.llm_model_id}. "
-                f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
-            )
+            # Parse context and question from prompt (support both formats) - do this first for refusal check
+            # Format 1: Original ### CONTEXT:/### QUESTION: format
+            context_match = re.search(r"### CONTEXT:\n(.*?)\n### QUESTION:\n(.*?)$", prompt, re.DOTALL)
+            if not context_match:
+                # Format 2: lowercase context:/question: format (for vocab compatibility)
+                context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
+            if not context_match:
+                context_text = prompt
+                question = ""
+            else:
+                context_text = context_match.group(1).strip()
+                question = context_match.group(2).strip()
 
-        # Parse context and question from prompt (support both formats)
-        # Format 1: Original ### CONTEXT:/### QUESTION: format
-        context_match = re.search(r"### CONTEXT:\n(.*?)\n### QUESTION:\n(.*?)$", prompt, re.DOTALL)
-        if not context_match:
-            # Format 2: lowercase context:/question: format (for vocab compatibility)
-            context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
-        if not context_match:
-            context_text = prompt
-            question = ""
-        else:
-            context_text = context_match.group(1).strip()
-            question = context_match.group(2).strip()
+            # Strict refusal rule: Check for missing evidence or empty context FIRST (before session checks)
+            if not context_text or "NO_RELEVANT_EVIDENCE" in context_text:
+                refusal_text = (
+                    "Insufficient evidence in the indexed documents to answer this question. "
+                    "The documents in your library do not contain information directly addressing this query."
+                )
+                return GenerationResult(
+                    text=refusal_text,
+                    prompt_tokens=len(prompt.split()),
+                    completion_tokens=len(refusal_text.split()),
+                )
 
-        # Strict refusal rule: Check for missing evidence or empty context
-        if not context_text or "NO_RELEVANT_EVIDENCE" in context_text:
-            refusal_text = (
-                "Insufficient evidence in the indexed documents to answer this question. "
-                "The documents in your library do not contain information directly addressing this query."
-            )
-            return GenerationResult(
-                text=refusal_text,
-                prompt_tokens=len(prompt.split()),
-                completion_tokens=len(refusal_text.split()),
-            )
+            # Check semantic alignment: does the context contain substantive terms from the question?
+            question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", question.lower()))
+            query_framing = {
+                "what", "which", "where", "when", "does", "have", "with", "from",
+                "that", "this", "these", "those", "about", "regarding", "indicate",
+                "demonstrate", "discuss", "explain", "paper", "study", "research",
+                "for", "the", "and", "are", "was", "were", "can", "could", "would",
+                "should", "how", "why", "who", "whom", "whose", "into", "onto",
+                "over", "under", "than", "then", "more", "most", "some", "such",
+                "each", "all", "both", "stage",
+            }
+            key_query_terms = question_words - query_framing
+            content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", context_text.lower()))
 
-        # Check semantic alignment: does the context contain substantive terms from the question?
-        question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", question.lower()))
-        query_framing = {
-            "what", "which", "where", "when", "does", "have", "with", "from",
-            "that", "this", "these", "those", "about", "regarding", "indicate",
-            "demonstrate", "discuss", "explain", "paper", "study", "research",
-            "for", "the", "and", "are", "was", "were", "can", "could", "would",
-            "should", "how", "why", "who", "whom", "whose", "into", "onto",
-            "over", "under", "than", "then", "more", "most", "some", "such",
-            "each", "all", "both", "stage",
-        }
-        key_query_terms = question_words - query_framing
-        content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", context_text.lower()))
-
-        has_overlap = False
-        if not key_query_terms:
-            has_overlap = True
-        else:
-            for term in key_query_terms:
-                if len(term) >= 4:
-                    prefix = term[:4]
-                    if any(cw == term or cw.startswith(prefix) or (len(cw) >= 4 and term.startswith(cw[:4])) for cw in content_words):
+            has_overlap = False
+            if not key_query_terms:
+                has_overlap = True
+            else:
+                for term in key_query_terms:
+                    if len(term) >= 4:
+                        prefix = term[:4]
+                        if any(cw == term or cw.startswith(prefix) or (len(cw) >= 4 and term.startswith(cw[:4])) for cw in content_words):
+                            has_overlap = True
+                            break
+                    elif term in content_words:
                         has_overlap = True
                         break
-                elif term in content_words:
-                    has_overlap = True
+
+            if not has_overlap:
+                refusal_text = (
+                    "Insufficient evidence in the indexed documents to answer this question. "
+                    "The documents in your library do not contain information directly addressing this query."
+                )
+                return GenerationResult(
+                    text=refusal_text,
+                    prompt_tokens=len(prompt.split()),
+                    completion_tokens=len(refusal_text.split()),
+                )
+
+            # NOW check session and tokenizer (after refusal checks)
+            if self._session is None:
+                raise RuntimeError(
+                    f"ONNX session not initialized for {self.config.llm_model_id}. "
+                    f"Snapdragon mode requires valid ONNX model and execution provider."
+                )
+            if self._tokenizer is None:
+                raise RuntimeError(
+                    f"Real tokenizer not available for {self.config.llm_model_id}. "
+                    f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
+                )
+
+            # Build prompt from extracted context + question (lowercase to stay within vocab)
+            llm_prompt = f"context:\n{context_text}\nquestion:\n{question}"
+            # Tokenize lowercase version to stay within model's vocab
+            input_ids = self._tokenize_prompt(llm_prompt.lower())
+
+            # Autoregressive generation with greedy decoding (fixed seq_len=256)
+            max_new_tokens = 256
+            generated_tokens = []
+            current_input_ids = input_ids.copy()
+            eos_token_id = self._tokenizer.token_to_id("[EOS]") or self._tokenizer.token_to_id("</s>") or 102
+
+            for step in range(max_new_tokens):
+                # Run ONNX inference - model expects fixed [1, 256] input
+                logits = self._session.run(["output_0"], {"input_ids": current_input_ids})[0]
+                # logits shape: [1, 256, vocab_size]
+                # Get logits for the last valid (non-padded) position
+                # Find the last non-pad token position
+                pad_id = self._tokenizer.token_to_id("[PAD]") or 0
+                valid_positions = np.where(current_input_ids[0] != pad_id)[0]
+                if len(valid_positions) == 0:
+                    last_pos = 0
+                else:
+                    last_pos = valid_positions[-1]
+                next_token_logits = logits[0, last_pos, :]
+            
+                # Greedy decoding: pick token with highest logit
+                next_token_id = int(np.argmax(next_token_logits))
+            
+                if next_token_id == eos_token_id:
                     break
+            
+                generated_tokens.append(next_token_id)
+                # Replace the next position (or last+1) instead of concatenating
+                next_pos = last_pos + 1
+                if next_pos < 256:
+                    current_input_ids[0, next_pos] = next_token_id
+                else:
+                    # Shift left if at capacity (sliding window)
+                    current_input_ids[0, :-1] = current_input_ids[0, 1:]
+                    current_input_ids[0, -1] = next_token_id
 
-        if not has_overlap:
-            refusal_text = (
-                "Insufficient evidence in the indexed documents to answer this question. "
-                "The documents in your library do not contain information directly addressing this query."
-            )
+            # Decode generated tokens
+            generated_text = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
+
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            prompt_tokens = len(input_ids[0])
+            completion_tokens = len(generated_tokens)
+            tps = (completion_tokens * 1000.0) / max(1.0, elapsed_ms)
+
+            if self._cold_run:
+                self.telemetry["cold_latency_ms"] = round(elapsed_ms, 2)
+                self._cold_run = False
+            else:
+                self.telemetry["warm_latency_ms"] = round(elapsed_ms, 2)
+            self.telemetry["tokens_per_second"] = round(tps, 1)
+
             return GenerationResult(
-                text=refusal_text,
-                prompt_tokens=len(prompt.split()),
-                completion_tokens=len(refusal_text.split()),
+                text=generated_text,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
             )
-
-        # Build prompt from extracted context + question (lowercase to stay within 32k vocab)
-        llm_prompt = f"context:\n{context_text}\nquestion:\n{question}"
-        # Tokenize lowercase version to stay within model's 32k vocab
-        input_ids = self._tokenize_prompt(llm_prompt.lower())
-
-        # Autoregressive generation with greedy decoding (fixed seq_len=256)
-        max_new_tokens = 256
-        generated_tokens = []
-        current_input_ids = input_ids.copy()
-        eos_token_id = self._tokenizer.token_to_id("[EOS]") or self._tokenizer.token_to_id("</s>") or 102
-
-        for step in range(max_new_tokens):
-            # Run ONNX inference - model expects fixed [1, 256] input
-            logits = self._session.run(["output_0"], {"input_ids": current_input_ids})[0]
-            # logits shape: [1, 256, vocab_size]
-            # Get logits for the last valid (non-padded) position
-            # Find the last non-pad token position
-            pad_id = self._tokenizer.token_to_id("[PAD]") or 0
-            valid_positions = np.where(current_input_ids[0] != pad_id)[0]
-            if len(valid_positions) == 0:
-                last_pos = 0
-            else:
-                last_pos = valid_positions[-1]
-            next_token_logits = logits[0, last_pos, :]
-            
-            # Greedy decoding: pick token with highest logit
-            next_token_id = int(np.argmax(next_token_logits))
-            
-            if next_token_id == eos_token_id:
-                break
-            
-            generated_tokens.append(next_token_id)
-            # Replace the next position (or last+1) instead of concatenating
-            next_pos = last_pos + 1
-            if next_pos < 256:
-                current_input_ids[0, next_pos] = next_token_id
-            else:
-                # Shift left if at capacity (sliding window)
-                current_input_ids[0, :-1] = current_input_ids[0, 1:]
-                current_input_ids[0, -1] = next_token_id
-
-        # Decode generated tokens
-        generated_text = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
-
-        elapsed_ms = (time.perf_counter() - t0) * 1000.0
-        prompt_tokens = len(input_ids[0])
-        completion_tokens = len(generated_tokens)
-        tps = (completion_tokens * 1000.0) / max(1.0, elapsed_ms)
-
-        if self._cold_run:
-            self.telemetry["cold_latency_ms"] = round(elapsed_ms, 2)
-            self._cold_run = False
-        else:
-            self.telemetry["warm_latency_ms"] = round(elapsed_ms, 2)
-        self.telemetry["tokens_per_second"] = round(tps, 1)
-
-        return GenerationResult(
-            text=generated_text,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-        )
 
 
 class QualcommVisionProvider(VisionProvider):
