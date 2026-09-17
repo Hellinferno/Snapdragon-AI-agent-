@@ -41,7 +41,7 @@ class QualcommConfig:
 
     # Qualcomm AI Hub verified candidate models
     embedding_model_id: str = "all-MiniLM-L6-v2"
-    llm_model_id: str = "Qwen2.5-3B-Instruct"
+    llm_model_id: str = "Qwen3-4B-Instruct-2507"
     vision_model_id: str = "MobileNet-v2"
 
     # Precision
