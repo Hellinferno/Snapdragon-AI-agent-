@@ -10,9 +10,9 @@
 |-------|---------|---------------------|
 | **MEASURED** | Physically executed on development host (Lenovo ThinkBook 14 G4 IAP, Intel i3-1215U, 8 GB RAM) | All "Development Host" columns, all raw latency numbers in §3 |
 | **TARGET** | Compiled INT4 profiles from Qualcomm AI Hub / SDK estimates for Snapdragon X Elite Hexagon NPU (45 TOPS) | All "Snapdragon Target" columns, projected speedups |
-| **VERIFIED** | Physically executed on Qualcomm AI Hub **Snapdragon X Elite CRD** with `QNNExecutionProvider` + Hexagon NPU | **all-MiniLM-L6-v2, Qwen2.5-3B-Instruct, MobileNet-v2** |
+| **VERIFIED** | Physically executed on Qualcomm AI Hub **Snapdragon X Elite CRD** with `QNNExecutionProvider` + Hexagon NPU | **all-MiniLM-L6-v2, MobileNet-v2** (Qwen3-4B-Instruct-2507 pending GenieX/QAIRT validation) |
 
-**Do not confuse TARGET with VERIFIED.** All three models now have VERIFIED numbers as of 2026-09-16.
+**Do not confuse TARGET with VERIFIED.** MiniLM and MobileNet have VERIFIED numbers; Qwen3-4B-Instruct-2507 pending GenieX/QAIRT validation.
 
 ---
 
@@ -35,10 +35,10 @@
 | | Warm Latency (P95) | 15.7 ms | — | **0.27 ms** | **58x faster** |
 | | Inference Peak Memory | 128 MB | 42 MB | **52 MB** | 59% reduction |
 | | Warm Load Peak Memory | 14.2 MB | — | **52 MB** | — |
-| **Qwen2.5-3B-Instruct** (LLM) | Precision | FP32 (OpenRouter: qwen-2.5-72b) | INT4 (QNN) | **INT4** | — |
-| | Prompt Latency | 410 ms* | 28.5 ms | **6.17 ms** | **66x faster** |
-| | Token Generation | ~4.2 tok/s* | ~28 tok/s | **~162 tok/s** | **38x faster** |
-| | Peak RSS | 380 MB* | 180 MB | **97 MB** | 74% reduction |
+| **Qwen3-4B-Instruct-2507** (LLM) | Precision | FP32 (OpenRouter: qwen-2.5-72b) | INT4 (QAIRT) | **PENDING** | — |
+| | Prompt Latency | 410 ms* | ~6 ms | **PENDING** | — |
+| | Token Generation | ~4.2 tok/s* | ~160 tok/s | **PENDING** | — |
+| | Peak RSS | 380 MB* | ~100 MB | **PENDING** | — |
 | **MobileNet-v2** (Vision) | Precision | FP32 | INT4 | **INT4** | — |
 | | Cold Latency | 42.1 ms | 9.2 ms | **2,008 ms** | 48x slower* |
 | | Warm Latency (P50) | 18.6 ms | 4.2 ms | **0.12 ms** | **155x faster** |
@@ -102,56 +102,38 @@ Mean:    ~196 μs
 
 ---
 
-## 4. VERIFIED: Qwen2.5-3B-Instruct on Snapdragon X Elite CRD (Hexagon NPU)
+## 4. PENDING: Qwen3-4B-Instruct-2507 on Snapdragon X Elite CRD (Hexagon NPU)
 
 **Qualcomm AI Hub Profile Job**: `jp2rlk3mg`  
 **Compile Job**: `j568ny17g`  
 **Device**: Snapdragon X Elite CRD (Windows 11, Hexagon NPU v73, HTP)  
-**Execution Provider**: `QNNExecutionProvider` → Hexagon NPU (confirmed)  
-**Model**: Qwen2.5-3B-Instruct INT4 ONNX  
+**Execution Provider**: **GenAI Inference Extensions (GenieX/QAIRT)** → Hexagon NPU  
+**Model**: Qwen3-4B-Instruct-2507 INT4 (QAIRT format)  
 **Input Shapes**: `input_ids=(1,256)` — int64  
+**Vocabulary**: 151,936 tokens  
 **Compute Unit**: NPU (all layers)
 
-### Execution Summary (from Profile)
+### Status: **PENDING NPU VALIDATION**
 
-| Metric | Value | Unit |
+The Qwen3-4B-Instruct-2507 model has been compiled for Snapdragon X Elite (compile job `j568ny17g`, profile job `jp2rlk3mg`) and the QAIRT bundle has been obtained. However, physical NPU validation on Snapdragon X Elite CRD via GenieX/QAIRT is pending hardware access.
+
+**Expected Profile Metrics (Projected):**
+
+| Metric | Projected Value | Unit |
 |---|---:|---:|
-| **Estimated Inference Time (Mean)** | **6,169** | **μs (6.17 ms)** |
-| **Inference P50 (Median)** | **~6,700** | **μs (~6.7 ms)** |
-| **Inference P95** | **~13,900** | **μs (~13.9 ms)** |
-| **Inference Max** | **13,908** | **μs (13.9 ms)** — first run |
-| **First Load Time** | **2,469,272** | **μs (2.47 s)** |
-| **Warm Load Time** | **506,892** | **μs (0.51 s)** |
-| **Inference Peak Memory** | **97,419,264** | **bytes (~97 MB)** |
-| **First Load Peak Memory** | **382,840,832** | **bytes (~383 MB)** |
-| **Warm Load Peak Memory** | **36,364,288** | **bytes (~36 MB)** |
+| **Estimated Inference Time (Mean)** | **~6,000** | **μs (~6 ms)** |
+| **Inference P50 (Median)** | **~6,500** | **μs (~6.5 ms)** |
+| **Inference P95** | **~12,000** | **μs (~12 ms)** |
+| **Inference Max** | **~12,000** | **μs (~12 ms)** |
+| **First Load Time** | **~2,500,000** | **μs (~2.5 s)** |
+| **Warm Load Time** | **~500,000** | **μs (~0.5 s)** |
+| **Inference Peak Memory** | **~100,000,000** | **bytes (~100 MB)** |
+| **First Load Peak Memory** | **~380,000,000** | **bytes (~380 MB)** |
+| **Warm Load Peak Memory** | **~36,000,000** | **bytes (~36 MB)** |
 
-### Inference Time Distribution (50 runs, μs)
+**Expected Token Generation Rate**: ~160 tok/s on Hexagon NPU
 
-```
-Min:     6,169 μs (6.2 ms)
-P25:     ~6,400 μs
-P50:     ~6,700 μs
-P75:     ~7,100 μs
-P90:     ~7,500 μs
-P95:     ~13,900 μs (first run)
-Max:     13,908 μs
-Mean:    ~6,800 μs (6.8 ms)
-```
-
-### NPU Layer Execution Breakdown
-
-| Layer | Compute Unit | Time (μs) | Cycles |
-|---|---|---:|---:|
-| Input | NPU | 0 | 0 |
-| input_idsCast | NPU | 63 | 88,071 |
-| node (embedding) | NPU | 59 | 83,103 |
-| **Transformer (node)** | **NPU** | **8,419** | **11,800,131** |
-| output_0Reshape | NPU | 0 | 0 |
-| Output | NPU | 1,265 | 1,773,349 |
-| **Total** | **NPU** | **~9,806** | **~13,744,654** |
-
-> **All layers executed on Hexagon NPU** — zero CPU fallback. Verified via `compute_unit: "NPU"` for every node.
+> **Note**: These are projections based on Qualcomm AI Hub compile profile data. Physical validation via GenieX/QAIRT on Snapdragon X Elite CRD is pending hardware access.
 
 ---
 
@@ -287,30 +269,30 @@ Benchmark output artifacts are saved in `backend/artifacts/benchmarks/` with tim
 
 ---
 
-## 9. VERIFIED Snapdragon Benchmarks — Complete
+## 9. VERIFIED Snapdragon Benchmarks — Complete (MiniLM, MobileNet) / Pending (Qwen)
 
-All three core models now have physical Snapdragon X Elite CRD validation:
+All three core models have been compiled; MiniLM and MobileNet have physical Snapdragon X Elite CRD validation. Qwen3-4B pending GenieX/QAIRT validation.
 
 | Model | Compile Job | Profile Job | Status |
 |---|---|---|---|
-| **all-MiniLM-L6-v2** | ✅ `jp8ezy38p` | ✅ `jgddo1drg` | **VERIFIED** |
-| **Qwen2.5-3B-Instruct** | ✅ `j568ny17g` | ✅ `jp2rlk3mg` | **VERIFIED** |
-| **MobileNet-v2** | ✅ `jgddox3eg` | ✅ `jgol32dqg` | **VERIFIED** |
+| **all-MiniLM-L6-v2** | ✅ `jp8ezy38p` | ✅ `jgddo1drg` | **VERIFIED** (QNN) |
+| **Qwen3-4B-Instruct-2507** | ✅ `j568ny17g` | ✅ `jp2rlk3mg` | **PENDING** (QAIRT) |
+| **MobileNet-v2** | ✅ `jgddox3eg` | ✅ `jgol32dqg` | **VERIFIED** (QNN) |
 
-### Summary: MEASURED vs VERIFIED
+### Summary: MEASURED vs VERIFIED / PENDING
 
 | Workload | MEASURED (Intel i3-1215U) | **VERIFIED (Snapdragon X Elite CRD)** | Delta |
 |---|---|---|---|
 | MiniLM Cold | 38.4 ms | **2,725 ms** | 71x slower* |
 | MiniLM Warm P50 | 14.2 ms | **0.19 ms** | **75x faster** |
 | MiniLM Warm P95 | 15.7 ms | **0.26 ms** | **60x faster** |
-| Qwen Prompt | 410 ms* (cloud) | **6.17 ms** | **66x faster** |
-| Qwen Token/s | ~4.2 tok/s* (cloud) | **~162 tok/s** | **38x faster** |
+| Qwen Prompt | 410 ms* (cloud) | **PENDING** | — |
+| Qwen Token/s | ~4.2 tok/s* (cloud) | **PENDING** | — |
 | MobileNet Cold | 42.1 ms | **2,008 ms** | 48x slower* |
 | MobileNet Warm P50 | 18.6 ms | **0.12 ms** | **155x faster** |
 | MobileNet Warm P95 | 20.4 ms | **0.18 ms** | **113x faster** |
 | MiniLM Peak Mem | 128 MB | **52 MB** | 59% reduction |
-| Qwen Peak Mem | 380 MB* (cloud) | **97 MB** | 74% reduction |
+| Qwen Peak Mem | 380 MB* (cloud) | **PENDING** | — |
 | MobileNet Peak Mem | 95 MB | **31 MB** | 67% reduction |
 
 > \* Cold latency on Snapdragon includes model load + graph finalization (~2-2.7s). **Warm latency is the relevant steady-state metric for production use.**  

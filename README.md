@@ -15,8 +15,8 @@
 Research AI workloads—dense PDF parsing, vector embedding generation, multi-paper comparative synthesis, active-recall formative assessments, and multimodal figure analysis—represent the **ideal archetype for private on-device edge computing**:
 
 ```text
-Research PDF ──► Semantic RAG ──► MiniLM Embedding ──► Qwen LLM ──► MobileNet Vision ──► Hexagon NPU
- (Confidential)    (Local-First)      (384-dim INT4)      (INT4 QNN)      (INT4 QNN)       (45 TOPS)
+Research PDF ──► Semantic RAG ──► MiniLM Embedding ──► Qwen3-4B LLM ──► MobileNet Vision ──► Hexagon NPU
+ (Confidential)    (Local-First)      (384-dim INT4)      (INT4 QAIRT)      (INT4 QNN)       (45 TOPS)
 ```
 
 1. **Uncompromised Data Confidentiality**: Medical trials, unpublished research papers, patent applications, and clinical health data (PHI) cannot legally or ethically be transmitted to third-party cloud APIs under HIPAA and GDPR. Snapdragon Copilot+ PCs execute all embeddings, vector ranking, and language models 100% on-device.
@@ -61,24 +61,27 @@ ScholarEdge implements genuine ONNX Runtime execution with explicit execution pr
 ```text
                             ScholarEdge Application
                                        │
-           ┌───────────────────────────┼───────────────────────────┐
-           ↓                           ↓                           ↓
+            ┌───────────────────────────┼───────────────────────────┐
+            ↓                           ↓                           ↓
   Embedding Engine                LLM Engine                Vision Engine
- (all-MiniLM-L6-v2 INT4 ONNX)  (Qwen2.5-3B-Instruct INT4)  (MobileNet-v2 INT4 ONNX)
-           │                           │                           │
-           └───────────────────────────┼───────────────────────────┘
-                                       ↓
-                                 ONNX Runtime
-                         (ort.InferenceSession v1.20+)
-                                       │
-                      ┌────────────────┴────────────────┐
-                      ▼                                 ▼
-           QNNExecutionProvider                   QNNExecutionProvider
-                      │                                 │
-                      ▼                                 ▼
-           Snapdragon Hexagon NPU                Snapdragon Hexagon NPU
-               (45 TOPS INT4)                       (45 TOPS INT4)
-         [Target Hardware Execution]           [Target Hardware Execution]
+ (all-MiniLM-L6-v2 INT4 ONNX)  (Qwen3-4B-Instruct INT4)  (MobileNet-v2 INT4 ONNX)
+            │                           │                           │
+            └───────────────────────────┼───────────────────────────┘
+                                        ↓
+                                  ONNX Runtime
+                          (ort.InferenceSession v1.20+)
+                                        │
+                       ┌────────────────┴────────────────┐
+                       ▼                                 ▼
+            QNNExecutionProvider                   QNNExecutionProvider
+                       │                                 │
+                       ▼                                 ▼
+            Snapdragon Hexagon NPU                Snapdragon Hexagon NPU
+                (45 TOPS INT4)                       (45 TOPS INT4)
+          [Target Hardware Execution]           [Target Hardware Execution]
+```
+
+> **LLM Note:** The LLM runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU. Embedding and Vision use ONNX Runtime with QNNExecutionProvider.
 ```
 
 ---
@@ -90,8 +93,8 @@ In accordance with strict scientific honesty:
 | Aspect | Development Host (Verified) | Snapdragon Target (Pending) |
 |--------|----------------------------|----------------------------|
 | **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
-| **Tests** | 37 backend tests passing, frontend build passing | Architecture implemented, ONNX graphs exported, provider isolation complete |
-| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen2.5-3B-Instruct INT4 → QNNExecutionProvider |
+| **Tests** | 79 backend tests passing, frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
+| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
@@ -167,21 +170,21 @@ Embeddings uploaded to cloud: No
 Vector search:    Local (zero network egress)
 Air-gapped:       No (requires internet for LLM)
 Verified on:      Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB RAM, Windows 11)
-Tests:            37 backend tests passing | Frontend build passing
+Tests:            79 backend tests passing | Frontend build passing
 ```
 
 ### SNAPDRAGON MODE (Target — Not Yet Physically Validated)
 
 ```text
-Inference:        Qwen2.5-3B-Instruct INT4 ONNX → QNNExecutionProvider → Hexagon NPU
+Inference:        Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU
 Document retrieval: Local (SQLite + all-MiniLM-L6-v2 INT4 ONNX → QNNExecutionProvider → Hexagon NPU)
 Documents uploaded to cloud: No
 Embeddings uploaded to cloud: No
 Vector search:    Local (zero network egress)
 Air-gapped:       Yes (fully offline capable)
 Target hardware:  Snapdragon X Elite / Hexagon NPU (45 TOPS)
-Status:           Architecture implemented, ONNX graphs exported, provider isolation complete
-                  PHYSICAL VALIDATION PENDING
+Status:           Architecture implemented, QAIRT bundle detected, provider isolation complete
+                  NPU VALIDATION PENDING
 ```
 
 **The UI Hardware Inspector displays `Host CPU (Development)` or `Hexagon NPU (Verified)` — never assumes Snapdragon execution without `QNNExecutionProvider` physically loaded.**
@@ -199,7 +202,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# Run automated tests (37 passing in ~4.9s)
+# Run automated tests (79 passing in ~4.9s)
 pytest -v
 
 # Start FastAPI server

@@ -8,35 +8,45 @@
 ## 1. High-Level System Architecture
 
 ```text
-                                  ScholarEdge Application Layer
-                                               │
-               ┌───────────────────────────────┼───────────────────────────────┐
-               ▼                               ▼                               ▼
-      Document Library &              Vector Search &                 Multimodal Vision
-       Page Chunker                     Compare Matrix                    Decomposition
-               │                               │                               │
-               └───────────────────────────────┼───────────────────────────────┘
-                                               ▼
-                                   Provider Factory Abstraction
-                                               │
-               ┌───────────────────────────────┼───────────────────────────────┐
-               ▼                               ▼                               ▼
-       Embedding Pipeline                 LLM Pipeline                  Vision Pipeline
-      (all-MiniLM-L6-v2)              (Qwen2.5-3B-Instruct)              (MobileNet-v2)
-               │                               │                               │
-               └───────────────────────────────┼───────────────────────────────┘
-                                               ▼
-                                      ONNX Runtime Engine
-                                 (ort.InferenceSession v1.20+)
-                                               │
-                     ┌─────────────────────────┴─────────────────────────┐
-                     ▼                                                   ▼
-            [TARGET ACCELERATOR]                                 [DEVELOPMENT HOST]
-           QNNExecutionProvider                                 CPUExecutionProvider
-                     │                                                   │
-                     ▼                                                   ▼
-          Qualcomm Hexagon HTP NPU                              Host CPU / Intel i3
-              (45 TOPS INT4)                                     (FP32 Simulation)
+                                   ScholarEdge Application Layer
+                                                │
+                ┌───────────────────────────────┼───────────────────────────────┐
+                ▼                               ▼                               ▼
+       Document Library &              Vector Search &                 Multimodal Vision
+        Page Chunker                     Compare Matrix                    Decomposition
+                │                               │                               │
+                └───────────────────────────────┼───────────────────────────────┘
+                                                ▼
+                                    Provider Factory Abstraction
+                                                │
+                ┌───────────────────────────────┼───────────────────────────────┐
+                ▼                               ▼                               ▼
+        Embedding Pipeline                 LLM Pipeline                  Vision Pipeline
+       (all-MiniLM-L6-v2)              (Qwen3-4B-Instruct-2507)              (MobileNet-v2)
+                │                               │                               │
+                └───────────────────────────────┼───────────────────────────────┘
+                                                ▼
+                        ┌───────────────────────┴───────────────────────┐
+                        ▼                                               ▼
+               Embedding/Vision                          LLM
+               ONNX Runtime                              GenieX/QAIRT
+               (ort.InferenceSession)                    (GenieX Runtime)
+                        │                                               │
+           ┌────────────┴────────────┐                   ┌─────────────┴─────────────┐
+           ▼                         ▼                   ▼                           ▼
+    QNNExecutionProvider      QNNExecutionProvider   GenAI Inference           QAIRT Runtime
+    (Embedding/Vision)          (Embedding/Vision)    Extensions (GenieX)       (QAIRT)
+         │                           │                       │                         │
+         ▼                           ▼                       ▼                         ▼
+Qualcomm Hexagon HTP NPU      Qualcomm Hexagon HTP    Snapdragon X Elite        Snapdragon X Elite
+(45 TOPS INT4 Embedding)      (45 TOPS INT4 Vision)   Hexagon NPU (45 TOPS)   Hexagon NPU (45 TOPS)
+[Snapdragon Mode]             [Snapdragon Mode]       [Snapdragon Mode]       [Snapdragon Mode]
+         │                           │                       │                         │
+         └───────────────────────────┼───────────────────────┘                         │
+                                      ▼                                                 ▼
+                              [DEVELOPMENT HOST]                              [SNAPDRAGON HARDWARE]
+                         CPUExecutionProvider (FP32)                   QAIRT/QNN on NPU
+                         (FP32 Simulation)                            (INT4 on NPU)
 ```
 
 ---
@@ -66,20 +76,23 @@ PDF Document ──► PyMuPDF Layout Parser ──► Page-Aware Chunker ──
 ### Pipeline B: Source-Grounded RAG Retrieval & Verification
 ```text
 User Question ──► Vector Query Embedding ──► Top-K Cosine Retrieval ──► Reranking & Relevance Filter
-                                                                                  │
-                                                ┌─────────────────────────────────┘
-                                                ▼
-                                    Score >= Threshold?
-                                    ├── No  ──► Explicit Refusal ("Insufficient evidence in indexed documents")
-                                    └── Yes ──► Qwen2.5-3B ONNX Forward Pass
-                                                      │
-                                                      ▼
-                                                Claim-Level Verification
-                                                      │
-                                                      ▼
-                                    Answer with Verifiable Citations
-                                    [Paper: X, Page: Y, Section: Z, Chunk: N]
-                                    └── "View Source Excerpt" modal jump
+                                                                                   │
+                                                 ┌─────────────────────────────────┘
+                                                 ▼
+                                     Score >= Threshold?
+                                     ├── No  ──► Explicit Refusal ("Insufficient evidence in indexed documents")
+                                     └── Yes ──► Qwen3-4B-Instruct-2507 (GenieX/QAIRT)
+                                                       │
+                                                       ▼
+                                                 Claim-Level Verification
+                                                       │
+                                                       ▼
+                                                 Answer with Verifiable Citations
+                                                 [Paper: X, Page: Y, Section: Z, Chunk: N]
+                                                 └── "View Source Excerpt" modal jump
+```
+
+> **Note:** The LLM runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU, not ONNX Runtime. The embedding and vision pipelines continue to use ONNX Runtime with QNNExecutionProvider.
 ```
 
 ### Pipeline C: Multimodal Vision Analysis
@@ -102,7 +115,7 @@ ScholarEdge maintains continuous hardware telemetry via `/api/health` and `/api/
 ```json
 {
   "status": "healthy",
-  "runtime_engine": "ONNX Runtime",
+  "runtime_engine": "ONNX Runtime + GenAI Inference Extensions",
   "execution_provider": "CPUExecutionProvider",
   "hardware_npu_active": false,
   "npu_status": "Inactive (Host Development CPU)",
@@ -119,6 +132,19 @@ ScholarEdge maintains continuous hardware telemetry via `/api/health` and `/api/
   ]
 }
 ```
+
+> **Snapdragon Mode Telemetry** (when running on Snapdragon X Elite with QAIRT):
+> ```json
+> {
+>   "runtime_engine": "GenAI Inference Extensions (GenieX/QAIRT)",
+>   "execution_provider": "QAIRT on QNN",
+>   "hardware_npu_active": true,
+>   "npu_status": "Hexagon NPU Active (GenAI Inference Extensions)",
+>   "llm_model": "Qwen3-4B-Instruct-2507 (QAIRT)",
+>   "embedding_model": "all-MiniLM-L6-v2 (QNN)",
+>   "vision_model": "MobileNet-v2 (QNN)"
+> }
+> ```
 
 The frontend UI strictly enforces:
 - **`Hexagon NPU Active`** is rendered with an emerald badge **only** when `hardware_npu_active === true`.

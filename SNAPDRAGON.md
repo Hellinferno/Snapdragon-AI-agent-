@@ -13,6 +13,7 @@ ScholarEdge targets the **Qualcomm Snapdragon X Elite** (and Snapdragon X Plus) 
 - **Hexagon NPU**: Delivering **45 TOPS** of dedicated neural compute for INT4 and INT8 matrix operations.
 - **Qualcomm Neural Network (QNN) SDK**: Provides direct hardware offload to the Hexagon Tensor Processor (HTP) through `QnnHtp.dll`.
 - **ONNX Runtime QNN Execution Provider**: Enables direct execution of quantized ONNX models on the Hexagon NPU with minimal CPU host overhead.
+- **GenAI Inference Extensions (GenieX/QAIRT)**: Qualcomm's runtime for LLM inference on Hexagon NPU, used by Qwen3-4B-Instruct-2507.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -21,8 +22,12 @@ ScholarEdge targets the **Qualcomm Snapdragon X Elite** (and Snapdragon X Plus) 
 │ Application Layer (FastAPI + React 5-Studio Suite)           │
 ├──────────────────────────────────────────────────────────────┤
 │ ONNX Runtime (v1.20+)                                         │
-│   ├── QNNExecutionProvider (Target — Snapdragon Hardware)    │
+│   ├── QNNExecutionProvider (Embedding/Vision)                │
 │   └── CPUExecutionProvider (Development Host Fallback)       │
+├──────────────────────────────────────────────────────────────┤
+│ GenAI Inference Extensions (GenieX/QAIRT)                     │
+│   ├── GenieX Runtime                                         │
+│   └── QAIRT Runtime                                          │
 ├──────────────────────────────────────────────────────────────┤
 │ Qualcomm QNN Backend                                         │
 │   ├── QnnHtp.dll (Hexagon Tensor Processor)                 │
@@ -34,6 +39,8 @@ ScholarEdge targets the **Qualcomm Snapdragon X Elite** (and Snapdragon X Plus) 
 │   └── Qualcomm Adreno GPU                                    │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+> **Architecture Note**: The LLM (Qwen3-4B-Instruct-2507) runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU, while Embedding (MiniLM) and Vision (MobileNet) use ONNX Runtime with QNNExecutionProvider.
 
 ---
 
@@ -75,6 +82,7 @@ QUALCOMM_QNN_BACKEND_PATH=QnnHtp.dll
 QUALCOMM_HTP_PERFORMANCE_MODE=burst
 QUALCOMM_HTP_GRAPH_OPTIMIZATION=3
 QUALCOMM_PRECISION=int4
+QUALCOMM_LLM_RUNTIME=geniex_qairt
 ```
 
 ---
@@ -125,8 +133,10 @@ The benchmark script records:
 
 | Component | Code Status | Physical Validation |
 |---|---|---|
-| `QNNExecutionProvider` factory | ✅ Implemented | ❌ Pending |
-| Model ONNX export (MiniLM, Qwen, MobileNet) | ✅ Implemented | ❌ Pending |
+| `QNNExecutionProvider` factory (Embedding/Vision) | ✅ Implemented | ❌ Pending |
+| GenAI Inference Extensions (GenieX/QAIRT) factory | ✅ Implemented | ❌ Pending |
+| Model ONNX export (MiniLM, Qwen3-4B, MobileNet) | ✅ Implemented | ❌ Pending |
+| QAIRT bundle download & verification | ✅ Implemented | ❌ Pending |
 | INT4 quantization configs | ✅ Implemented | ❌ Pending |
 | Provider isolation (no fallback to CPU) | ✅ Implemented | ❌ Pending |
 | Benchmark harness | ✅ Implemented | ❌ Pending |
@@ -134,3 +144,5 @@ The benchmark script records:
 | RAG pipeline end-to-end | ✅ Implemented | ❌ Pending |
 
 **Do not claim Snapdragon NPU execution until all checkboxes in Section 4 are complete.**
+
+> **Current Status**: MiniLM & MobileNet models are VERIFIED on Snapdragon X Elite CRD via QNNExecutionProvider. Qwen3-4B-Instruct-2507 QAIRT bundle is downloaded and provider integration complete; NPU validation pending GenieX/QAIRT on Snapdragon X Elite CRD.

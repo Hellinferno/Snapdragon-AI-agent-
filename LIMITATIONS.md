@@ -10,12 +10,12 @@
 | Aspect | **DEVELOPMENT MODE** (Physically Verified) | **SNAPDRAGON MODE** (Target — Not Verified) |
 |---|---|---|
 | **Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U) | Snapdragon X Elite / Copilot+ PC |
-| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen2.5-3B-Instruct INT4 → QNNExecutionProvider |
+| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen3-4B-Instruct-2507 INT4 → GenieX/QAIRT → Hexagon NPU |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
-| **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (QNNExecutionProvider)` — only when loaded |
-| **Verification** | ✅ 37 tests passing, frontend build passing | ❌ Architecture complete, physical validation pending |
+| **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (GenieX/QAIRT)` — only when loaded |
+| **Verification** | ✅ 79 tests passing, frontend build passing | ❌ Architecture complete, physical validation pending |
 
 **The UI and `/api/health` **never** display `Hexagon NPU Active` unless `QNNExecutionProvider` is physically loaded.**
 
@@ -50,8 +50,9 @@
 - **Zero-Dependency Fallback**: High-speed deterministic 384-dimensional feature hashing (`MurmurHash3`/`sha256`) is retained as a zero-dependency fallback if ONNX Runtime is missing.
 
 ### Large Language Model (LLM) Pipeline
-- **Target Implementation**: `Qwen2.5-3B-Instruct` compiled for Snapdragon X Elite via Qualcomm AI Hub.
+- **Target Implementation**: `Qwen3-4B-Instruct-2507` compiled for Snapdragon X Elite via Qualcomm AI Hub (QAIRT/GenieX format).
 - **Current Development Host**: Executes genuine ONNX forward graph passes for input prompt tokenization, logit generation, and exact source-grounded claim extraction.
+- **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU (Snapdragon Mode) / Development fallback (Development Mode).
 - **Grounding Guarantee**: When evidence is missing or below relevance threshold, the system strictly outputs:  
   `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`  
   It will never hallucinate fabricated findings.

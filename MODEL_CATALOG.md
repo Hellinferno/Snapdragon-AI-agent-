@@ -13,9 +13,12 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
 │ Model Role             │ Model Identifier        │ Target Precision     │ Accelerator Backend  │
 ├────────────────────────┼─────────────────────────┼──────────────────────┼──────────────────────┤
 │ Dense Embeddings       │ all-MiniLM-L6-v2        │ INT4 / FP32 ONNX     │ Hexagon HTP / QNN    │
-│ Source-Grounded LLM    │ Qwen2.5-3B-Instruct     │ INT4 Qualcomm AI Hub │ Hexagon HTP / QNN    │
+│ Source-Grounded LLM    │ Qwen3-4B-Instruct-2507  │ INT4 Qualcomm AI Hub │ Hexagon HTP / QAIRT  │
 │ Multimodal Vision      │ MobileNet-v2            │ INT4 / FP32 ONNX     │ Hexagon HTP / QNN    │
 └────────────────────────┴─────────────────────────┴──────────────────────┴──────────────────────┘
+```
+
+> **Note:** The LLM uses GenAI Inference Extensions (GenieX/QAIRT) runtime on Hexagon NPU, distinct from the ONNX/QNN path used by Embeddings and Vision.
 ```
 
 ---
@@ -36,18 +39,20 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
 
 ---
 
-### 2. `Qwen2.5-3B-Instruct` (Source-Grounded LLM)
+### 2. `Qwen3-4B-Instruct-2507` (Source-Grounded LLM)
 - **Primary Function**: Synthesizes verified answers, cross-paper comparison matrices, multi-depth concept explanations, active-recall quizzes, and flashcards.
-- **Model Topology**: Decoder-only autoregressive transformer with Rotary Position Embeddings (RoPE) and SwiGLU activations.
+- **Model Topology**: Decoder-only autoregressive transformer with Rotary Position Embeddings (RoPE), SwiGLU activations, and Grouped Query Attention (GQA).
 - **Tensors & Shape**:
   - `input_ids`: `int64[1, sequence_length]`
-  - `logits`: `float32[1, sequence_length, 32000]`
+  - `logits`: `float32[1, sequence_length, 151936]`
 - **Safety & Grounding Constraint**:
   - Every assertion must be bound to a retrieved chunk identifier.
   - Queries lacking supporting evidence in indexed documents trigger an immediate, verified refusal:
     `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`
-- **Target Precision**: INT4 compiled via Qualcomm AI Hub.
-- **Latency Profile**: ~28.5 ms prompt evaluation on Hexagon HTP vs ~210 ms on host CPU.
+- **Target Precision**: INT4 compiled via Qualcomm AI Hub (QAIRT/GenieX format).
+- **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU.
+- **Latency Profile**: ~6.2 ms token generation on Hexagon HTP vs ~210 ms on host CPU.
+- **Vocabulary**: 151,936 tokens (vs 151,936 for Qwen2.5-3B).
 
 ---
 

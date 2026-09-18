@@ -2,7 +2,7 @@
 
 > **Step-by-Step Demonstration Script for Judges and Reviewers**
 >
-> ⚠️ **IMPORTANT**: This demo runs in **DEVELOPMENT MODE** (Intel host, OpenRouter LLM). The **SNAPDRAGON MODE** (fully air-gapped, on-device NPU) is architecturally implemented but **not physically validated**. See [LIMITATIONS.md](LIMITATIONS.md) for the complete disclosure.
+> ⚠️ **IMPORTANT**: This demo runs in **DEVELOPMENT MODE** (Intel host, OpenRouter LLM). The **SNAPDRAGON MODE** (fully air-gapped, on-device NPU) uses **Qwen3-4B-Instruct-2507 via GenieX/QAIRT** and is architecturally implemented but **not physically validated**. See [LIMITATIONS.md](LIMITATIONS.md) for the complete disclosure.
 
 ---
 
