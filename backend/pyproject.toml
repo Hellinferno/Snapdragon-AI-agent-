@@ -30,5 +30,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "live: opt-in tests that require real external API connectivity (deselected by default)",
+    "integration: tests that exercise real external services over the network (deselected by default)",
+    "external_api: tests that require external API credentials such as OPENROUTER_API_KEY (deselected by default)",
 ]
-addopts = "-m 'not live'"
+addopts = "-m 'not integration and not external_api and not live'"

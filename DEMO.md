@@ -133,27 +133,31 @@ Before evaluating features, verify the execution mode:
 
 ## 📊 4. RAG Benchmark Evidence (Pre-Run)
 
-The repository includes a pre-run RAG evaluation on the "Data Science for Business" corpus:
+The repository includes a pre-run RAG evaluation on the bundled demo-papers corpus
+(13 answerable + 2 unanswerable questions, full mode, hybrid retrieval, MiniLM ONNX +
+OpenRouter qwen-2.5-72b-instruct):
 
-**Location**: `backend/evaluation/results/data_science_for_business/baseline.json`
+**Location**: `backend/evaluation/results/demo_papers/pre_rag_changes_full.json`
 
 **Key Measured Metrics (Development Host)**:
 | Metric | Value |
 |---|---|
 | Doc Hit@K | 100% |
-| Page Hit@K | 66.7% |
-| Evidence Hit@K | 50% |
-| Answer Correctness | 44.4% |
-| False Refusal Rate | 44.4% |
+| Page Hit@K | 100% |
+| Evidence Hit@K | 100% |
+| Answer Correctness | 92.3% |
+| False Refusal Rate | 0% |
 | Abstention Accuracy | 100% |
 | Groundedness | 100% |
-| Citation Accuracy | 100% |
-| Search Latency (P50) | 263 ms |
-| Chat Latency (P50) | 2,742 ms |
+| Citation Rate / Page / Doc / Faithfulness | 100% |
+| Search Latency (P50) | ~26 ms |
 
-**Known Gaps**: Multi-page questions (33% evidence hit), Cross-section (33%), Conceptual (40%), Page citations (66%).
+**Known Gaps**: One cross-document question answers at 50% (synthesis misses a second
+paper's keyword); page_recall@k = 0.92 (occasionally retrieves the neighboring page of
+a multi-page evidence span before the exact one).
 
-To re-run: `cd backend && python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. --mode full --label rerun`
+To re-run: `cd backend && python -m evaluation.run_eval --dataset demo_papers --mode full --label rerun`
+(For the larger "Data Science for Business" corpus, add `--corpus-dir ..`.)
 
 ---
 

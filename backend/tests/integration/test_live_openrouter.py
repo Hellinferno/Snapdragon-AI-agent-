@@ -3,12 +3,12 @@
 These tests verify REAL external connectivity (OpenRouter) and are intentionally
 excluded from the standard automated suite, which must stay fully hermetic.
 
+Markers: `integration` (requires real network) and `external_api` (requires
+OpenRouter credentials). Both are deselected from the default `pytest` run.
+
 Run manually with real credentials:
 
-    RUN_LIVE_TESTS=1 OPENROUTER_API_KEY=sk-... pytest -m live
-
-Standard `pytest` runs skip everything in this module, so CI never requires an
-external API.
+    RUN_LIVE_TESTS=1 OPENROUTER_API_KEY=sk-... pytest -m integration
 """
 
 import os
@@ -24,6 +24,8 @@ HAS_API_KEY = bool(
 )
 
 pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.external_api,
     pytest.mark.live,
     pytest.mark.skipif(
         not RUN_LIVE_TESTS,

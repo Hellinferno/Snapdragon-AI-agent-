@@ -225,9 +225,29 @@ def run_full_benchmark(output_dir: Path, dry_run: bool = False) -> Path:
         print(f"      Peak Memory Delta:  {emb_results['peak_memory_delta_mb']:.3f} MB")
 
     print("\n[2/3] Benchmarking Qualcomm Grounded LLM Pipeline (Qwen3-4B-Instruct-2507)...")
-    if llm_prov._session is None or llm_prov._tokenizer is None:
-        print("      Skipped (QAIRT bundle not available)")
-        llm_results = {"cold_latency_ms": 0, "warm_mean_latency_ms": 0, "tokens_per_second": 0, "peak_memory_delta_mb": 0}
+    if getattr(llm_prov, "_qairt_bundle_detected", False):
+        # Honest state: the QAIRT model bundle exists on disk, but QAIRT/GenieX
+        # inference is unavailable on this host (no Snapdragon NPU / SDK).
+        print(
+            "      Skipped (QAIRT bundle detected, but QAIRT/GenAI Inference Extensions "
+            "runtime is unavailable on this host - requires Snapdragon NPU + SDK)"
+        )
+        llm_results = {
+            "cold_latency_ms": 0,
+            "warm_mean_latency_ms": 0,
+            "tokens_per_second": 0,
+            "peak_memory_delta_mb": 0,
+            "status": "QAIRT_BUNDLE_DETECTED_RUNTIME_UNAVAILABLE",
+        }
+    elif llm_prov._session is None or llm_prov._tokenizer is None:
+        print("      Skipped (QAIRT bundle not found on this host)")
+        llm_results = {
+            "cold_latency_ms": 0,
+            "warm_mean_latency_ms": 0,
+            "tokens_per_second": 0,
+            "peak_memory_delta_mb": 0,
+            "status": "QAIRT_BUNDLE_NOT_FOUND",
+        }
     else:
         llm_results = run_llm_benchmark(llm_prov, iterations=2 if dry_run else 3)
         print(f"      Cold Latency:       {llm_results['cold_latency_ms']:.2f} ms")

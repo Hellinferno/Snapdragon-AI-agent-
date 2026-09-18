@@ -27,6 +27,40 @@ def _resolve_default_model_dir() -> Path:
     return candidates[-1]
 
 
+# Candidate locations for a QAIRT / GenAI Inference Extensions bundle
+# (e.g. a Qualcomm AI Hub export directory). Resolution is CWD-independent:
+# repo root is derived from this file's location, never from os.getcwd().
+QAIRT_BUNDLE_DIR_NAME = "qwen3_4b_instruct_2507-genie-w4a16-qualcomm_snapdragon_x_elite"
+
+
+def resolve_qairt_bundle_dir(llm_model_id: str) -> Optional[Path]:
+    """Locate a QAIRT model bundle for the given model id, CWD-independently.
+
+    Checks, in order:
+    1. QUALCOMM_QAIRT_DIR environment variable (explicit override)
+    2. <models/qualcomm>/<llm_model_id>/ (the configured model dir)
+    3. <repo root>/<qairt_bundle_dir_name>/ (Qualcomm AI Hub download layout)
+    Returns the first existing directory, else None.
+    """
+    repo_root = Path(__file__).resolve().parents[3]
+
+    env_dir = os.getenv("QUALCOMM_QAIRT_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        if p.exists():
+            return p
+
+    candidates = [
+        _resolve_default_model_dir() / llm_model_id,
+        repo_root / QAIRT_BUNDLE_DIR_NAME,
+        Path("backend") / "models" / "qualcomm" / llm_model_id,
+    ]
+    for cand in candidates:
+        if cand.is_dir():
+            return cand
+    return None
+
+
 @dataclass
 class QualcommConfig:
     """Configuration for Qualcomm Snapdragon AI runtime and models."""

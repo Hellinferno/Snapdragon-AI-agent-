@@ -93,7 +93,7 @@ In accordance with strict scientific honesty:
 | Aspect | Development Host (Verified) | Snapdragon Target (Pending) |
 |--------|----------------------------|----------------------------|
 | **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
-| **Tests** | 93 backend tests passing (hermetic — zero live-API dependency), frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
+| **Tests** | 93 backend tests passing offline (deterministic, zero live-API dependency); 2 live OpenRouter tests as separate opt-in integration tests; frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
 | **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU (inference validation pending) |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
@@ -170,7 +170,7 @@ Embeddings uploaded to cloud: No
 Vector search:    Local (zero network egress)
 Air-gapped:       No (requires internet for LLM)
 Verified on:      Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB RAM, Windows 11)
-Tests:            93 backend tests passing (hermetic) | Frontend build passing
+Tests:            93 backend tests passing offline (deterministic) + 2 opt-in live integration tests | Frontend build passing
 ```
 
 ### SNAPDRAGON MODE (Target — Not Yet Physically Validated)
@@ -204,6 +204,10 @@ pip install -r requirements.txt
 
 # Run automated tests (93 passing, fully offline/hermetic — no API keys needed)
 pytest -v
+
+# Optional: real OpenRouter connectivity tests (require network + API key)
+$env:RUN_LIVE_TESTS = "1"; $env:OPENROUTER_API_KEY = "sk-..."
+pytest -m integration
 
 # Start FastAPI server
 uvicorn app.main:app --reload --port 8000

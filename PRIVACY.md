@@ -6,12 +6,36 @@
 
 ## 1. Privacy Modes at a Glance
 
+This exact distinction is canonical and must stay identical across README.md, DEMO.md, and this document.
+
+### Development Mode (current, verified)
+
+```text
+Documents          → LOCAL
+Embeddings         → LOCAL
+Vector DB          → LOCAL
+Retrieval          → LOCAL
+LLM                → OpenRouter
+Internet required  → YES
+```
+
+### Snapdragon Mode (target, pending physical validation)
+
+```text
+Documents          → LOCAL
+Embeddings         → Snapdragon NPU (QNN)
+Vector DB          → LOCAL
+Retrieval          → LOCAL
+LLM                → Qwen3-4B via QAIRT/GenieX
+Internet required  → NO
+```
+
 | Check | **DEVELOPMENT MODE** (Current) | **SNAPDRAGON MODE** (Target) |
 |---|---|---|
 | **Local Document Storage** | ✅ Verified (SQLite + filesystem) | ✅ Target |
 | **Local Embedding Storage** | ✅ Verified (SQLite vectors) | ✅ Target |
 | **Local Vector Search** | ✅ Verified (CPU cosine similarity) | ✅ Target (NPU) |
-| **AI Inference** | ⚠️ OpenRouter (cloud LLM) | ✅ Local (QNN NPU) |
+| **AI Inference** | ⚠️ OpenRouter (cloud LLM) | ✅ Local (QAIRT/GenieX on NPU) |
 | **No Document Upload** | ✅ Verified | ✅ Target |
 | **External Providers** | ⚠️ OpenRouter enabled | ✅ Disabled by default |
 | **Air-Gapped Operation** | ❌ No (requires internet) | ✅ Fully offline capable |

@@ -23,7 +23,7 @@ from app.providers.base import (
     VisionAnalysisResult,
     VisualQAResult,
 )
-from app.providers.qualcomm.qualcomm_config import QualcommConfig
+from app.providers.qualcomm.qualcomm_config import QualcommConfig, resolve_qairt_bundle_dir
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -204,32 +204,36 @@ class QualcommLLMProvider(LLMProvider):
         return f"qualcomm-ai-hub-{self.config.llm_model_id}"
 
     def _initialize(self) -> None:
-        model_dir = self.config.model_dir / self.config.llm_model_id
-        
-        # Check for QAIRT/GenAI Inference Extensions model (GenAI Inference Extensions format)
-        qairt_model_dir = Path("qwen3_4b_instruct_2507-genie-w4a16-qualcomm_snapdragon_x_elite")
-        if qairt_model_dir.exists():
-            model_dir = qairt_model_dir
+        # Resolve the QAIRT bundle CWD-independently via config; the legacy
+        # Qualcomm AI Hub download layout at the repo root is a candidate.
+        model_dir = resolve_qairt_bundle_dir(self.config.llm_model_id)
+        if model_dir is not None:
+            self._qairt_bundle_detected = True
+            self._qairt_model_dir = model_dir
+        else:
+            self._qairt_bundle_detected = False
 
         # Load real tokenizer
         self._tokenizer = _load_tokenizer(model_dir, self.config.llm_model_id)
 
-        # QAIRT / GenAI Inference Extensions bundle; this is not an ONNX model.
-        qairt_model_parts = list(model_dir.glob("part*_of_*.bin"))
-        if qairt_model_parts:
-            # GenAI Inference Extensions (QAIRT) model - runs on Snapdragon NPU via GenAI Inference Extensions
-            # Requires GenAI Inference Extensions Python SDK and Snapdragon NPU hardware
-            # On non-Snapdragon hosts, we load tokenizer but cannot run inference
-            self._session = None  # QAIRT requires GenAI Inference Extensions SDK + Snapdragon NPU
-            self._qairt_model_dir = model_dir  # Store path for potential future use
-            self.telemetry["active_provider"] = "GenAI Inference Extensions (QAIRT) - Not Available on This Host"
-            self.telemetry["hardware_npu_active"] = False  # Not running on Snapdragon NPU
-            self.telemetry["runtime_status"] = "QAIRT Bundle Detected - Requires Snapdragon NPU + GenAI Inference Extensions SDK"
-            logger.info(
-                "Detected QAIRT bundle for %s at %s - Requires Snapdragon NPU + GenAI Inference Extensions SDK for inference",
-                self.config.llm_model_id,
-                model_dir,
-            )
+        if model_dir is not None:
+            # QAIRT / GenAI Inference Extensions bundle; this is not an ONNX model.
+            qairt_model_parts = list(model_dir.glob("part*_of_*.bin"))
+            if qairt_model_parts or self._tokenizer is not None:
+                # GenAI Inference Extensions (QAIRT) model - runs on Snapdragon NPU via GenAI Inference Extensions
+                # Requires GenAI Inference Extensions Python SDK and Snapdragon NPU hardware
+                # On non-Snapdragon hosts, we load tokenizer but cannot run inference
+                self._session = None  # QAIRT requires GenAI Inference Extensions SDK + Snapdragon NPU
+                self.telemetry["active_provider"] = "GenAI Inference Extensions (QAIRT) - Not Available on This Host"
+                self.telemetry["hardware_npu_active"] = False  # Not running on Snapdragon NPU
+                self.telemetry["runtime_status"] = "QAIRT Bundle Detected - Requires Snapdragon NPU + GenAI Inference Extensions SDK"
+                logger.info(
+                    "Detected QAIRT bundle for %s at %s - Requires Snapdragon NPU + GenAI Inference Extensions SDK for inference",
+                    self.config.llm_model_id,
+                    model_dir,
+                )
+            else:
+                self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
         else:
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
 
@@ -247,7 +251,7 @@ class QualcommLLMProvider(LLMProvider):
             )
         if hasattr(self, "_qairt_model_dir"):
             raise RuntimeError(
-                f"QAIRT bundle detected for {self.config.llm_model_id}, but QAIRT inference is not yet "
+                f"QAIRT bundle detected at {self._qairt_model_dir} for {self.config.llm_model_id}, but QAIRT inference is not yet "
                 "implemented. GenAI Inference Extensions integration and physical Snapdragon validation "
                 "are required before this provider can generate text."
             )
