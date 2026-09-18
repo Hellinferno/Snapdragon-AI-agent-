@@ -10,6 +10,7 @@ export function normalizeVisionUpload(response) {
     aspectRatio: width / height,
     mimeType: response.mime_type,
     previewUrl: response.preview_url,
+    documentId: response.document_id || null,
   };
 }
 
@@ -153,9 +154,10 @@ export async function generateFlashcards() {
   return res.json();
 }
 
-export async function uploadVisionImage(file) {
+export async function uploadVisionImage(file, documentId = null) {
   const formData = new FormData();
   formData.append('file', file);
+  if (documentId) formData.append('document_id', documentId);
   const res = await fetch(`${API_BASE}/vision/upload`, {
     method: 'POST',
     body: formData,
@@ -181,11 +183,11 @@ export async function analyzeFigure(imageId) {
   return res.json();
 }
 
-export async function chatWithFigure(imageId, question) {
+export async function chatWithFigure(imageId, question, documentId = null) {
   const res = await fetch(`${API_BASE}/vision/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_id: imageId, question }),
+    body: JSON.stringify({ image_id: imageId, question, document_id: documentId }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));

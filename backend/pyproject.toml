@@ -28,3 +28,7 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "live: opt-in tests that require real external API connectivity (deselected by default)",
+]
+addopts = "-m 'not live'"

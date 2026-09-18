@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.schemas.vision import (
@@ -15,9 +15,12 @@ vision_service = VisionService()
 
 
 @router.post("/upload", response_model=ImageUploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_figure(file: UploadFile = File(...)) -> ImageUploadResponse:
-    """Uploads a research figure or screenshot for visual understanding."""
-    return await vision_service.save_image(file)
+async def upload_figure(
+    file: UploadFile = File(...),
+    document_id: str | None = Form(None),
+) -> ImageUploadResponse:
+    """Uploads a research figure or screenshot, optionally linked to a paper for context."""
+    return await vision_service.save_image(file, document_id=document_id)
 
 
 @router.post("/analyze", response_model=FigureAnalysisResponse)
@@ -29,7 +32,9 @@ async def analyze_figure(request: FigureAnalysisRequest) -> FigureAnalysisRespon
 @router.post("/chat", response_model=VisualQAResponse)
 async def chat_with_figure(request: VisualQARequest) -> VisualQAResponse:
     """Grounded question answering focused on the visual evidence in the figure."""
-    return await vision_service.chat_with_figure(request.image_id, request.question)
+    return await vision_service.chat_with_figure(
+        request.image_id, request.question, document_id=request.document_id
+    )
 
 
 @router.get("/{image_id}/file")

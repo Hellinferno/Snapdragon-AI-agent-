@@ -30,6 +30,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Standalone session factory for non-request contexts (services, scripts).
+
+    Yields short-lived sessions that callers can iterate with `async for`.
+    """
+    async with async_session_factory() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
 async def init_db() -> None:
     """Initialize database tables."""
     # Import db_models so Base.metadata knows about them

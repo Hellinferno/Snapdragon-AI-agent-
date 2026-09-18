@@ -121,6 +121,7 @@ export default function App() {
   const [visionChatLoading, setVisionChatLoading] = useState(false);
   const [visionChatInput, setVisionChatInput] = useState('');
   const [visionChatMessages, setVisionChatMessages] = useState([]);
+  const [visionLinkedDocId, setVisionLinkedDocId] = useState('NONE');
   const visionFileInputRef = useRef(null);
   const visionChatBottomRef = useRef(null);
 
@@ -286,6 +287,8 @@ export default function App() {
         text: res.answer,
         sources: res.sources || [],
         hasSufficientEvidence: res.has_sufficient_evidence,
+        promptTokens: res.prompt_tokens || 0,
+        completionTokens: res.completion_tokens || 0,
       };
 
       setChatMessages((prev) => [...prev, assistantMsg]);
@@ -403,7 +406,8 @@ export default function App() {
     if (!file) return;
     try {
       setVisionUploading(true);
-      const uploaded = await uploadVisionImage(file);
+      const linkedId = visionLinkedDocId === 'NONE' ? null : visionLinkedDocId;
+      const uploaded = await uploadVisionImage(file, linkedId);
       setVisionImage(uploaded);
       showSuccess(`Figure '${uploaded.filename}' uploaded (${uploaded.width}x${uploaded.height}). Analyzing...`);
 
@@ -414,7 +418,8 @@ export default function App() {
         {
           id: 'vision-welcome',
           sender: 'assistant',
-          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence * 100).toFixed(0)}% confidence. You can now ask questions about trends, methodology, or observations.`,
+          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence * 100).toFixed(0)}% confidence.` +
+            (uploaded.documentId ? ' Linked to a paper: figure Q&A now cites retrieved context from that document.' : ' Tip: link a paper below to ground answers in its text.'),
         },
       ]);
     } catch (err) {
@@ -435,11 +440,13 @@ export default function App() {
     setVisionChatLoading(true);
 
     try {
-      const res = await chatWithFigure(visionImage.id, text);
+      const linkedId = visionLinkedDocId === 'NONE' ? null : visionLinkedDocId;
+      const res = await chatWithFigure(visionImage.id, text, linkedId || visionImage.documentId || null);
       const assistantMsg = {
         id: 'a-' + Date.now(),
         sender: 'assistant',
         text: res.answer,
+        paperSources: res.paper_context_sources || [],
       };
       setVisionChatMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
@@ -938,6 +945,11 @@ export default function App() {
                             <div className="assistant-header">
                               <Sparkles size={16} />
                               <span>ScholarEdge Evidence Synthesis</span>
+                              {typeof msg.promptTokens === 'number' && msg.promptTokens > 0 && (
+                                <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                                  {msg.promptTokens}p / {msg.completionTokens}c tokens
+                                </span>
+                              )}
                             </div>
                             <div className="assistant-text">{msg.text}</div>
 
@@ -1774,6 +1786,33 @@ export default function App() {
                       </span>
                     </div>
 
+                    {/* Paper Context Link Selector */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      fontSize: '0.78rem',
+                    }}>
+                      <BookOpen size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+                      <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>Paper Context:</span>
+                      <select
+                        className="scope-select"
+                        style={{ flex: 1, fontSize: '0.78rem' }}
+                        value={visionLinkedDocId}
+                        onChange={(e) => setVisionLinkedDocId(e.target.value)}
+                        title="Select a paper to ground figure answers in its indexed text"
+                      >
+                        <option value="NONE">No paper linked (visual analysis only)</option>
+                        {documents.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.title || d.filename}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Quick Prompts */}
                     <div className="vision-quick-prompts">
                       <button
@@ -1807,6 +1846,34 @@ export default function App() {
                       {visionChatMessages.map((msg) => (
                         <div key={msg.id} className={`vision-msg ${msg.sender}`}>
                           {msg.text}
+                          {msg.sender === 'assistant' && msg.paperSources && msg.paperSources.length > 0 && (
+                            <div style={{
+                              marginTop: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              border: '1px solid rgba(16, 185, 129, 0.25)',
+                              fontSize: '0.75rem',
+                            }}>
+                              <div style={{ fontWeight: 600, color: 'var(--accent-emerald)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <BookOpen size={12} /> Paper Context ({msg.paperSources.length} cited {msg.paperSources.length === 1 ? 'chunk' : 'chunks'})
+                              </div>
+                              {msg.paperSources.map((src, i) => (
+                                <div
+                                  key={src.chunk_id || i}
+                                  style={{
+                                    cursor: 'pointer',
+                                    padding: '3px 0',
+                                    color: 'var(--text-secondary)',
+                                  }}
+                                  onClick={() => handleViewSource(src)}
+                                  title="Click to inspect this excerpt in the document viewer"
+                                >
+                                  ▸ [{src.document_title}, Page {src.page_number}]
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {visionChatLoading && (

@@ -7,8 +7,22 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
-from app.core.database import Base, get_db
-from app.main import app
+
+# ---------------------------------------------------------------------------
+# Hermetic test guarantee: automated tests MUST NOT make live network calls.
+# Force local development providers BEFORE importing app.main so every
+# API/service test uses the deterministic grounded synthesizer and the local
+# embedding provider, regardless of the developer's local .env selecting
+# OpenRouter/Gemini. Real-provider connectivity is covered separately by the
+# opt-in live integration test (tests/test_live_integration.py, marker "live").
+# ---------------------------------------------------------------------------
+settings.LLM_PROVIDER = "development"
+settings.EMBEDDING_PROVIDER = "development"
+settings.VISION_PROVIDER = "development"
+settings.ALLOW_EXTERNAL_PROVIDERS = False
+
+from app.core.database import Base, get_db  # noqa: E402
+from app.main import app  # noqa: E402
 
 # Create a temporary directory for test storage
 TEST_TEMP_DIR = tempfile.mkdtemp()

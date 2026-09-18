@@ -102,17 +102,22 @@ Before evaluating features, verify the execution mode:
 
 ---
 
-### Step 5: Multimodal Vision Studio (Figure Analysis)
+### Step 5: Multimodal Vision Studio (Figure Analysis + Paper Context)
 1. Switch to the **Vision (Figures)** tab.
-2. Click on the pre-loaded architecture diagram or upload your own research plot.
-3. **Decomposition Card**:
+2. **Link a paper**: use the **"Paper Context"** selector at the top of the Q&A panel and choose one of the demo papers. This grounds figure Q&A in that paper's indexed text.
+3. Click on the pre-loaded architecture diagram or upload your own research plot (the selected paper is linked at upload time).
+4. **Decomposition Card**:
    - Visual telemetry: Resolution, Aspect Ratio, Format, and Confidence score.
    - Figure classification: Categorized via MobileNet-v2 ONNX.
-4. **Researcher Quick Prompts**:
+5. **Researcher Quick Prompts**:
    - Click **"📊 What does this graph show?"**
    - Click **"🔄 Explain the pipeline"**
    - Click **"🔢 Extract the important numbers"**
    - Click **"🔬 Describe observable structures"** (returns visual observations, not clinical diagnoses).
+6. **Inspect Output (Paper Context linking)**:
+   - When a paper is linked, answers that retrieve matching chunks append a **"Paper Context"** section with `[Doc: <title>, Page: <N>]` citations.
+   - Click a cited chunk in the green context panel — the Document Inspector opens at that exact chunk.
+   - With **no paper linked**, answers stay purely visual-only, with no fabricated paper claims.
 
 ---
 
@@ -165,3 +170,26 @@ To re-run: `cd backend && python -m evaluation.run_eval --dataset data_science_f
 | **Verified Snapdragon benchmarks** | ❌ Not yet run | 🎯 **Pending physical validation** |
 
 **Honest framing for judges**: "We've built the complete 5-studio application with grounded RAG, cross-paper synthesis, formative learning, and vision analysis. The architecture is fully isolated behind a provider factory so the *same application* can run on Intel (development) or Snapdragon NPU (target). Physical Snapdragon validation is the remaining milestone — see LIMITATIONS.md and SNAPDRAGON.md for the exact checklist."
+
+---
+
+## 🧪 6. Automated Test Suite (Hermetic CI)
+
+The backend suite is fully deterministic — no live API or network access is required:
+
+```powershell
+cd backend
+pytest -v
+```
+
+- All provider/LLM/embedding backends are forced to local deterministic providers during tests, regardless of your local `.env`.
+- Real OpenRouter connectivity is covered by a **separate opt-in** test module, never run in CI:
+
+```powershell
+# Only run this when you want to verify live external connectivity:
+$env:RUN_LIVE_TESTS = "1"
+$env:OPENROUTER_API_KEY = "sk-..."
+pytest -m live
+```
+
+A plain `pytest` run deselects the live tests (93+ passing in well under a minute), demonstrating that the RAG, comparison, learning, and vision pipelines are verifiable offline.
