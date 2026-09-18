@@ -37,7 +37,7 @@ The following baseline metrics were collected using the reproducible harness (`b
 | **Host Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Win 11 AMD64) | `platform.uname()` telemetry |
 | **Execution Mode** | `DEVELOPMENT_HOST_SIMULATION` (Zero-weight fallback) | `backend/benchmarks/` |
 | **Candidate Embeddings** | `all-MiniLM-L6-v2` (384-dimensional dense vectors) | `QualcommConfig.embedding_model_id` |
-| **Candidate LLM** | `Qwen2.5-3B-Instruct` / `Llama-3.2-3B` (Target: INT4 W4A16) | `QualcommConfig.llm_model_id` |
+| **Candidate LLM** | `Qwen3-4B-Instruct-2507` (QAIRT / GenAI Inference Extensions; physical validation pending) | `QualcommConfig.llm_model_id` |
 | **Candidate Vision** | `MobileNet-v2` / `CLIP-ViT-B-32` (Target: INT8/FP16) | `QualcommConfig.vision_model_id` |
 | **Embedding Latency (Host)** | Cold: **2.46 ms** \| Warm Mean (10 passages): **10.15 ms** | Development host CPU baseline |
 | **LLM Latency (Host)** | Cold: **1.66 ms** \| Warm Mean: **4.39 ms** (Python host simulation) | Development host CPU baseline |

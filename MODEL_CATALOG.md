@@ -35,7 +35,7 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
 - **Post-Processing**: Attention-masked mean pooling followed by L2 unit vector normalization:
   $$\vec{v}_{\text{norm}} = \frac{\sum_{i=1}^L m_i \cdot \vec{h}_i}{\|\sum_{i=1}^L m_i \cdot \vec{h}_i\|_2}$$
 - **Target Precision**: INT4 quantized via Qualcomm AI Hub.
-- **Latency Profile**: ~3.1 ms per chunk on Hexagon HTP vs ~14.2 ms on host CPU.
+- **Validation Status**: ONNX/QNN is the intended Snapdragon runtime. No physical target benchmark is currently published.
 
 ---
 
@@ -51,8 +51,8 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
     `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`
 - **Target Precision**: INT4 compiled via Qualcomm AI Hub (QAIRT/GenieX format).
 - **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU.
-- **Latency Profile**: ~6.2 ms token generation on Hexagon HTP vs ~210 ms on host CPU.
-- **Vocabulary**: 151,936 tokens (vs 151,936 for Qwen2.5-3B).
+- **Vocabulary**: 151,936 tokens.
+- **Validation Status**: Bundle detection and tokenizer loading are implemented. QAIRT inference and physical Snapdragon NPU benchmarking are pending, so no LLM latency or throughput is claimed.
 
 ---
 
@@ -68,7 +68,7 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
   3. `data_table`: Tabular grids, column headers, and numerical cells.
   4. `medical_radiograph`: Radiographic scans, anatomical observations, and imaging textures.
 - **Target Precision**: INT4 via Qualcomm AI Hub.
-- **Latency Profile**: ~4.2 ms per image on Hexagon HTP vs ~18.6 ms on host CPU.
+- **Validation Status**: ONNX/QNN is the intended Snapdragon runtime. No physical target benchmark is currently published.
 
 ---
 

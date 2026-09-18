@@ -8,13 +8,13 @@ ScholarEdge includes a standardized, reproducible benchmark harness (`backend/sc
 
 As mandated by `docs/SNAPDRAGON.md`, every benchmark execution records:
 
-1. **Model / Version**: Identifier of the neural model (e.g. `all-MiniLM-L6-v2`, `Qwen2.5-3B-Instruct`, `MobileNet-v2`).
-2. **Runtime / Version**: Execution framework and exact version (e.g. `onnxruntime-qnn 1.20.0`, Python version).
+1. **Model / Version**: Identifier of the neural model (e.g. `all-MiniLM-L6-v2`, `Qwen3-4B-Instruct-2507`, `MobileNet-v2`).
+2. **Runtime / Version**: Execution framework and exact version (e.g. `onnxruntime-qnn` for embedding/vision or GenAI Inference Extensions for the LLM, plus Python version).
 3. **Target Snapdragon Device**: Device identification probed from platform telemetry (e.g. `Snapdragon X Elite Copilot+ PC`).
 4. **Precision / Quantization**: Weights format (`INT4 (W4A16)`, `INT8`, `FP16`).
 5. **Cold vs Warm Latency**: First-token / first-embedding invocation vs steady-state warm iteration mean and p95.
 6. **Memory Footprint**: Peak memory delta during execution measured via memory tracing (`tracemalloc` / `psutil`).
-7. **Accelerator Execution Verification**: Confirms whether `QNNExecutionProvider` (Hexagon NPU) was active vs CPU fallback.
+7. **Accelerator Execution Verification**: Confirms `QNNExecutionProvider` for embedding/vision or a validated QAIRT runtime for the LLM; one does not prove the other.
 8. **Application-Level Latency**: Full RAG pipeline latency (query embedding + vector search + prompt construction + grounded synthesis).
 9. **Reproducible Configuration**: Timestamped JSON artifact saved to `backend/benchmarks/`.
 
@@ -53,30 +53,21 @@ The generated JSON file has the following schema:
   },
   "configuration": {
     "device_target": "Snapdragon X Elite",
-    "preferred_provider": "QNNExecutionProvider",
+    "embedding_vision_provider": "QNNExecutionProvider",
+    "llm_runtime": "GenAI Inference Extensions (QAIRT)",
     "precision": "int4",
     "embedding_model": "all-MiniLM-L6-v2",
-    "llm_model": "Qwen2.5-3B-Instruct"
+    "llm_model": "Qwen3-4B-Instruct-2507"
   },
   "benchmarks": {
     "embedding": {
-      "cold_latency_ms": 3.20,
-      "warm_mean_latency_ms": 10.31,
-      "warm_p95_latency_ms": 11.02,
-      "peak_memory_delta_mb": 0.134,
-      "accelerator_execution": true
+      "status": "record only after physical QNN validation"
     },
     "llm": {
-      "cold_latency_ms": 1.47,
-      "warm_mean_latency_ms": 1.66,
-      "tokens_per_second": 35.4,
-      "peak_memory_delta_mb": 0.018,
-      "accelerator_execution": true
+      "status": "QAIRT inference and physical validation pending"
     },
     "application_e2e": {
-      "cold_e2e_latency_ms": 4.67,
-      "warm_e2e_latency_ms": 2.69,
-      "total_peak_memory_delta_mb": 0.152
+      "status": "record only after all component runtimes are validated"
     }
   }
 }

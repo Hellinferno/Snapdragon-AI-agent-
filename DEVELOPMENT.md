@@ -30,11 +30,11 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Acquire Real ONNX Models (Development & Local Testing)
+### Acquire ONNX Models for Embeddings and Vision
 ```powershell
 python scripts/download_qualcomm_models.py
 ```
-This downloads and verifies real ONNX models from legitimate sources (Hugging Face, Qualcomm AI Hub) for `all-MiniLM-L6-v2`, `Qwen2.5-3B-Instruct`, and `MobileNet-v2` in `backend/models/qualcomm/`.
+This downloads and verifies ONNX models from legitimate sources (Hugging Face, Qualcomm AI Hub) for `all-MiniLM-L6-v2` and `MobileNet-v2` in `backend/models/qualcomm/`. The LLM is `Qwen3-4B-Instruct-2507` in QAIRT / GenAI Inference Extensions format, not an ONNX/QNN artifact.
 
 ### Run Automated Backend Tests
 ```powershell
@@ -72,5 +72,5 @@ Open `http://localhost:5173` in your browser.
 
 1. **Strict Source Grounding**: Never generate cross-paper claims or answers without retrieved, verifiable evidence.
 2. **Explicit Refusal**: If evidence similarity is below threshold or documents lack the requested information, return an explicit refusal rather than guessing.
-3. **Truthful Telemetry**: Never display `Hexagon NPU Active` unless `QNNExecutionProvider` is physically loaded and executing.
+3. **Truthful Telemetry**: Never display `Hexagon NPU Active` unless the relevant runtime is physically executing: `QNNExecutionProvider` for embeddings/vision, or a validated QAIRT session for the LLM.
 4. **Memory Safety**: Keep process memory under 500 MB RSS on development laptops to prevent out-of-memory errors on 8 GB systems.

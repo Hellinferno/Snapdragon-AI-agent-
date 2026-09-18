@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Compile and profile all Qualcomm models on AI Hub for Snapdragon X Elite.
+Compile and profile ONNX embedding and vision models on AI Hub for Snapdragon X Elite.
 
 Models:
 1. all-MiniLM-L6-v2 (embeddings)
-2. Qwen2.5-3B-Instruct (LLM)
-3. MobileNet-v2 (vision)
+2. MobileNet-v2 (vision)
+
+Qwen3-4B-Instruct-2507 uses its QAIRT / GenAI Inference Extensions bundle and
+is deliberately not compiled or profiled through this ONNX/QNN script.
 
 Prerequisites:
 1. Qualcomm account + AI Hub access
@@ -35,11 +37,6 @@ TARGET_RUNTIME = "onnx"
 MODELS = {
     "all-MiniLM-L6-v2": {
         "path": MODEL_DIR / "all-MiniLM-L6-v2" / "model.onnx",
-        "compile_options": f"--target_runtime {TARGET_RUNTIME}",
-        "profile_options": f"--target_runtime {TARGET_RUNTIME} --onnx_execution_providers qnn --compute_unit npu",
-    },
-    "Qwen2.5-3B-Instruct": {
-        "path": MODEL_DIR / "Qwen2.5-3B-Instruct" / "model.onnx",
         "compile_options": f"--target_runtime {TARGET_RUNTIME}",
         "profile_options": f"--target_runtime {TARGET_RUNTIME} --onnx_execution_providers qnn --compute_unit npu",
     },

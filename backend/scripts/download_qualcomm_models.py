@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Download and verify Qualcomm AI Hub model artifacts.
 
-Places verified models in models/qualcomm/ structure expected by the providers.
+Places verified ONNX models for the embedding and vision providers in the
+models/qualcomm/ structure expected by the providers.
 
 This script:
 1. Verifies existing model.onnx files are real (not fake generated)
-2. Uses AI Hub compiled models when available (model_snapdragon_x_elite.onnx)
+2. Uses AI Hub compiled ONNX models when available (model_snapdragon_x_elite.onnx)
 3. Downloads real models from proper sources
 4. Does NOT generate fake models with random weights
 """
@@ -19,17 +20,6 @@ from pathlib import Path
 # Model definitions with SHA256 for verification
 # These are the real models we expect
 MODELS = {
-    "Qwen2.5-3B-Instruct": {
-        "repo": "Qwen/Qwen2.5-3B-Instruct",
-        "revision": "master",
-        "files": {
-            # Note: Qwen ONNX exports may not be directly on HF.
-            # The AI Hub compiled model (model_snapdragon_x_elite.onnx) is the verified artifact.
-            # We use the compiled model directly.
-        },
-        "ai_hub_compiled": True,
-        "compiled_name": "model_snapdragon_x_elite.onnx",
-    },
     "MobileNet-v2": {
         "repo": "onnx/models",
         "revision": "main",
@@ -56,11 +46,6 @@ TARGET_BASE = Path(__file__).resolve().parent.parent / "models" / "qualcomm"
 # Known fake model signatures (from setup_qualcomm_onnx_models.py)
 # These are the fake models generated with random weights
 FAKE_MODEL_SIGNATURES = {
-    "Qwen2.5-3B-Instruct": {
-        "size_approx": 16_000_000,  # ~16 MB
-        "vocab_size": 32000,
-        "dim": 64,
-    },
     "MobileNet-v2": {
         "size_approx": 2_400_000,  # ~2.4 MB
         "classes": 4,
@@ -74,7 +59,6 @@ FAKE_MODEL_SIGNATURES = {
 
 # Real model expected sizes (approximate)
 REAL_MODEL_SIZES = {
-    "Qwen2.5-3B-Instruct": 15_000_000,  # ~15-16 MB for INT4 compiled
     "MobileNet-v2": 2_400_000,  # ~2.4 MB for INT4 compiled
     "all-MiniLM-L6-v2": 46_000_000,  # ~46 MB for INT4 compiled
 }
@@ -104,19 +88,13 @@ def is_fake_model(model_path: Path, model_name: str) -> bool:
         fake_sig = FAKE_MODEL_SIGNATURES.get(model_name, {})
         
         # Check graph name
-        if model.graph.name in ["all-MiniLM-L6-v2-qualcomm", "MobileNet-v2-qualcomm-vision", "Qwen2.5-3B-Instruct-qualcomm"]:
+        if model.graph.name in ["all-MiniLM-L6-v2-qualcomm", "MobileNet-v2-qualcomm-vision"]:
             return True
         
         # Check producer name
         if "Qualcomm-AI-Hub-Exporter" in model.producer_name:
             return True
             
-        # Check for fake Qwen (tiny vocab/dim)
-        if model_name == "Qwen2.5-3B-Instruct":
-            for init in model.graph.initializer:
-                if init.name == "llm_embed" and init.dims == [32000, 64]:
-                    return True
-                    
         # Check for fake MiniLM
         if model_name == "all-MiniLM-L6-v2":
             for init in model.graph.initializer:
@@ -290,7 +268,7 @@ def ensure_model(model_name: str, info: dict) -> bool:
 def main():
     TARGET_BASE.mkdir(parents=True, exist_ok=True)
     
-    print("Verifying and acquiring Qualcomm AI Hub models...")
+    print("Verifying and acquiring Qualcomm ONNX models for embeddings and vision...")
     print(f"Base directory: {TARGET_BASE}")
     
     # First, handle MiniLM - copy from embeddings if needed

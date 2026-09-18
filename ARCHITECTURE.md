@@ -92,7 +92,7 @@ User Question ──► Vector Query Embedding ──► Top-K Cosine Retrieval 
                                                  └── "View Source Excerpt" modal jump
 ```
 
-> **Note:** The LLM runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU, not ONNX Runtime. The embedding and vision pipelines continue to use ONNX Runtime with QNNExecutionProvider.
+> **Note:** The LLM targets **GenAI Inference Extensions (GenieX/QAIRT)**, not ONNX Runtime. QAIRT bundle detection and tokenizer loading are implemented, but inference and physical NPU validation are pending. The embedding and vision pipelines continue to target ONNX Runtime with QNNExecutionProvider.
 ```
 
 ### Pipeline C: Multimodal Vision Analysis
@@ -133,7 +133,7 @@ ScholarEdge maintains continuous hardware telemetry via `/api/health` and `/api/
 }
 ```
 
-> **Snapdragon Mode Telemetry** (when running on Snapdragon X Elite with QAIRT):
+> **Expected Snapdragon Mode Telemetry** (after QAIRT inference is implemented and validated):
 > ```json
 > {
 >   "runtime_engine": "GenAI Inference Extensions (GenieX/QAIRT)",

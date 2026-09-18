@@ -40,11 +40,11 @@ Provider Factory (`backend/app/providers/factory.py`)
         ↓
 Qualcomm Provider Layer (`backend/app/providers/qualcomm/`)
   ├── QualcommEmbeddingProvider (all-MiniLM-L6-v2, 384-d)
-  ├── QualcommLLMProvider (Qwen2.5-3B-Instruct / Llama-3.2-3B)
+  ├── QualcommLLMProvider (Qwen3-4B-Instruct-2507, QAIRT target)
   └── QualcommVisionProvider (MobileNet-v2 / CLIP)
         ↓
-ONNX Runtime with QNN Execution Provider (`QnnHtp.dll` on Hexagon NPU)
-  └── Fallback: CPUExecutionProvider / Development fallback
+ONNX Runtime with QNN Execution Provider (`QnnHtp.dll` on Hexagon NPU) for embedding and vision
+GenAI Inference Extensions (QAIRT) for the LLM; inference validation pending
         ↓
 Target Hardware (Snapdragon X Elite / Copilot+ PC)
 ```
@@ -58,7 +58,7 @@ These models are designated candidates for target-device deployment via Qualcomm
 | Modality | Candidate Model | Target Precision | NPU Runtime Target |
 |---|---|---|---|
 | **Embeddings** | `all-MiniLM-L6-v2` | INT8 / FP16 | ONNX Runtime + QNN HTP |
-| **Grounded LLM** | `Qwen2.5-3B-Instruct` / `Llama-3.2-3B` | INT4 (W4A16) | ONNX Runtime GenAI + QNN HTP |
+| **Grounded LLM** | `Qwen3-4B-Instruct-2507` | INT4 (W4A16) | GenAI Inference Extensions / QAIRT (pending validation) |
 | **Vision / Figures** | `MobileNet-v2` / `CLIP-ViT-B-32` | INT8 / FP16 | ONNX Runtime + QNN HTP |
 | **OCR** | `EasyOCR` / `TrOCR` | INT8 | ONNX Runtime + QNN HTP |
 

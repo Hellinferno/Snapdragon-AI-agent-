@@ -30,7 +30,7 @@ Research PDF ──► Semantic RAG ──► MiniLM Embedding ──► Qwen3-4
 
 ## 🏛️ System Execution Architecture
 
-ScholarEdge implements genuine ONNX Runtime execution with explicit execution provider separation for **two modes**:
+ScholarEdge separates ONNX/QNN embedding and vision execution from the QAIRT LLM path across **two modes**:
 
 ### Development Mode (Intel Host — Verified)
 
@@ -40,7 +40,7 @@ ScholarEdge implements genuine ONNX Runtime execution with explicit execution pr
            ┌───────────────────────────┼───────────────────────────┐
            ↓                           ↓                           ↓
   Embedding Engine                LLM Engine                Vision Engine
- (all-MiniLM-L6-v2 ONNX)      (OpenRouter: Qwen 2.5 72B)   (MobileNet-v2 ONNX)
+ (all-MiniLM-L6-v2 ONNX)   (OpenRouter: configured LLM)    (MobileNet-v2 ONNX)
            │                           │                           │
            └───────────────────────────┼───────────────────────────┘
                                        ↓
@@ -73,7 +73,7 @@ ScholarEdge implements genuine ONNX Runtime execution with explicit execution pr
                                         │
                        ┌────────────────┴────────────────┐
                        ▼                                 ▼
-            QNNExecutionProvider                   QNNExecutionProvider
+            QNNExecutionProvider              QAIRT / GenieX Runtime              QNNExecutionProvider
                        │                                 │
                        ▼                                 ▼
             Snapdragon Hexagon NPU                Snapdragon Hexagon NPU
@@ -81,7 +81,7 @@ ScholarEdge implements genuine ONNX Runtime execution with explicit execution pr
           [Target Hardware Execution]           [Target Hardware Execution]
 ```
 
-> **LLM Note:** The LLM runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU. Embedding and Vision use ONNX Runtime with QNNExecutionProvider.
+> **LLM Note:** The target LLM is **Qwen3-4B-Instruct-2507** in **QAIRT / GenAI Inference Extensions** format. Bundle detection and tokenizer loading are implemented; QAIRT inference and physical Snapdragon validation are pending. Embedding and Vision use ONNX Runtime with QNNExecutionProvider when available.
 ```
 
 ---
@@ -94,7 +94,7 @@ In accordance with strict scientific honesty:
 |--------|----------------------------|----------------------------|
 | **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
 | **Tests** | 79 backend tests passing, frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
-| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU |
+| **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU (inference validation pending) |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
@@ -102,7 +102,7 @@ In accordance with strict scientific honesty:
 
 **Truthful Status Display**:
 - Development Host UI shows: `Development Host (CPUExecutionProvider)`
-- Snapdragon PC UI shows: `Hexagon NPU (QNNExecutionProvider)` **only** when `QNNExecutionProvider` is physically loaded and executing
+- Snapdragon PC UI shows `Hexagon NPU Active` only for components whose runtime reports physical execution; QNN covers embeddings/vision, while QAIRT LLM execution remains pending validation.
 
 *Read our detailed disclosure in [LIMITATIONS.md](LIMITATIONS.md).*
 
@@ -163,7 +163,7 @@ ScholarEdge operates in **two distinct modes**. The distinction is explicit and 
 ### DEVELOPMENT MODE (Current Verified State)
 
 ```text
-Inference:        OpenRouter (qwen/qwen-2.5-72b-instruct)
+Inference:        OpenRouter (configured development model)
 Document retrieval: Local (SQLite + all-MiniLM-L6-v2 ONNX)
 Documents uploaded to cloud: No
 Embeddings uploaded to cloud: No
@@ -187,7 +187,7 @@ Status:           Architecture implemented, QAIRT bundle detected, provider isol
                   NPU VALIDATION PENDING
 ```
 
-**The UI Hardware Inspector displays `Host CPU (Development)` or `Hexagon NPU (Verified)` — never assumes Snapdragon execution without `QNNExecutionProvider` physically loaded.**
+**The UI Hardware Inspector never assumes Snapdragon execution: QNN must be physically loaded for embedding/vision, and QAIRT LLM execution remains unverified until a physical Snapdragon run succeeds.**
 
 **Air-Gapped Offline Guarantee (Snapdragon Mode only)**: Disconnect the internet or switch to airplane mode—ScholarEdge continues complete operation with zero interruption.
 
@@ -230,8 +230,8 @@ npm run dev
 | [LIMITATIONS.md](LIMITATIONS.md) | **Brutally honest** disclosure of development host vs Snapdragon target status. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System pipeline diagrams, data flow, and provider factory abstractions. |
 | [SNAPDRAGON.md](SNAPDRAGON.md) | Snapdragon Copilot+ PC deployment, QNN SDK, and HTP offload guide. |
-| [MODEL_CATALOG.md](MODEL_CATALOG.md) | Specifications for MiniLM-L6-v2, Qwen2.5-3B, and MobileNet-v2. |
-| [BENCHMARKS.md](BENCHMARKS.md) | Benchmark methodology, measured host latencies, and Snapdragon target profiles. |
+| [MODEL_CATALOG.md](MODEL_CATALOG.md) | Specifications for MiniLM-L6-v2, Qwen3-4B-Instruct-2507, and MobileNet-v2. |
+| [BENCHMARKS.md](BENCHMARKS.md) | Reproducible benchmark methodology and current validation status. |
 | [PRIVACY.md](PRIVACY.md) | Demonstrable local-first checklist, air-gapped test, and HIPAA/GDPR compliance. |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Developer onboarding, environment setup, and test execution. |
 | [DEMO.md](DEMO.md) | Step-by-step evaluation script for challenge reviewers. |

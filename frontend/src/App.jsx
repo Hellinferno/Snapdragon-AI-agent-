@@ -2026,7 +2026,7 @@ export default function App() {
               {/* Section 3: CPU vs Snapdragon NPU Benchmark Comparison */}
               <div>
                 <div style={{ fontSize: '0.86rem', fontWeight: 600, marginBottom: '8px', color: '#94a3b8' }}>
-                  CPU VS SNAPDRAGON HEXAGON NPU BENCHMARK COMPARISON
+                  DEVELOPMENT VS SNAPDRAGON RUNTIME STATUS
                 </div>
                 <div className="benchmark-table-wrapper">
                   <table className="benchmark-table">
@@ -2040,10 +2040,9 @@ export default function App() {
                     </thead>
                     <tbody>
                       {(backendHealth?.hardware_benchmark_comparison || [
-                        { model: "MiniLM-L6-v2 (Embedding)", cpu: "14.2 ms (FP32)", snapdragon_npu: "3.1 ms (INT4 HTP)", benefit: "4.5x Latency Reduction" },
-                        { model: "Qwen2.5-3B (LLM Prompt)", cpu: "210.0 ms (FP32)", snapdragon_npu: "28.5 ms (INT4 HTP)", benefit: "7.3x Latency Reduction" },
-                        { model: "MobileNet-v2 (Vision)", cpu: "18.6 ms (FP32)", snapdragon_npu: "4.2 ms (INT4 HTP)", benefit: "4.4x Latency Reduction" },
-                        { model: "Power Envelope", cpu: "28W - 45W Peak", snapdragon_npu: "4.5W Sustained NPU", benefit: "Up to 80% Energy Savings" },
+                        { model: "MiniLM-L6-v2 (Embedding)", cpu: "ONNX Runtime on development host", snapdragon_npu: "ONNX Runtime + QNN (validation pending)", benefit: "No benchmark published" },
+                        { model: "Qwen3-4B-Instruct-2507 (LLM)", cpu: "OpenRouter development configuration", snapdragon_npu: "QAIRT / GenAI Inference Extensions", benefit: "QAIRT inference pending" },
+                        { model: "MobileNet-v2 (Vision)", cpu: "ONNX Runtime on development host", snapdragon_npu: "ONNX Runtime + QNN (validation pending)", benefit: "No benchmark published" },
                       ]).map((row, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 600, color: '#f1f5f9' }}>{row.model}</td>
@@ -2056,7 +2055,7 @@ export default function App() {
                   </table>
                 </div>
                 <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
-                  * Development CPU values physically measured on host system. Snapdragon NPU values reflect Qualcomm AI Hub target profiles. No benchmark metrics are fabricated.
+                  Snapdragon performance figures are intentionally withheld until the relevant runtime executes on physical target hardware and produces a reproducible benchmark artifact.
                 </div>
               </div>
             </div>

@@ -10,14 +10,14 @@
 | Aspect | **DEVELOPMENT MODE** (Physically Verified) | **SNAPDRAGON MODE** (Target — Not Verified) |
 |---|---|---|
 | **Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U) | Snapdragon X Elite / Copilot+ PC |
-| **LLM Inference** | OpenRouter (qwen/qwen-2.5-72b-instruct) | Qwen3-4B-Instruct-2507 INT4 → GenieX/QAIRT → Hexagon NPU |
+| **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 INT4 → GenieX/QAIRT → Hexagon NPU (inference pending) |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
 | **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (GenieX/QAIRT)` — only when loaded |
 | **Verification** | ✅ 79 tests passing, frontend build passing | ❌ Architecture complete, physical validation pending |
 
-**The UI and `/api/health` **never** display `Hexagon NPU Active` unless `QNNExecutionProvider` is physically loaded.**
+**The UI and `/api/health` never display LLM NPU execution without a validated QAIRT session. `QNNExecutionProvider` telemetry applies only to the ONNX embedding and vision paths.**
 
 ---
 
@@ -31,14 +31,14 @@
 | **Memory** | 8.00 GB DDR4 RAM | 16 GB - 32 GB LPDDR5x |
 | **Operating System** | Windows 11 Pro 64-bit | Windows 11 on ARM (Build 26100+) |
 | **AI Accelerator** | None (Host CPU only) | Qualcomm Hexagon NPU (45 TOPS) |
-| **Execution Provider** | `CPUExecutionProvider` | `QNNExecutionProvider` (Qualcomm Neural Network) |
+| **Execution Provider** | `CPUExecutionProvider` | `QNNExecutionProvider` (embeddings/vision); QAIRT / GenieX (LLM) |
 | **NPU Status** | **Inactive / Simulated** (`hardware_npu_active: false`) | **Active Target** (`QnnHtp.dll` offload) |
 | **Verification Status** | **Physically verified** (37 automated tests passing) | **Pending physical target hardware verification** |
 
 ### Truth in Telemetry
 - The application UI and runtime telemetry API (`/api/health`, `/api/runtime/status`) **never claim NPU acceleration** when running on the Intel host machine.
 - The badge displays **`Development Host (CPU Simulation)`** or **`Host CPU (Snapdragon Validation Pending)`**.
-- The green status **`Hexagon NPU Active`** is programmatically displayed **only** when `QNNExecutionProvider` is loaded and returned by `ort.InferenceSession.get_providers()`.
+- The green status **`Hexagon NPU Active`** is displayed only when the relevant component reports physical execution: `QNNExecutionProvider` for ONNX embedding/vision, or a validated QAIRT session for the LLM.
 
 ---
 
@@ -51,7 +51,7 @@
 
 ### Large Language Model (LLM) Pipeline
 - **Target Implementation**: `Qwen3-4B-Instruct-2507` compiled for Snapdragon X Elite via Qualcomm AI Hub (QAIRT/GenieX format).
-- **Current Development Host**: Executes genuine ONNX forward graph passes for input prompt tokenization, logit generation, and exact source-grounded claim extraction.
+- **Current Development Host**: Detects the QAIRT bundle and loads its tokenizer, but cannot execute QAIRT inference on the Intel host.
 - **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU (Snapdragon Mode) / Development fallback (Development Mode).
 - **Grounding Guarantee**: When evidence is missing or below relevance threshold, the system strictly outputs:  
   `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`  
@@ -94,7 +94,7 @@ From `evaluation/results/data_science_for_business/baseline.json`:
 
 To graduate from "Architecture Implemented & Simulation Verified" to "Physically Verified on Snapdragon Hardware":
 1. Deploy codebase to a Snapdragon X Elite Copilot+ PC running Windows 11 ARM64.
-2. Install Qualcomm Neural Processing SDK (`QNN`) and `onnxruntime-qnn`.
+2. Install Qualcomm Neural Processing SDK (`QNN`), `onnxruntime-qnn` for embeddings/vision, and GenAI Inference Extensions for the LLM.
 3. Verify `QnnHtp.dll` initialization in `backend/app/providers/qualcomm/qualcomm_config.py`.
-4. Run `backend/scripts/benchmark_snapdragon.py` to record physical NPU cold and warm latencies, memory footprint, and TOPS utilization.
-5. Record physical validation metrics in `BENCHMARKS.md` under **VERIFIED** section.
+4. Implement and validate the QAIRT generation session on the target device before running LLM benchmarks.
+5. Run `backend/scripts/benchmark_snapdragon.py` and record only reproducible physical measurements in `BENCHMARKS.md`.

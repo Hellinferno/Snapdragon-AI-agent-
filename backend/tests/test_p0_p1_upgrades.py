@@ -46,9 +46,9 @@ async def test_qualcomm_onnx_embedding_execution():
 
 
 @pytest.mark.asyncio
-async def test_qualcomm_onnx_llm_execution_and_telemetry():
+async def test_qualcomm_qairt_llm_telemetry():
     provider = QualcommLLMProvider()
-    assert provider.telemetry["runtime_engine"] == "ONNX Runtime"
+    assert provider.telemetry["runtime_engine"] == "GenAI Inference Extensions (QAIRT)"
     assert provider.telemetry["hardware_npu_active"] is False
     status = provider.telemetry["runtime_status"]
     assert "Hardware Validation Pending" in status or status == "Fallback Mode (Model Not Found)" or "QAIRT Bundle Detected" in status

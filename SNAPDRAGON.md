@@ -40,7 +40,7 @@ ScholarEdge targets the **Qualcomm Snapdragon X Elite** (and Snapdragon X Plus) 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-> **Architecture Note**: The LLM (Qwen3-4B-Instruct-2507) runs via **GenAI Inference Extensions (GenieX/QAIRT)** on the Hexagon NPU, while Embedding (MiniLM) and Vision (MobileNet) use ONNX Runtime with QNNExecutionProvider.
+> **Architecture Note**: The LLM target is Qwen3-4B-Instruct-2507 via **GenAI Inference Extensions (GenieX/QAIRT)**. The bundle and tokenizer are detected, but QAIRT inference and physical NPU validation are pending. Embedding (MiniLM) and Vision (MobileNet) use ONNX Runtime with QNNExecutionProvider.
 
 ---
 
@@ -135,7 +135,8 @@ The benchmark script records:
 |---|---|---|
 | `QNNExecutionProvider` factory (Embedding/Vision) | ✅ Implemented | ❌ Pending |
 | GenAI Inference Extensions (GenieX/QAIRT) factory | ✅ Implemented | ❌ Pending |
-| Model ONNX export (MiniLM, Qwen3-4B, MobileNet) | ✅ Implemented | ❌ Pending |
+| ONNX artifacts (MiniLM, MobileNet) | ✅ Implemented | ❌ Pending |
+| QAIRT LLM bundle (Qwen3-4B-Instruct-2507) | ✅ Detected; tokenizer loaded | ❌ Inference and validation pending |
 | QAIRT bundle download & verification | ✅ Implemented | ❌ Pending |
 | INT4 quantization configs | ✅ Implemented | ❌ Pending |
 | Provider isolation (no fallback to CPU) | ✅ Implemented | ❌ Pending |
@@ -145,4 +146,4 @@ The benchmark script records:
 
 **Do not claim Snapdragon NPU execution until all checkboxes in Section 4 are complete.**
 
-> **Current Status**: MiniLM & MobileNet models are VERIFIED on Snapdragon X Elite CRD via QNNExecutionProvider. Qwen3-4B-Instruct-2507 QAIRT bundle is downloaded and provider integration complete; NPU validation pending GenieX/QAIRT on Snapdragon X Elite CRD.
+> **Current Status**: The Qwen3-4B-Instruct-2507 QAIRT bundle is present, the tokenizer loads, and the provider reports that inference is unavailable. Do not claim Snapdragon NPU execution or publish NPU benchmark values until QAIRT generation succeeds on physical target hardware.

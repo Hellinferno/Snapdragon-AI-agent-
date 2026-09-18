@@ -24,56 +24,35 @@ def _get_system_runtime_telemetry() -> dict:
         {"item": "Documents stored locally", "status": True, "detail": "Local SQLite database and filesystem storage"},
         {"item": "Embeddings stored locally", "status": True, "detail": "384-d vector embeddings persisted on-device"},
         {"item": "Vector search local", "status": True, "detail": "Local SQLite exact cosine similarity"},
-        {"item": "AI inference local", "status": True, "detail": f"ONNX Runtime on {backend}"},
+        {"item": "AI inference local", "status": True, "detail": f"ONNX Runtime on {backend} for embeddings and vision; QAIRT LLM validation pending"},
         {"item": "No document upload", "status": True, "detail": "Zero document transmission to third-party endpoints"},
         {"item": "External providers disabled", "status": not settings.ALLOW_EXTERNAL_PROVIDERS, "detail": "Cloud APIs blocked by default" if not settings.ALLOW_EXTERNAL_PROVIDERS else "External provider opted-in"},
     ]
 
-    benchmark_comparison = [
+    hardware_comparison = [
         {
-            "metric": "Embedding Model",
+            "model": "MiniLM-L6-v2 (Embedding)",
             "cpu": "all-MiniLM-L6-v2 (FP32)",
-            "snapdragon_npu": "all-MiniLM-L6-v2 (INT4 / QNN)*",
+            "snapdragon_npu": "all-MiniLM-L6-v2 (ONNX Runtime + QNN; physical validation pending)",
+            "benefit": "No benchmark published",
         },
         {
-            "metric": "LLM Model",
-            "cpu": "Qwen2.5-3B-Instruct (FP32)",
-            "snapdragon_npu": "Qwen2.5-3B-Instruct (INT4 / QNN)*",
+            "model": "Qwen3-4B-Instruct-2507 (LLM)",
+            "cpu": "OpenRouter (development configuration)",
+            "snapdragon_npu": "Qwen3-4B-Instruct-2507 (QAIRT / GenAI Inference Extensions; validation pending)",
+            "benefit": "QAIRT inference not implemented",
         },
         {
-            "metric": "Vision Model",
+            "model": "MobileNet-v2 (Vision)",
             "cpu": "MobileNet-v2 (FP32)",
-            "snapdragon_npu": "MobileNet-v2 (INT4 / QNN)*",
+            "snapdragon_npu": "MobileNet-v2 (ONNX Runtime + QNN; physical validation pending)",
+            "benefit": "No benchmark published",
         },
         {
-            "metric": "Execution Provider",
+            "model": "Runtime paths",
             "cpu": "CPUExecutionProvider",
-            "snapdragon_npu": "QNNExecutionProvider",
-        },
-        {
-            "metric": "Hardware Backend",
-            "cpu": f"Intel {uname.processor[:24]}",
-            "snapdragon_npu": "Qualcomm Hexagon HTP NPU",
-        },
-        {
-            "metric": "Cold Latency",
-            "cpu": "12.4 ms",
-            "snapdragon_npu": "3.1 ms (Target Spec)*",
-        },
-        {
-            "metric": "Warm Latency",
-            "cpu": "2.8 ms",
-            "snapdragon_npu": "0.9 ms (Target Spec)*",
-        },
-        {
-            "metric": "Tokens / Second",
-            "cpu": "18.5 tok/s",
-            "snapdragon_npu": "45.0 tok/s (Target Spec)*",
-        },
-        {
-            "metric": "Typical Power (Inference)",
-            "cpu": "15 - 28 W",
-            "snapdragon_npu": "4 - 8 W (Hexagon NPU)*",
+            "snapdragon_npu": "QNNExecutionProvider (embeddings/vision); QAIRT (LLM, pending)",
+            "benefit": "Separate runtimes",
         },
     ]
 
@@ -84,7 +63,7 @@ def _get_system_runtime_telemetry() -> dict:
         "device_name": env.get("detected_device"),
         "processor": uname.processor or "Unknown",
         "architecture": uname.machine,
-        "runtime_engine": "ONNX Runtime",
+        "runtime_engine": "ONNX Runtime (embeddings/vision); QAIRT pending (LLM)",
         "active_provider": active_provider,
         "execution_backend": backend,
         "precision": precision,
@@ -98,8 +77,8 @@ def _get_system_runtime_telemetry() -> dict:
         "external_providers_enabled": settings.ALLOW_EXTERNAL_PROVIDERS,
         "device_target": settings.QUALCOMM_DEVICE_TARGET,
         "privacy_checklist": privacy_checklist,
-        "benchmark_comparison": benchmark_comparison,
-        "hardware_validation_note": "Snapdragon target values are based on Qualcomm AI Hub hardware profiles; physical validation on target Snapdragon PC is pending.",
+        "hardware_benchmark_comparison": hardware_comparison,
+        "hardware_validation_note": "Qwen3-4B-Instruct-2507 QAIRT bundle detection and tokenizer loading are implemented. QAIRT inference, physical Snapdragon validation, and NPU benchmarks are pending; no Snapdragon LLM performance is reported.",
     }
 
 
@@ -113,4 +92,3 @@ async def health_check() -> dict:
 async def runtime_status() -> dict:
     """Detailed hardware, NPU, and privacy telemetry status."""
     return _get_system_runtime_telemetry()
-

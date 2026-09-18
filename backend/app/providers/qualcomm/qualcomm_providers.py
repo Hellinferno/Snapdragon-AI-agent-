@@ -1,18 +1,14 @@
-"""Qualcomm Snapdragon AI Hub Provider implementations.
+"""Qualcomm provider implementations for ScholarEdge.
 
-Executes genuine ONNX model graphs via ONNX Runtime:
-1. QualcommEmbeddingProvider: all-MiniLM-L6-v2 (384-d sentence embeddings via ONNX Gather & mean pooling)
-2. QualcommLLMProvider: Qwen2.5-3B-Instruct (Token forward pass via ONNX Gather & MatMul, grounded synthesis)
-3. QualcommVisionProvider: MobileNet-v2 (Figure classification via 224x224 RGB normalization & ONNX Gemm)
-
-Strictly verifies accelerator presence:
-- On Snapdragon target PC: QNNExecutionProvider -> Hexagon HTP NPU Active
-- On Development host: CPUExecutionProvider fallback -> Development Host (CPU Simulation)
+Embedding (all-MiniLM-L6-v2) and vision (MobileNet-v2) execute ONNX graphs via
+ONNX Runtime, using QNNExecutionProvider only when it is physically available.
+The LLM path targets Qwen3-4B-Instruct-2507 in QAIRT / GenAI Inference
+Extensions format. This module detects that bundle and its tokenizer, but does
+not yet invoke the QAIRT runtime or claim NPU execution.
 """
 
 import io
 import math
-import re
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -177,9 +173,11 @@ class QualcommEmbeddingProvider(EmbeddingProvider):
 
 class QualcommLLMProvider(LLMProvider):
     """
-    Qualcomm AI Hub LLM Provider (Qwen2.5-3B-Instruct).
-    Executes actual ONNX Runtime token forward pass for inference verification,
-    synthesizes evidence with claim-level citations, and refuses ungrounded requests.
+    Snapdragon LLM integration point for Qwen3-4B-Instruct-2507.
+
+    The provider currently verifies the QAIRT bundle and loads its tokenizer.
+    Generation is intentionally unavailable until the GenAI Inference Extensions
+    runtime is wired up and validated on a physical Snapdragon host.
     """
 
     def __init__(self, config: Optional[QualcommConfig] = None):
@@ -194,7 +192,7 @@ class QualcommLLMProvider(LLMProvider):
             "cold_latency_ms": 0.0,
             "warm_latency_ms": 0.0,
             "tokens_per_second": 0.0,
-            "runtime_engine": "ONNX Runtime",
+            "runtime_engine": "GenAI Inference Extensions (QAIRT)",
             "active_provider": "None",
             "hardware_npu_active": False,
             "runtime_status": "Initializing",
@@ -216,37 +214,9 @@ class QualcommLLMProvider(LLMProvider):
         # Load real tokenizer
         self._tokenizer = _load_tokenizer(model_dir, self.config.llm_model_id)
 
-        # Check for ONNX model (for ONNX Runtime path)
-        onnx_model_path = model_dir / "model.onnx"
-        
-        # Check for GenAI Inference Extensions model (QAIRT format)
+        # QAIRT / GenAI Inference Extensions bundle; this is not an ONNX model.
         qairt_model_parts = list(model_dir.glob("part*_of_*.bin"))
-        
-        if onnx_model_path.exists():
-            # ONNX Runtime path
-            try:
-                import onnxruntime as ort
-                providers = self.config.get_effective_providers()
-                self._session = ort.InferenceSession(str(onnx_model_path), providers=providers)
-                active_providers = self._session.get_providers()
-                self.telemetry["active_provider"] = active_providers[0] if active_providers else "Unknown"
-                self.telemetry["hardware_npu_active"] = "QNNExecutionProvider" in active_providers
-                self.telemetry["runtime_status"] = (
-                    "Hexagon NPU Active (ONNX Runtime)"
-                    if self.telemetry["hardware_npu_active"]
-                    else "Implemented (CPU Simulation / Target Hardware Validation Pending)"
-                )
-                logger.info(
-                    "Initialized Qualcomm LLM ONNX session for %s with providers: %s (NPU active: %s)",
-                    self.config.llm_model_id,
-                    active_providers,
-                    self.telemetry["hardware_npu_active"],
-                )
-            except Exception as e:
-                logger.warning("Failed to initialize ONNX session for Qualcomm LLM: %s", e)
-                self._session = None
-                self.telemetry["runtime_status"] = "Fallback Mode (Session Load Failed)"
-        elif qairt_model_parts:
+        if qairt_model_parts:
             # GenAI Inference Extensions (QAIRT) model - runs on Snapdragon NPU via GenAI Inference Extensions
             # Requires GenAI Inference Extensions Python SDK and Snapdragon NPU hardware
             # On non-Snapdragon hosts, we load tokenizer but cannot run inference
@@ -263,176 +233,27 @@ class QualcommLLMProvider(LLMProvider):
         else:
             self.telemetry["runtime_status"] = "Fallback Mode (Model Not Found)"
 
-    def _tokenize_prompt(self, prompt: str) -> np.ndarray:
-        """Tokenize prompt using real tokenizer, padded/truncated to model's max sequence length."""
-        if self._tokenizer is None:
-            raise RuntimeError(
-                f"Real tokenizer not available for {self.config.llm_model_id}. "
-                f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
-            )
-        # Model expects fixed sequence length of 256
-        # Use actual vocab size from tokenizer (151669 for Qwen3-4B)
-        max_seq_len = 256
-        vocab_size = self._tokenizer.get_vocab_size()
-        encoding = self._tokenizer.encode(prompt)
-        ids = encoding.ids
-        if len(ids) > max_seq_len:
-            ids = ids[:max_seq_len]
-        else:
-            # Pad with pad_token_id (or 0)
-            pad_id = self._tokenizer.token_to_id("[PAD]") or 0
-            pad_id = min(max(pad_id, 0), vocab_size - 1)
-            ids = ids + [pad_id] * (max_seq_len - len(ids))
-        return np.array([ids], dtype=np.int64)
-
     async def generate(self, prompt: str, system_prompt: str | None = None) -> GenerationResult:
-            """Generate text using real autoregressive Qwen ONNX inference."""
-            t0 = time.perf_counter()
-
-            # Parse context and question from prompt (support both formats) - do this first for refusal check
-            # Format 1: Original ### CONTEXT:/### QUESTION: format
-            context_match = re.search(r"### CONTEXT:\n(.*?)\n### QUESTION:\n(.*?)$", prompt, re.DOTALL)
-            if not context_match:
-                # Format 2: lowercase context:/question: format (for vocab compatibility)
-                context_match = re.search(r"context:\n(.*?)\nquestion:\n(.*?)$", prompt, re.DOTALL | re.IGNORECASE)
-            if not context_match:
-                context_text = prompt
-                question = ""
-            else:
-                context_text = context_match.group(1).strip()
-                question = context_match.group(2).strip()
-
-            # Strict refusal rule: Check for missing evidence or empty context FIRST (before session checks)
-            if not context_text or "NO_RELEVANT_EVIDENCE" in context_text:
-                refusal_text = (
-                    "Insufficient evidence in the indexed documents to answer this question. "
-                    "The documents in your library do not contain information directly addressing this query."
-                )
-                return GenerationResult(
-                    text=refusal_text,
-                    prompt_tokens=len(prompt.split()),
-                    completion_tokens=len(refusal_text.split()),
-                )
-
-            # Check semantic alignment: does the context contain substantive terms from the question?
-            question_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", question.lower()))
-            query_framing = {
-                "what", "which", "where", "when", "does", "have", "with", "from",
-                "that", "this", "these", "those", "about", "regarding", "indicate",
-                "demonstrate", "discuss", "explain", "paper", "study", "research",
-                "for", "the", "and", "are", "was", "were", "can", "could", "would",
-                "should", "how", "why", "who", "whom", "whose", "into", "onto",
-                "over", "under", "than", "then", "more", "most", "some", "such",
-                "each", "all", "both", "stage",
-            }
-            key_query_terms = question_words - query_framing
-            content_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", context_text.lower()))
-
-            has_overlap = False
-            if not key_query_terms:
-                has_overlap = True
-            else:
-                for term in key_query_terms:
-                    if len(term) >= 4:
-                        prefix = term[:4]
-                        if any(cw == term or cw.startswith(prefix) or (len(cw) >= 4 and term.startswith(cw[:4])) for cw in content_words):
-                            has_overlap = True
-                            break
-                    elif term in content_words:
-                        has_overlap = True
-                        break
-
-            if not has_overlap:
-                refusal_text = (
-                    "Insufficient evidence in the indexed documents to answer this question. "
-                    "The documents in your library do not contain information directly addressing this query."
-                )
-                return GenerationResult(
-                    text=refusal_text,
-                    prompt_tokens=len(prompt.split()),
-                    completion_tokens=len(refusal_text.split()),
-                )
-
-            # NOW check session and tokenizer (after refusal checks)
-            # Check if QAIRT bundle was detected but runtime not available
-            if hasattr(self, '_qairt_model_dir') and self._session is None:
-                raise RuntimeError(
-                    f"QAIRT bundle detected for {self.config.llm_model_id} but GenAI Inference Extensions SDK "
-                    f"and Snapdragon NPU hardware are required for inference. "
-                    f"Current host does not support QAIRT inference."
-                )
-            if self._session is None:
-                raise RuntimeError(
-                    f"ONNX session not initialized for {self.config.llm_model_id}. "
-                    f"Snapdragon mode requires valid ONNX model and execution provider."
-                )
-            if self._tokenizer is None:
-                raise RuntimeError(
-                    f"Real tokenizer not available for {self.config.llm_model_id}. "
-                    f"Snapdragon mode requires real tokenizer at {self.config.model_dir / self.config.llm_model_id / 'tokenizer.json'}"
-                )
-
-            # Build prompt from extracted context + question (lowercase to stay within vocab)
-            llm_prompt = f"context:\n{context_text}\nquestion:\n{question}"
-            # Tokenize lowercase version to stay within model's vocab
-            input_ids = self._tokenize_prompt(llm_prompt.lower())
-
-            # Autoregressive generation with greedy decoding (fixed seq_len=256)
-            max_new_tokens = 256
-            generated_tokens = []
-            current_input_ids = input_ids.copy()
-            eos_token_id = self._tokenizer.token_to_id("[EOS]") or self._tokenizer.token_to_id("</s>") or 102
-
-            for step in range(max_new_tokens):
-                # Run ONNX inference - model expects fixed [1, 256] input
-                logits = self._session.run(["output_0"], {"input_ids": current_input_ids})[0]
-                # logits shape: [1, 256, vocab_size]
-                # Get logits for the last valid (non-padded) position
-                # Find the last non-pad token position
-                pad_id = self._tokenizer.token_to_id("[PAD]") or 0
-                valid_positions = np.where(current_input_ids[0] != pad_id)[0]
-                if len(valid_positions) == 0:
-                    last_pos = 0
-                else:
-                    last_pos = valid_positions[-1]
-                next_token_logits = logits[0, last_pos, :]
-            
-                # Greedy decoding: pick token with highest logit
-                next_token_id = int(np.argmax(next_token_logits))
-            
-                if next_token_id == eos_token_id:
-                    break
-            
-                generated_tokens.append(next_token_id)
-                # Replace the next position (or last+1) instead of concatenating
-                next_pos = last_pos + 1
-                if next_pos < 256:
-                    current_input_ids[0, next_pos] = next_token_id
-                else:
-                    # Shift left if at capacity (sliding window)
-                    current_input_ids[0, :-1] = current_input_ids[0, 1:]
-                    current_input_ids[0, -1] = next_token_id
-
-            # Decode generated tokens
-            generated_text = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
-
-            elapsed_ms = (time.perf_counter() - t0) * 1000.0
-            prompt_tokens = len(input_ids[0])
-            completion_tokens = len(generated_tokens)
-            tps = (completion_tokens * 1000.0) / max(1.0, elapsed_ms)
-
-            if self._cold_run:
-                self.telemetry["cold_latency_ms"] = round(elapsed_ms, 2)
-                self._cold_run = False
-            else:
-                self.telemetry["warm_latency_ms"] = round(elapsed_ms, 2)
-            self.telemetry["tokens_per_second"] = round(tps, 1)
-
-            return GenerationResult(
-                text=generated_text,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
+        """Raise until a QAIRT generation session is implemented and validated."""
+        if "NO_RELEVANT_EVIDENCE" in prompt:
+            refusal_text = (
+                "Insufficient evidence in the indexed documents to answer this question. "
+                "The documents in your library do not contain information directly addressing this query."
             )
+            return GenerationResult(
+                text=refusal_text,
+                prompt_tokens=len(prompt.split()),
+                completion_tokens=len(refusal_text.split()),
+            )
+        if hasattr(self, "_qairt_model_dir"):
+            raise RuntimeError(
+                f"QAIRT bundle detected for {self.config.llm_model_id}, but QAIRT inference is not yet "
+                "implemented. GenAI Inference Extensions integration and physical Snapdragon validation "
+                "are required before this provider can generate text."
+            )
+        raise RuntimeError(
+            f"QAIRT bundle not found for {self.config.llm_model_id}; Snapdragon LLM inference is unavailable."
+        )
 
 
 class QualcommVisionProvider(VisionProvider):

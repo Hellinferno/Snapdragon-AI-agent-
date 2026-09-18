@@ -76,8 +76,8 @@ async def test_qualcomm_llm_provider_grounding_and_refusal():
     if provider._session is None or provider._tokenizer is None:
         pytest.skip("QAIRT bundle not at expected path, skipping generation test")
 
-    # Grounded synthesis test - model runs but quality limited by tokenizer/model vocab mismatch
-    # (compiled model uses 32k vocab, tokenizer is 151k; clamping produces garbled output)
+    # QAIRT generation is intentionally unavailable until a physical Snapdragon
+    # environment and the GenAI Inference Extensions runtime are integrated.
     prompt = (
         "### CONTEXT:\n"
         "[Source 1: Qualcomm Technical Whitepaper, Page 2, Section: Architecture]\n"
