@@ -107,7 +107,10 @@ class VisionService:
 
     def _find_image_file(self, image_id: str) -> tuple[Path, str]:
         pattern = f"{image_id}_*"
-        matches = list(self.storage_dir.glob(pattern))
+        # The paper-link sidecar "{id}__link.txt" also matches the pattern; which
+        # file a directory lists first is filesystem-dependent, so exclude it.
+        link_sidecar = f"{image_id}__link.txt"
+        matches = [p for p in self.storage_dir.glob(pattern) if p.name != link_sidecar]
         if not matches:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
