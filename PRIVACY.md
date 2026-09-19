@@ -64,7 +64,7 @@ ScholarEdge provides continuous verification of its local-first privacy boundary
 | **1. Local Document Storage** | PDF files and extracted page representations reside exclusively in local SQLite database and `./backend/data/` filesystem directory. | **🎯 TARGET** |
 | **2. Local Embedding Storage** | 384-dimensional dense vectors stored in local SQLite `chunks` table; no cloud vector databases contacted. | **🎯 TARGET** |
 | **3. Local Vector Search** | Cosine similarity scoring computed entirely on Hexagon NPU using local memory; zero query text transmitted externally. | **🎯 TARGET** |
-| **4. AI Inference** | **Snapdragon**: LLM, Embeddings, Vision all local ONNX → QNNExecutionProvider → Hexagon NPU. | **🎯 TARGET** |
+| **4. AI Inference** | **Snapdragon**: LLM → Qwen3-4B via QAIRT/GenieX; Embeddings → MiniLM ONNX + QNN; Vision → MobileNet-v2 ONNX + QNN; all on Hexagon NPU. | **🎯 TARGET** |
 | **5. No Document Upload** | Zero document, page, or excerpt payloads dispatched to external endpoints. | **🎯 TARGET** |
 | **6. External Providers** | All external providers disabled (`AI_PROVIDER=qualcomm`); `OPENROUTER_API_KEY` ignored if set. | **🎯 TARGET** |
 
@@ -95,11 +95,14 @@ ScholarEdge provides continuous verification of its local-first privacy boundary
 
 ---
 
-## 5. Clinical & Research Compliance
+## 5. Technical Privacy Properties (Snapdragon Mode Target)
 
-- **HIPAA (Health Insurance Portability and Accountability Act)**: Clinical research documents containing Protected Health Information (PHI) remain strictly on the clinician's or researcher's physical device. **Only Snapdragon Mode guarantees zero cloud egress for PHI.**
-- **GDPR (General Data Protection Regulation)**: Ensures compliance with data minimization, purpose limitation, and zero third-party cross-border transfers. **Only Snapdragon Mode guarantees zero cross-border transfer.**
-- **Proprietary IP Protection**: Academic papers under peer review and corporate patents are safeguarded from unauthorized ingestion into public model training corpuses. **Only Snapdragon Mode guarantees zero cloud exposure.**
+- **Zero Cloud Egress**: All document content, embeddings, vector search, LLM inference, and vision analysis execute locally on the device. No query text, retrieved excerpts, or document payloads leave the physical machine.
+- **Zero Cross-Border Transfer**: Air-gapped operation means no network transmission of any kind — all data remains within the device's memory and storage boundaries.
+- **Zero Cloud Exposure for Proprietary IP**: Documents never contact external APIs; model weights and inference run on-device without telemetry to model providers.
+- **Data Minimization by Architecture**: Only the RAG prompt (question + retrieved citations) is constructed in memory; full documents never enter the LLM context window.
+- **Local-First Vector Search**: Cosine similarity computed on-device using local embeddings; zero query vectors transmitted externally.
+- **No Document Upload**: Zero document, page, or excerpt payloads dispatched to external endpoints — verified by the runtime privacy inspector.
 
 ---
 
@@ -111,4 +114,4 @@ During development, the system uses **OpenRouter (qwen/qwen-2.5-72b-instruct)** 
 - **Documents, embeddings, and vector search** remain fully local
 - **No document content is uploaded** — only the RAG prompt with citations
 
-**For true air-gapped/HIPAA/GDPR compliance, deploy in Snapdragon Mode on target hardware.**
+**For true air-gapped operation with the technical privacy properties above, deploy in Snapdragon Mode on target hardware.**
