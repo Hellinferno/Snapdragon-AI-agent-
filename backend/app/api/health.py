@@ -1,6 +1,15 @@
 import platform
+
 from fastapi import APIRouter
+
 from app.core.config import settings
+from app.providers.factory import (
+    embedding_provider_status,
+    llm_runs_locally,
+    resolved_llm_name,
+    resolved_vision_name,
+    retrieval_mode,
+)
 from app.providers.qualcomm.qualcomm_config import QualcommConfig
 
 router = APIRouter()
@@ -20,12 +29,35 @@ def _get_system_runtime_telemetry() -> dict:
     npu_status_label = "Hexagon NPU Active" if qnn_active else "Inactive (Host Development CPU)"
     runtime_mode = "Snapdragon Hexagon NPU" if qnn_active else "Development Host (CPU Simulation)"
 
+    embedding = embedding_provider_status()
+    llm_local = llm_runs_locally()
+
     privacy_checklist = [
         {"item": "Documents stored locally", "status": True, "detail": "Local SQLite database and filesystem storage"},
-        {"item": "Embeddings stored locally", "status": True, "detail": "384-d vector embeddings persisted on-device"},
+        {"item": "Embeddings stored locally", "status": True, "detail": f"384-d vector embeddings persisted on-device ({embedding.name})"},
         {"item": "Vector search local", "status": True, "detail": "Local SQLite exact cosine similarity"},
-        {"item": "AI inference local", "status": True, "detail": f"ONNX Runtime on {backend} for embeddings and vision; QAIRT LLM validation pending"},
-        {"item": "No document upload", "status": True, "detail": "Zero document transmission to third-party endpoints"},
+        # The LLM is the only leg that can leave the machine; embeddings and vision never do.
+        {
+            "item": "AI inference local",
+            "status": llm_local,
+            "detail": (
+                f"Embeddings and vision run locally on {backend} ({embedding.name}); "
+                f"generation is served by {resolved_llm_name()}"
+                if llm_local
+                else f"Generation is served by the cloud provider {resolved_llm_name()}; "
+                f"embeddings, retrieval and vision stay local"
+            ),
+        },
+        {
+            "item": "No document upload",
+            "status": llm_local,
+            "detail": (
+                "No document content leaves the device"
+                if llm_local
+                else f"Documents are indexed locally, but retrieved excerpts are sent to "
+                f"{resolved_llm_name()} for generation"
+            ),
+        },
         {"item": "External providers disabled", "status": not settings.ALLOW_EXTERNAL_PROVIDERS, "detail": "Cloud APIs blocked by default" if not settings.ALLOW_EXTERNAL_PROVIDERS else "External provider opted-in"},
     ]
 
@@ -71,9 +103,16 @@ def _get_system_runtime_telemetry() -> dict:
         "npu_status": npu_status_label,
         "runtime_mode": runtime_mode,
         "provider_backend": settings.PROVIDER_BACKEND,
-        "llm_provider": settings.LLM_PROVIDER or settings.PROVIDER_BACKEND,
-        "embedding_provider": settings.EMBEDDING_PROVIDER or settings.PROVIDER_BACKEND,
-        "vision_provider": settings.VISION_PROVIDER or settings.PROVIDER_BACKEND,
+        # Resolved providers, not the configured strings: a machine without the ONNX
+        # model must not be able to look like it is running semantic retrieval.
+        "llm_provider": resolved_llm_name(),
+        "embedding_provider": embedding.name,
+        "embedding_backend": embedding.backend,
+        "embedding_degraded": embedding.degraded,
+        "embedding_degraded_reason": embedding.reason,
+        "retrieval_mode": retrieval_mode(),
+        "vision_provider": resolved_vision_name(),
+        "llm_runs_locally": llm_local,
         "external_providers_enabled": settings.ALLOW_EXTERNAL_PROVIDERS,
         "device_target": settings.QUALCOMM_DEVICE_TARGET,
         "privacy_checklist": privacy_checklist,

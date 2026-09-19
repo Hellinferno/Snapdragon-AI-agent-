@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str | None = None
     EMBEDDING_PROVIDER: str | None = None  # "development" | "onnx_minilm" | "qualcomm"
     EMBEDDING_MODEL_DIR: Path = BASE_DIR / "models" / "embeddings" / "all-MiniLM-L6-v2"
-    HYBRID_RETRIEVAL: bool = True  # fuse BM25 with vector search; False = vector only
+    # Fuse BM25 with vector search; False = vector only. None derives the default from
+    # the resolved embedding provider, since the two want opposite settings.
+    HYBRID_RETRIEVAL: bool | None = None
     VISION_PROVIDER: str | None = None
     ALLOW_EXTERNAL_PROVIDERS: bool = False
     GEMINI_API_KEY: str | None = None

@@ -10,6 +10,7 @@ Retrieval (answerable questions only, measured before any score threshold or LLM
     page_recall@k    fraction of expected (document, page) pairs found in the top-k
     evidence_hit@k   a top-k chunk contains one of the question's evidence phrases
     mrr              reciprocal rank of the first relevant chunk (evidence, else page)
+    precision@k      fraction of the k retrieved slots that were relevant
 
 Generation:
     answer_correctness   answerable questions whose answer contains every required fact
@@ -214,6 +215,10 @@ class RetrievalJudgment:
     evidence_hit: bool | None  # None when the question lists no evidence phrases
     reciprocal_rank: float
     first_relevant_rank: int | None
+    # Fraction of the retrieved slots that were relevant. Unlike hit@k this falls
+    # when a change floods the top-k with redundant or off-topic chunks, so it is
+    # the metric that notices a precision-for-recall trade.
+    precision: float = 0.0
 
 
 def judge_retrieval(question: dict, retrieved: list[dict]) -> RetrievalJudgment:
@@ -229,6 +234,7 @@ def judge_retrieval(question: dict, retrieved: list[dict]) -> RetrievalJudgment:
     evidence_hit = False
     first_rank: int | None = None
 
+    relevant_slots = 0
     for rank, chunk in enumerate(retrieved, 1):
         pair = (normalize_title(chunk["document_title"]), int(chunk["page_number"]))
         doc_hit = doc_hit or pair[0] in expected_docs
@@ -238,6 +244,8 @@ def judge_retrieval(question: dict, retrieved: list[dict]) -> RetrievalJudgment:
         has_evidence = bool(evidence) and chunk_contains_evidence(chunk.get("text", ""), evidence)
         evidence_hit = evidence_hit or has_evidence
         relevant = has_evidence if evidence else on_page
+        if relevant:
+            relevant_slots += 1
         if relevant and first_rank is None:
             first_rank = rank
 
@@ -248,6 +256,7 @@ def judge_retrieval(question: dict, retrieved: list[dict]) -> RetrievalJudgment:
         evidence_hit=evidence_hit if evidence else None,
         reciprocal_rank=1.0 / first_rank if first_rank else 0.0,
         first_relevant_rank=first_rank,
+        precision=relevant_slots / len(retrieved) if retrieved else 0.0,
     )
 
 
@@ -331,6 +340,7 @@ class RetrievalSummary:
     evidence_hit: Ratio = field(default_factory=Ratio)
     page_recall: Mean = field(default_factory=Mean)
     mrr: Mean = field(default_factory=Mean)
+    precision: Mean = field(default_factory=Mean)
 
     def add(self, j: RetrievalJudgment) -> None:
         self.doc_hit.add(j.doc_hit)
@@ -339,6 +349,7 @@ class RetrievalSummary:
             self.evidence_hit.add(j.evidence_hit)
         self.page_recall.add(j.page_recall)
         self.mrr.add(j.reciprocal_rank)
+        self.precision.add(j.precision)
 
     def to_dict(self) -> dict:
         return {
@@ -347,6 +358,7 @@ class RetrievalSummary:
             "evidence_hit_at_k": self.evidence_hit.to_dict(),
             "page_recall_at_k": self.page_recall.to_dict(),
             "mrr": self.mrr.to_dict(),
+            "precision_at_k": self.precision.to_dict(),
         }
 
 

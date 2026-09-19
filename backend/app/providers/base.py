@@ -30,6 +30,15 @@ class EmbeddingProvider(ABC):
         """Embedding vector dimension."""
         pass
 
+    @property
+    def is_semantic(self) -> bool:
+        """Whether vectors come from a trained language model rather than feature hashing.
+
+        Drives the default hybrid-retrieval setting: BM25 fusion only helps when the
+        vectors are the weak signal (see app/providers/factory.py).
+        """
+        return True
+
     @abstractmethod
     async def embed_text(self, text: str) -> list[float]:
         """Generate embedding vector for a single text chunk."""

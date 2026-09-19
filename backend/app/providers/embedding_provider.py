@@ -28,6 +28,15 @@ class DevelopmentEmbeddingProvider(EmbeddingProvider):
         return "development-feature-hash-384"
 
     @property
+    def is_semantic(self) -> bool:
+        """False: these vectors are lexical feature hashes, not learned embeddings.
+
+        Measured on the book corpus this provider reaches 44.4% answer correctness
+        vector-only and 72.2% with BM25 fusion, against 94.4% for the real model.
+        """
+        return False
+
+    @property
     def dimension(self) -> int:
         return self._dim
 

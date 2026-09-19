@@ -35,7 +35,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
-from app.providers.factory import get_embedding_provider, get_llm_provider  # noqa: E402
+from app.providers.factory import (  # noqa: E402
+    describe_embedding_provider,
+    effective_hybrid_retrieval,
+    get_embedding_provider,
+    get_llm_provider,
+    retrieval_mode,
+)
 from app.services.document_service import DocumentService  # noqa: E402
 from app.services.retrieval_service import RetrievalService  # noqa: E402
 from evaluation.metrics import (  # noqa: E402
@@ -147,7 +153,14 @@ async def evaluate(args: argparse.Namespace) -> dict:
         await conn.run_sync(Base.metadata.create_all)
     session_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
-    embedding = get_embedding_provider()
+    # An explicit --embedding-provider / --hybrid wins; otherwise the same resolution the
+    # application uses, so a default-mode run measures the default configuration.
+    requested_embedding = None if args.embedding_provider == "auto" else args.embedding_provider
+    embedding = get_embedding_provider(requested_embedding)
+    embedding_status = describe_embedding_provider(embedding)
+    if args.hybrid is not None:
+        settings.HYBRID_RETRIEVAL = args.hybrid
+    hybrid_active = effective_hybrid_retrieval(embedding)
     llm = get_llm_provider() if args.mode == "full" else None
 
     retrieval = RetrievalSummary()
@@ -240,8 +253,13 @@ async def evaluate(args: argparse.Namespace) -> dict:
             "dataset_sha256": sha256_file(dataset_path),
             "corpus": [{"title": e["title"], "sha256": sha256_file(p)} for e, p in corpus],
             "embedding_provider": embedding.name,
+            "embedding_degraded": embedding_status.degraded,
+            "embedding_degraded_reason": embedding_status.reason,
+            "retrieval_mode": retrieval_mode(embedding),
             "llm_provider": llm.name if llm else None,
-            "hybrid_retrieval": settings.HYBRID_RETRIEVAL,
+            # The value actually used for this run, not the (possibly unset) setting.
+            "hybrid_retrieval": hybrid_active,
+            "hybrid_retrieval_explicit": args.hybrid is not None,
             "top_k": args.top_k,
             "min_score_threshold": args.min_score if llm else None,
             "chunk_size_chars": settings.CHUNK_SIZE_CHARS,
@@ -288,9 +306,13 @@ def print_question(record: dict) -> None:
 
 
 def print_summary(report: dict) -> None:
+    config = report["config"]
     print("\n" + "=" * 72)
     print(f"{report['dataset']} [{report['label']}] mode={report['mode']}  "
-          f"embedding={report['config']['embedding_provider']}  llm={report['config']['llm_provider']}")
+          f"embedding={config['embedding_provider']}  hybrid={config['hybrid_retrieval']}  "
+          f"llm={config['llm_provider']}")
+    if config.get("embedding_degraded"):
+        print(f"DEGRADED EMBEDDINGS ({config.get('retrieval_mode')}): {config['embedding_degraded_reason']}")
     print("=" * 72)
     for group in ("retrieval", "generation", "citation"):
         if report[group]:
@@ -311,6 +333,26 @@ def main() -> None:
     parser.add_argument("--dataset", default="data_science_for_business", help="dataset name in evaluation/datasets or a path")
     parser.add_argument("--corpus-dir", type=Path, help="directory containing the dataset's corpus PDFs")
     parser.add_argument("--mode", choices=["retrieval", "full"], default="retrieval")
+    parser.add_argument(
+        "--embedding-provider",
+        choices=["auto", "development", "onnx_minilm", "qualcomm"],
+        default="auto",
+        help="embedding backend; 'auto' follows the application's own resolution",
+    )
+    hybrid = parser.add_mutually_exclusive_group()
+    hybrid.add_argument(
+        "--hybrid",
+        dest="hybrid",
+        action="store_true",
+        default=None,
+        help="force BM25 fusion on (default: follow the resolved embedding provider)",
+    )
+    hybrid.add_argument(
+        "--no-hybrid",
+        dest="hybrid",
+        action="store_false",
+        help="force vector-only retrieval",
+    )
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--min-score", type=float, default=0.08, help="evidence threshold passed to chat() in full mode")
     parser.add_argument("--label", default=None, help="result file name (default: <mode>_<timestamp>)")

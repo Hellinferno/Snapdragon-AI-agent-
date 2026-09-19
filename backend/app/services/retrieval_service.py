@@ -4,10 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.config import settings
 from app.models.db_models import Chunk, Document
 from app.providers.base import EmbeddingProvider, LLMProvider
-from app.providers.factory import get_embedding_provider, get_llm_provider
+from app.providers.factory import (
+    effective_hybrid_retrieval,
+    get_embedding_provider,
+    get_llm_provider,
+)
 from app.providers.vector_store import SQLiteVectorStore
 from app.services.embedding_index import ensure_index_matches
 from app.services.lexical_index import get_bm25_index
@@ -62,7 +65,7 @@ class RetrievalService:
 
         pool = max(top_k * CANDIDATE_MULTIPLIER, MIN_CANDIDATES)
         lexical_ranked: list[tuple[str, float, float]] = []
-        if settings.HYBRID_RETRIEVAL:
+        if effective_hybrid_retrieval(self.embedding_provider):
             lexical_index = await get_bm25_index(self.db)
             lexical_ranked = lexical_index.search(query, limit=pool, document_ids=document_ids)
 
