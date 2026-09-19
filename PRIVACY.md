@@ -1,6 +1,6 @@
 # Privacy Architecture & Data Handling
 
-> **ScholarEdge has two privacy modes: Development (cloud LLM, verified on an Intel host) and Snapdragon (fully local by design, not yet physically validated).**
+> **The architecture is designed for local/on-device inference. The current development configuration uses OpenRouter for LLM generation; fully local Snapdragon operation remains pending hardware validation.**
 
 Sensitive research and clinical data may be subject to institutional, contractual, or legal
 restrictions. ScholarEdge's Snapdragon architecture is designed to reduce external data exposure
@@ -53,7 +53,7 @@ Internet required  → NO (by design; the air-gapped test has not been run on ha
 
 The only outbound traffic is the LLM call. It is made by these features, and only these:
 
-| Feature | Sent to OpenRouter | Never sent |
+| Feature | Sent to OpenRouter | Stays on the device |
 |---|---|---|
 | Research chat | the question + the top-k retrieved excerpts | the PDF, other pages, embeddings |
 | Learn: explainer, quiz, flashcards | the concept/task + retrieved excerpts | the PDF, other pages, embeddings |
@@ -87,7 +87,7 @@ this checklist from the provider that was actually resolved, not from configurat
 | **2. Local embedding storage** | Same as development mode; embeddings are computed by MiniLM ONNX via QNN on the Hexagon NPU. | **🎯 TARGET** |
 | **3. Local vector search** | Exact cosine similarity on the host CPU. The vector search itself is not an NPU workload in this design. | **🎯 TARGET** |
 | **4. AI inference** | LLM → Qwen3-4B-Instruct-2507 via QAIRT / GenieX on the Hexagon NPU; embeddings → MiniLM ONNX via QNN. | **🎯 TARGET** |
-| **5. No document upload** | No document, page, or excerpt leaves the device. | **🎯 TARGET** |
+| **5. No document upload** | Designed so that no document, page, or excerpt needs to leave the device. | **🎯 TARGET** |
 | **6. External providers** | Disabled (`ALLOW_EXTERNAL_PROVIDERS=false`, the default); `OPENROUTER_API_KEY` is ignored. | **🎯 TARGET** |
 
 ---

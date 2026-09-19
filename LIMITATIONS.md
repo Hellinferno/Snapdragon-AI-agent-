@@ -7,6 +7,8 @@
 
 ## 0. Known Limitations (summary)
 
+**Development uses the OpenRouter cloud API. Fully local/offline Snapdragon inference remains pending hardware and QAIRT/GenieX validation.**
+
 - **Snapdragon hardware validation is pending**: nothing has run on a physical Snapdragon device.
 - **Qwen3 QAIRT generation is not implemented or validated**: the bundle is detected and its
   tokenizer loads; no token has been generated on the NPU.

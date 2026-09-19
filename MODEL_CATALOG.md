@@ -35,12 +35,17 @@ ScholarEdge targets two neural models on Snapdragon, plus a figure-analysis path
 - **Post-Processing**: Attention-masked mean pooling followed by L2 unit vector normalization:
   $$\vec{v}_{\text{norm}} = \frac{\sum_{i=1}^L m_i \cdot \vec{h}_i}{\|\sum_{i=1}^L m_i \cdot \vec{h}_i\|_2}$$
 - **Target Precision**: INT4 quantized via Qualcomm AI Hub.
+- **Current (development build)**: FP32 ONNX on the host CPU (`CPUExecutionProvider`).
 - **Validation Status**: ONNX/QNN is the intended Snapdragon runtime. No physical target benchmark is currently published.
 
 ---
 
-### 2. `Qwen3-4B-Instruct-2507` (Source-Grounded LLM)
-- **Primary Function**: Writes cited answers, multi-depth concept explanations, active-recall quizzes and flashcards. (The Compare studio is extractive and does not use the LLM.)
+### 2. `Qwen3-4B-Instruct-2507` (Source-Grounded LLM — target Snapdragon model)
+- **Status in the frozen build**: available as the target Snapdragon model. The QAIRT bundle is present
+  and detected, and its tokenizer loads, but **QAIRT inference is not implemented**: Qwen3 does not
+  generate any text in this build and has not run on a Snapdragon NPU. Development builds use the
+  OpenRouter cloud API for generation instead.
+- **Target role**: write cited answers, multi-depth concept explanations, active-recall quizzes and flashcards. (The Compare studio is extractive and does not use an LLM.)
 - **Model Topology**: Decoder-only autoregressive transformer with Rotary Position Embeddings (RoPE), SwiGLU activations, and Grouped Query Attention (GQA).
 - **Tensors & Shape**:
   - `input_ids`: `int64[1, sequence_length]`
@@ -50,7 +55,7 @@ ScholarEdge targets two neural models on Snapdragon, plus a figure-analysis path
   - Questions the retrieved evidence cannot answer must be refused with:
     `"Insufficient evidence in the indexed documents to answer this question."`
 - **Target Precision**: INT4 compiled via Qualcomm AI Hub (QAIRT/GenieX format).
-- **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU.
+- **Target Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU (planned; not implemented).
 - **Vocabulary**: 151,936 tokens.
 - **Validation Status**: Bundle detection and tokenizer loading are implemented. QAIRT inference and physical Snapdragon NPU benchmarking are pending, so no LLM latency or throughput is claimed.
 

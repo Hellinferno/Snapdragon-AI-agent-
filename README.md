@@ -1,7 +1,10 @@
 # ScholarEdge
 
-> **Private, On-Device AI Research & Learning Copilot**
-> *Designed for Qualcomm Snapdragon Copilot+ PCs (Snapdragon X Elite, Hexagon NPU). Currently verified on an Intel development host; Snapdragon execution is not yet physically validated.*
+> **AI Research & Learning Copilot for Qualcomm Snapdragon Copilot+ PCs**
+>
+> **Designed for on-device use; development builds use OpenRouter for LLM access. Local Snapdragon inference is the target deployment path.**
+>
+> *Verified on an Intel development host; Snapdragon execution (Hexagon NPU) is not yet physically validated.*
 
 [![Automated Tests](https://img.shields.io/badge/pytest-125%20hermetic%20tests-10b981.svg)](DEVELOPMENT.md)
 [![Frontend Build](https://img.shields.io/badge/vite-build%20passing-38bdf8.svg)](DEVELOPMENT.md)
@@ -21,8 +24,9 @@ and figure analysis — often involves unpublished manuscripts, trial data, or c
 2. **Heterogeneous compute (target design)**:
    - **Hexagon NPU**: embedding generation (MiniLM via QNN) and LLM generation (Qwen3-4B via QAIRT / GenieX).
    - **Oryon CPU**: PDF parsing, chunking, and exact cosine-similarity retrieval over SQLite.
-3. **Offline use**: once the LLM runs locally, the whole research loop is designed to work without a
-   network connection (not yet tested on hardware — see [PRIVACY.md](PRIVACY.md)).
+3. **Offline use (target)**: the current development build needs the network for LLM generation.
+   Once the LLM runs locally on Snapdragon, the research loop is designed to work without a network
+   connection; this has not been tested on hardware (see [PRIVACY.md](PRIVACY.md)).
 
 ---
 

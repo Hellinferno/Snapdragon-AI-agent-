@@ -2,7 +2,12 @@
 
 > **Deploying ScholarEdge on Qualcomm Snapdragon X Elite with Hexagon NPU**
 >
-> ⚠️ **STATUS: ARCHITECTURE IMPLEMENTED — PHYSICAL VALIDATION PENDING**
+> ⚠️ **STATUS: TARGET DEPLOYMENT — PHYSICAL VALIDATION PENDING**
+>
+> **Qwen3-4B-Instruct-2507 → QAIRT/GenieX → Hexagon NPU (planned; Snapdragon hardware validation pending).**
+>
+> During development, LLM generation uses the **OpenRouter** cloud API on an Intel host. Nothing in this
+> guide has been executed on Snapdragon hardware yet.
 
 ---
 
@@ -30,10 +35,12 @@ all-MiniLM-L6-v2 embeddings
 
 Qwen3-4B-Instruct-2507
         ↓
-QAIRT / GenieX
+QAIRT / GenieX            (planned; generation not implemented)
         ↓
-Hexagon NPU
+Hexagon NPU               (Snapdragon hardware validation pending)
 ```
+
+Until then, development builds generate text through **OpenRouter** (cloud API); see PRIVACY.md.
 
 Retrieval (cosine similarity over SQLite vectors) runs on the CPU in this design; the NPU computes
 embeddings, not the vector search.
@@ -57,7 +64,7 @@ ScholarEdge targets the **Qualcomm Snapdragon X Elite** (and Snapdragon X Plus) 
 - **Hexagon NPU**: Delivering **45 TOPS** of dedicated neural compute for INT4 and INT8 matrix operations.
 - **Qualcomm Neural Network (QNN) SDK**: Provides direct hardware offload to the Hexagon Tensor Processor (HTP) through `QnnHtp.dll`.
 - **ONNX Runtime QNN Execution Provider**: Enables direct execution of quantized ONNX models on the Hexagon NPU with minimal CPU host overhead.
-- **GenAI Inference Extensions (GenieX/QAIRT)**: Qualcomm's runtime for LLM inference on Hexagon NPU, used by Qwen3-4B-Instruct-2507.
+- **GenAI Inference Extensions (GenieX/QAIRT)**: Qualcomm's runtime for LLM inference on Hexagon NPU, planned for Qwen3-4B-Instruct-2507 (generation not yet implemented).
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -186,7 +193,7 @@ The benchmark script records:
 | Component | Code Status | Physical Validation |
 |---|---|---|
 | `QNNExecutionProvider` factory (embeddings) | ✅ Implemented | ❌ Pending |
-| GenAI Inference Extensions (GenieX/QAIRT) factory | ✅ Implemented | ❌ Pending |
+| QAIRT / GenieX LLM provider | ⚠️ Scaffolding only: bundle detection and tokenizer loading; no generation | ❌ Pending |
 | MiniLM ONNX artifact | ✅ Download & verification script | ❌ Pending |
 | Figure classifier for the vision provider | ❌ Not trained (MobileNet-v2 provider is scaffolding) | ❌ Pending |
 | QAIRT generation (Qwen3 inference) | ❌ Not implemented | ❌ Pending |
@@ -196,7 +203,7 @@ The benchmark script records:
 | Provider isolation (no fallback to CPU) | ✅ Implemented | ❌ Pending |
 | Benchmark harness | ✅ Implemented | ❌ Pending |
 | Hardware telemetry API | ✅ Implemented | ❌ Pending |
-| RAG pipeline end-to-end | ✅ Implemented | ❌ Pending |
+| RAG pipeline end-to-end | ✅ Development mode (OpenRouter generation); ❌ Snapdragon mode blocked on QAIRT generation | ❌ Pending |
 
 **Do not claim Snapdragon NPU execution until all checkboxes in Section 4 are complete.**
 

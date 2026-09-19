@@ -18,9 +18,11 @@ Conventions these checks enforce
 * A test count claim is written ``<N> hermetic tests`` (or the equivalent
   ``<N> tests``/``<N> passed``/``<N> passing``). ``N`` is the number of tests the
   default ``pytest`` run collects, i.e. everything except the opt-in
-  ``integration``/``external_api``/``live`` modules. Do **not** quote the
+  ``integration``/``external_api``/``live`` modules. Do **not** quote a bare
   ``N passed`` figure from a summary line: it varies with which local ONNX
-  models are present, whereas the collected count does not.
+  models are present, whereas the collected count does not. The one exception
+  is a ``P passed, S skipped`` pair, accepted when ``P + S`` equals the
+  collected count.
 * Counts of *live*/*integration* tests are exempt, because those are stated as
   opt-in extras rather than as the size of the hermetic suite.
 * Every ``*.json`` path named in the docs must exist **and be tracked by git**
@@ -89,6 +91,9 @@ COUNT_CLAIM_RE = re.compile(
     r"(?:tests?|test\s+cases?|passed|passing)\b",
     re.IGNORECASE,
 )
+
+# "118 passed, 7 skipped": a passed count is only meaningful beside its skips.
+SKIPPED_TAIL_RE = re.compile(r"\s*,\s*(\d{1,4})\s+skipped\b", re.IGNORECASE)
 
 # Claims about the opt-in live suite are not claims about the hermetic suite.
 NON_HERMETIC_QUALIFIERS = ("integration", "live", "opt-in", "optin", "external")
@@ -160,6 +165,9 @@ def check_test_counts() -> list[str]:
                 if any(q in claim for q in NON_HERMETIC_QUALIFIERS):
                     continue
                 value = int(match.group(1))
+                skipped = SKIPPED_TAIL_RE.match(line, match.end())
+                if claim.lower().rstrip().endswith("passed") and skipped:
+                    value += int(skipped.group(1))  # compare the pair's total
                 if value != expected:
                     problems.append(
                         f"{doc.relative_to(REPO_ROOT)}:{line_no}: claims {value} "

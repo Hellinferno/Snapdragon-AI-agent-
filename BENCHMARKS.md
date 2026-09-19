@@ -2,6 +2,14 @@
 
 > **Status: no physical Snapdragon NPU benchmark has been recorded for the current Qwen3-4B-Instruct-2507 QAIRT integration.**
 
+## Automated tests (development host)
+
+**125 tests collected: 118 passed, 7 skipped (Qualcomm artifacts unavailable).**
+
+Hermetic suite (`pytest -v` in `backend/`, 0 API keys, 0 network) on the Intel development laptop,
+2026-09-19. The 7 skipped tests exercise Qualcomm ONNX/QAIRT artifacts that are not present on this
+machine; none failed.
+
 ## RAG quality (development host)
 
 Final full-mode run after the last code changes (2026-09-19): MiniLM ONNX embeddings, vector-only

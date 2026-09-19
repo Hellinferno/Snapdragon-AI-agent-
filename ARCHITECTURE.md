@@ -1,7 +1,11 @@
 # ScholarEdge System Architecture
 
-> **Private, On-Device AI Research & Learning Architecture**  
-> Designed for heterogeneous execution on Qualcomm Snapdragon Copilot+ PCs with seamless host CPU development support.
+> **ScholarEdge Research & Learning Architecture**
+>
+> **The architecture defines explicit CPU-host and Snapdragon NPU execution roles. The current development build runs on the CPU; NPU offload is the target deployment path.**
+>
+> In the development build, LLM generation is served by OpenRouter (cloud); embeddings, retrieval,
+> comparison and figure analysis run on the host CPU. No component has executed on a Snapdragon NPU yet.
 
 ---
 
@@ -40,7 +44,7 @@ Research AI workloads (PDF document parsing, dense semantic embeddings, multi-pa
 
 1. **Data Confidentiality**: Sensitive research and clinical data may be subject to institutional, contractual, or legal restrictions. ScholarEdge's Snapdragon architecture is designed to reduce external data exposure by performing inference locally.
 2. **Heterogeneous Compute Architecture**: Modern research analysis combines varied computational profiles:
-   - **Hexagon NPU (target)**: embedding generation (MiniLM via QNN) and LLM generation (Qwen3 via QAIRT / GenieX).
+   - **Hexagon NPU (target role, not yet executed)**: embedding generation (MiniLM via QNN) and LLM generation (Qwen3 via QAIRT / GenieX, planned).
    - **Qualcomm Oryon CPU**: PDF parsing, chunking, and exact cosine-similarity retrieval.
    - **Adreno GPU**: renders the browser UI; no ScholarEdge model workload targets it.
 3. **All-Day Battery Life & Portability**: Researchers and clinicians need continuous intelligence without tethering to cloud servers or high-wattage desktop GPUs. Snapdragon Copilot+ PCs are designed for sustained low-power on-device inference; ScholarEdge has not yet measured its own power draw on one.
