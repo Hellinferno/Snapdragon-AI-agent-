@@ -126,7 +126,7 @@ Before evaluating features, verify the execution mode:
    > `Host: Windows AMD64 | Provider: CPUExecutionProvider`
 2. The **ScholarEdge Hardware & Privacy Runtime Inspector Modal** opens:
    - **Active Environment**: Displays Host Machine, Architecture, Engine, Provider, and truthful NPU status (`Validation Pending`).
-   - **Demonstrable Privacy Checklist**: 6 checks — Development Mode shows 4 green (local storage, embeddings, search, no uploads) and 2 yellow (cloud LLM via OpenRouter, external providers enabled).
+   - **Demonstrable Privacy Checklist**: 6 checks — Development Mode with OpenRouter shows 3 green (local storage, embeddings, local vector search) and 3 yellow (generation served by a cloud LLM, retrieved excerpts leave the device for that generation, external providers enabled). The two yellow inference rows are derived from the resolved LLM provider, so they turn green in Snapdragon Mode.
    - **CPU vs Snapdragon NPU Benchmark Comparison Table**: Displays physically measured host CPU latencies alongside **target** (not verified) Snapdragon Hexagon NPU profiles.
 
 ---
@@ -134,10 +134,13 @@ Before evaluating features, verify the execution mode:
 ## 📊 4. RAG Benchmark Evidence (Pre-Run)
 
 The repository includes a pre-run RAG evaluation on the bundled demo-papers corpus
-(13 answerable + 2 unanswerable questions, full mode, hybrid retrieval, MiniLM ONNX +
+(13 answerable + 2 unanswerable questions, full mode, MiniLM ONNX vector-only — i.e.
+`HYBRID_RETRIEVAL=false`, which is what that result file records — +
 OpenRouter qwen-2.5-72b-instruct):
 
-**Location**: `backend/evaluation/results/demo_papers/pre_rag_changes_full.json`
+**Location**: `backend/evaluation/results/demo_papers/p1b_minilm.json` (the MiniLM
+vector-only run; `baseline.json`, `p1_hybrid.json` and `p1b_minilm_hybrid.json` sit
+beside it so the embedding and fusion choices can be compared directly)
 
 **Key Measured Metrics (Development Host)**:
 | Metric | Value |
@@ -196,4 +199,4 @@ $env:OPENROUTER_API_KEY = "sk-..."
 pytest -m live
 ```
 
-A plain `pytest` run deselects the live tests (93+ passing in well under a minute), demonstrating that the RAG, comparison, learning, and vision pipelines are verifiable offline.
+A plain `pytest` run deselects the live tests (119 hermetic tests in about 15 seconds), demonstrating that the RAG, comparison, learning, and vision pipelines are verifiable offline.

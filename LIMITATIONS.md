@@ -11,11 +11,11 @@
 |---|---|---|
 | **Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U) | Snapdragon X Elite / Copilot+ PC |
 | **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 INT4 → GenieX/QAIRT → Hexagon NPU (inference pending) |
-| **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
+| **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) — auto-selected when the model is present, otherwise the feature-hash fallback (reported as `embedding_degraded` by `/api/health`) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
 | **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (GenieX/QAIRT)` — only when loaded |
-| **Verification** | ✅ 79 tests passing, frontend build passing | ❌ Architecture complete, physical validation pending |
+| **Verification** | ✅ 119 hermetic tests, frontend build passing | ❌ Architecture complete, physical validation pending |
 
 **The UI and `/api/health` never display LLM NPU execution without a validated QAIRT session. `QNNExecutionProvider` telemetry applies only to the ONNX embedding and vision paths.**
 
@@ -33,7 +33,7 @@
 | **AI Accelerator** | None (Host CPU only) | Qualcomm Hexagon NPU (45 TOPS) |
 | **Execution Provider** | `CPUExecutionProvider` | `QNNExecutionProvider` (embeddings/vision); QAIRT / GenieX (LLM) |
 | **NPU Status** | **Inactive / Simulated** (`hardware_npu_active: false`) | **Active Target** (`QnnHtp.dll` offload) |
-| **Verification Status** | **Physically verified** (37 automated tests passing) | **Pending physical target hardware verification** |
+| **Verification Status** | **Physically verified** (119 automated tests) | **Pending physical target hardware verification** |
 
 ### Truth in Telemetry
 - The application UI and runtime telemetry API (`/api/health`, `/api/runtime/status`) **never claim NPU acceleration** when running on the Intel host machine.
@@ -47,7 +47,7 @@
 ### Embedding Pipeline
 - **Target Implementation**: `all-MiniLM-L6-v2` (384-dimensional dense vectors) exported to ONNX and configured for Qualcomm AI Hub INT4 compilation on Hexagon HTP.
 - **Current Development Host**: Executes the genuine ONNX model graph via ONNX Runtime with `CPUExecutionProvider`, performing token identification, tensor forward pass, mean pooling across attention masks, and L2 unit normalization.
-- **Zero-Dependency Fallback**: High-speed deterministic 384-dimensional feature hashing (`MurmurHash3`/`sha256`) is retained as a zero-dependency fallback if ONNX Runtime is missing.
+- **Zero-Dependency Fallback**: High-speed deterministic 384-dimensional feature hashing (`sha256`) is retained as a zero-dependency fallback when the ONNX model or runtime is missing. It is selected automatically in that case and flagged as `embedding_degraded` in `/api/health` and in evaluation result files, with the measured cost named (44.4% vs 94.4% answer correctness on the book corpus, §5) — so a machine without the model cannot silently look like it is running semantic retrieval.
 
 ### Large Language Model (LLM) Pipeline
 - **Target Implementation**: `Qwen3-4B-Instruct-2507` compiled for Snapdragon X Elite via Qualcomm AI Hub (QAIRT/GenieX format).
@@ -71,22 +71,101 @@
 
 ---
 
-## 5. RAG Quality Baseline (Measured on Development Host)
+## 5. RAG Quality (Measured on Development Host)
 
-From `evaluation/results/data_science_for_business/baseline.json`:
+Every number below comes from a committed result file named in the column header. Metric
+definitions, per-question detail and the experiment log live in `backend/evaluation/README.md`,
+which is the canonical source — this table is a summary of it, not a second copy.
 
-| Metric | Value | Notes |
-|---|---|---|
-| Doc Hit@K | 100% | 18/18 |
-| Page Hit@K | 66.7% | 12/18 |
-| Evidence Hit@K | 50% | 9/18 |
-| Answer Correctness | 44.4% | 8/18 |
-| False Refusal Rate | 44.4% | 8/18 |
-| Abstention Accuracy | 100% | 2/2 |
-| Groundedness | 100% | 10/10 |
-| Citation Accuracy | 100% | 13/13 |
+**A single number is meaningless without its configuration.** The same dataset spans 44.4% to
+94.4% answer correctness depending only on which embedding provider and retrieval mode are
+selected, so configuration is a column, not a footnote.
 
-**Known gaps**: Multi-page (33% evidence hit), Cross-section (33%), Conceptual (40%), Page citations (66%).
+### `data_science_for_business` (409-page book, 18 answerable + 2 unanswerable questions)
+
+Full mode (retrieval + generation via OpenRouter qwen-2.5-72b-instruct), top-k = 5:
+
+| Metric | `baseline.json` (hash, vector-only) | `p1_hybrid.json` (hash + BM25) | `head_full_k5.json` (MiniLM, vector-only) | `p1b_minilm_hybrid.json` (MiniLM + BM25) |
+|---|---|---|---|---|
+| Evidence Hit@5 | 9/18 (50.0%) | 12/18 (66.7%) | **17/18 (94.4%)** | 16/18 (88.9%) |
+| Page Hit@5 | 12/18 (66.7%) | 17/18 (94.4%) | **18/18 (100%)** | 18/18 (100%) |
+| Page recall@5 | 0.493 | 0.729 | **0.812** | 0.784 |
+| MRR | 0.431 | 0.509 | **0.681** | 0.630 |
+| Answer Correctness | 8/18 (44.4%) | 13/18 (72.2%) | **17/18 (94.4%)** | 15/18 (83.3%) |
+| False Refusal Rate | 8/18 (44.4%) | 1/18 (5.6%) | **1/18 (5.6%)** | 1/18 (5.6%) |
+| Abstention Accuracy | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) |
+
+What this says, and what it does not:
+
+- **Real semantic embeddings are the whole story** (44.4% → 94.4%). The largest single lever is not
+  reranking, thresholds, or chunking — it is not using sha256 feature hashes for semantic search.
+- **With MiniLM, BM25 fusion costs one retrieval hit and two correct answers** (94.4% → 83.3%), which
+  is why the retrieval default follows the embedding provider: fusion is only the right default when
+  the vectors are the weak signal (44.4% → 72.2% with hashing).
+- **Hit@k saturates at this corpus size and cannot rank configurations.** Doc hit is 100% even with
+  feature hashing. MRR and page recall@k are the discriminating metrics.
+- **Abstention, groundedness and citation accuracy are 100% in every configuration**, so they are not
+  evidence of retrieval quality; they are evidence that the refusal and citation plumbing works.
+
+Retrieval-mode top-k sweep (MiniLM, vector-only, from `head_retrieval_k{3,5,8,10}.json`):
+
+| k | Evidence Hit | Page Hit | Page recall | MRR |
+|---|---|---|---|---|
+| 3 | 88.9% | 94.4% | 0.773 | 0.667 |
+| 5 | 94.4% | 100% | 0.812 | 0.681 |
+| 8 | 94.4% | 100% | 0.840 | 0.681 |
+| 10 | 94.4% | 100% | 0.868 | 0.681 |
+
+(BM25 at k = 10, `head_retrieval_k10_hybrid.json`, reaches 100% evidence hit but a *lower* MRR of
+0.649, i.e. it buys recall by pushing relevant chunks down — the precision-for-recall trade that
+`precision_at_k`, added to the harness with this change, now reports.)
+
+### `demo_papers` (3 synthetic clinical papers, 13 answerable + 2 unanswerable questions)
+
+Retrieval metrics; full-mode correctness for the recommended configuration is 12/13 (92.3%),
+false refusals 0/13, in `p1b_minilm.json` (committed alongside `baseline.json`, `p1_hybrid.json`
+and `p1b_minilm_hybrid.json`).
+
+| Metric | `baseline.json` (hash, vector-only) | `p1_hybrid.json` (hash + BM25) | `p1b_minilm.json` (MiniLM, vector-only) | `p1b_minilm_hybrid.json` (MiniLM + BM25) |
+|---|---|---|---|---|
+| Doc Hit@5 | 100% | 100% | 100% | 100% |
+| Page Hit@5 | 92.3% | 100% | 100% | 100% |
+| Evidence Hit@5 | 92.3% | 100% | 100% | 100% |
+| Page recall@5 | 0.692 | 0.750 | **0.923** | 0.923 |
+| MRR | 0.718 | 0.872 | 0.821 | **0.910** |
+
+On this corpus BM25 fusion *helps* MRR even with semantic embeddings — the opposite of the book
+corpus — because 15 chunks total leave little for a generic-keyword promotion to displace. Full-mode
+correctness is 12/13 either way, so the disagreement is confined to ranking, and the book corpus
+(1,900 chunks, realistic scale) is the one the default follows.
+
+### Reproducing these numbers
+
+The book's PDF is not redistributed (copyright), so its rows need the corpus locally:
+
+```bash
+cd backend
+# recommended configuration (this is also the automatic default)
+python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. --mode retrieval
+# the four configurations above
+python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. \
+        --embedding-provider development --no-hybrid   # 44.4%-class
+python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. \
+        --embedding-provider development --hybrid      # 72.2%-class
+python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .. \
+        --embedding-provider onnx_minilm --hybrid      # 83.3%-class
+```
+
+The demo corpus is committed, so those rows reproduce with no arguments beyond `--dataset demo_papers`.
+Ranking on it is frozen by `backend/tests/test_retrieval_regression.py`.
+
+`precision_at_k` was added to the harness with this change, so the pre-existing result files above do
+not contain it; the values recorded in this document are the ones they do contain.
+
+**Known gaps**: the single cross-document synthesis miss on the demo corpus (50% on one category);
+page recall@k 0.812 on the book, where multi-page evidence spans are capped by retrieving the
+neighbouring page before the exact one. Neither is a reranking problem — with MiniLM the first
+relevant chunk is already at rank ≤ 3 for 17/18 book questions.
 
 ---
 

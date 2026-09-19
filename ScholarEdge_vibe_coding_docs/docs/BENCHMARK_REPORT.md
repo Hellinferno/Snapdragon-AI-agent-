@@ -5,7 +5,7 @@
 ScholarEdge is an on-device AI research and learning copilot designed for researchers and clinicians handling proprietary or sensitive documents.
 
 > **Hardware Verification Status**:
-> - **Verified Development Host**: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 Pro AMD64). Complete 5-studio research-to-learning loop, vector indexing, citation tracking, and 31 automated tests verified.
+> - **Verified Development Host**: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 Pro AMD64). Complete 5-studio research-to-learning loop, vector indexing, citation tracking, and 119 automated tests verified.
 > - **Snapdragon Target Deployment**: Snapdragon X Elite / Copilot+ PC (ARM64 Windows, Qualcomm Hexagon NPU 45 TOPS). Architecture and provider isolation implemented; on-device NPU benchmark execution is **PENDING TARGET-DEVICE VALIDATION**.
 
 To maintain strict scientific and competition integrity, all benchmark figures in this report are explicitly classified as **Development Host Baseline Simulation**. No fabricated or synthetic NPU accelerator claims are made.

@@ -3,7 +3,7 @@
 > **Private, On-Device AI Research & Learning Copilot**  
 > *Engineered for Qualcomm Snapdragon Copilot+ PCs (Snapdragon X Elite / Hexagon NPU 45 TOPS).*
 
-[![Automated Tests](https://img.shields.io/badge/pytest-37%20passed-10b981.svg)](DEVELOPMENT.md)
+[![Automated Tests](https://img.shields.io/badge/pytest-119%20hermetic%20tests-10b981.svg)](DEVELOPMENT.md)
 [![Frontend Build](https://img.shields.io/badge/vite-build%20passing-38bdf8.svg)](DEVELOPMENT.md)
 [![Privacy Mode](https://img.shields.io/badge/privacy-100%25%20local--first-emerald.svg)](PRIVACY.md)
 [![Hardware Status](https://img.shields.io/badge/runtime-Intel%20i3%20Verified%20%7C%20Snapdragon%20NPU%20Pending-f59e0b.svg)](LIMITATIONS.md)
@@ -93,7 +93,7 @@ In accordance with strict scientific honesty:
 | Aspect | Development Host (Verified) | Snapdragon Target (Pending) |
 |--------|----------------------------|----------------------------|
 | **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
-| **Tests** | 93 backend tests passing offline (deterministic, zero live-API dependency); 2 live OpenRouter tests as separate opt-in integration tests; frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
+| **Tests** | 95 backend tests passing offline (deterministic, zero live-API dependency); 2 live OpenRouter tests as separate opt-in integration tests; frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
 | **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU (inference validation pending) |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
 | **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
@@ -170,7 +170,7 @@ Embeddings uploaded to cloud: No
 Vector search:    Local (zero network egress)
 Air-gapped:       No (requires internet for LLM)
 Verified on:      Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB RAM, Windows 11)
-Tests:            93 backend tests passing offline (deterministic) + 2 opt-in live integration tests | Frontend build passing
+Tests:            95 backend tests passing offline (deterministic) + 2 opt-in live integration tests | Frontend build passing
 ```
 
 ### SNAPDRAGON MODE (Target — Not Yet Physically Validated)
@@ -202,7 +202,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# Run automated tests (93 passing, fully offline/hermetic — no API keys needed)
+# Run automated tests (119 hermetic tests, no API keys or network needed)
 pytest -v
 
 # Optional: real OpenRouter connectivity tests (require network + API key)

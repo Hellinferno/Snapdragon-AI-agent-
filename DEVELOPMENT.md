@@ -40,7 +40,14 @@ This downloads and verifies ONNX models from legitimate sources (Hugging Face, Q
 ```powershell
 pytest -v
 ```
-All 37 test cases should pass in under 5 seconds.
+All 119 offline test cases run without network access or API keys (about 10–15 seconds warm, which includes a nested pytest collection run by the documentation guard below; the first run after a cold boot is slower, and a few ONNX-dependent tests skip when the local model files have not been downloaded).
+
+Two separate guards keep the documentation itself honest:
+```powershell
+python -m scripts.check_docs   # fails if any doc's test count or cited result file is stale
+pytest tests/test_doc_consistency.py
+```
+If you add or remove tests, `check_docs` fails until the documented count is updated — that is intentional, and it is how four contradictory counts (95 / 79 / 37 / 31) accumulated unnoticed before.
 
 ### Start Backend Development Server
 ```powershell

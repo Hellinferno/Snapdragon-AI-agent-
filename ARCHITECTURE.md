@@ -110,39 +110,60 @@ Research Figure ──► Image Preprocessing ──► MobileNet-v2 ONNX ──
 
 ## 4. Hardware Telemetry & Runtime Inspection Contract
 
-ScholarEdge maintains continuous hardware telemetry via `/api/health` and `/api/runtime/status`:
+ScholarEdge maintains continuous hardware telemetry via `/api/health` and `/api/runtime/status`. Every
+field below is derived from the provider that was **actually resolved**, not from the configured
+string, so a machine that silently fell back cannot report the good configuration
+(`embedding_degraded` exists for exactly that reason). This is the real development-host payload with
+OpenRouter as the generation provider — note that three checklist rows are *not* green, because the
+LLM leg does leave the device:
 
 ```json
 {
   "status": "healthy",
-  "runtime_engine": "ONNX Runtime + GenAI Inference Extensions",
-  "execution_provider": "CPUExecutionProvider",
+  "device_name": "Windows AMD64 (Development Host / Non-Snapdragon)",
+  "architecture": "AMD64",
+  "runtime_engine": "ONNX Runtime (embeddings/vision); QAIRT pending (LLM)",
+  "active_provider": "CPUExecutionProvider",
+  "execution_backend": "Host CPU",
+  "precision": "FP32",
   "hardware_npu_active": false,
   "npu_status": "Inactive (Host Development CPU)",
-  "host_device": "Windows AMD64",
-  "host_architecture": "AMD64",
-  "privacy_mode": "Strict Local-First",
+  "runtime_mode": "Development Host (CPU Simulation)",
+  "llm_provider": "openrouter-qwen/qwen-2.5-72b-instruct",
+  "llm_runs_locally": false,
+  "embedding_provider": "onnx-all-MiniLM-L6-v2",
+  "embedding_backend": "onnx_minilm",
+  "embedding_degraded": false,
+  "embedding_degraded_reason": null,
+  "retrieval_mode": "semantic-vector",
+  "vision_provider": "development-vision-heuristic",
+  "external_providers_enabled": true,
   "privacy_checklist": [
-    { "item": "Documents stored locally", "verified": true },
-    { "item": "Embeddings stored locally", "verified": true },
-    { "item": "Vector search local", "verified": true },
-    { "item": "AI inference local", "verified": true },
-    { "item": "No document upload", "verified": true },
-    { "item": "External providers disabled", "verified": true }
+    { "item": "Documents stored locally", "status": true, "detail": "Local SQLite database and filesystem storage" },
+    { "item": "Embeddings stored locally", "status": true, "detail": "384-d vector embeddings persisted on-device (onnx-all-MiniLM-L6-v2)" },
+    { "item": "Vector search local", "status": true, "detail": "Local SQLite exact cosine similarity" },
+    { "item": "AI inference local", "status": false, "detail": "Generation is served by the cloud provider openrouter-qwen/qwen-2.5-72b-instruct; embeddings, retrieval and vision stay local" },
+    { "item": "No document upload", "status": false, "detail": "Documents are indexed locally, but retrieved excerpts are sent to openrouter-qwen/qwen-2.5-72b-instruct for generation" },
+    { "item": "External providers disabled", "status": false, "detail": "External provider opted-in" }
   ]
 }
 ```
 
-> **Expected Snapdragon Mode Telemetry** (after QAIRT inference is implemented and validated):
+> **Expected Snapdragon Mode Telemetry** (after QAIRT inference is implemented and validated; these
+> values are a target, not a measurement — no field here may be shown as verified until a physical
+> Snapdragon run reports it):
 > ```json
 > {
 >   "runtime_engine": "GenAI Inference Extensions (GenieX/QAIRT)",
->   "execution_provider": "QAIRT on QNN",
+>   "active_provider": "QAIRT on QNN",
 >   "hardware_npu_active": true,
 >   "npu_status": "Hexagon NPU Active (GenAI Inference Extensions)",
->   "llm_model": "Qwen3-4B-Instruct-2507 (QAIRT)",
->   "embedding_model": "all-MiniLM-L6-v2 (QNN)",
->   "vision_model": "MobileNet-v2 (QNN)"
+>   "llm_provider": "qairt-Qwen3-4B-Instruct-2507",
+>   "llm_runs_locally": true,
+>   "embedding_provider": "onnx-all-MiniLM-L6-v2",
+>   "embedding_backend": "qnn-htp",
+>   "retrieval_mode": "semantic-vector",
+>   "vision_provider": "onnx-MobileNet-v2"
 > }
 > ```
 

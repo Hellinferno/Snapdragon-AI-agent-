@@ -53,6 +53,18 @@ questions refused), `groundedness` (non-refused answers with ≥1 citation, all 
   exact phrase counts as a miss (book B16).
 - **20 questions:** one question moves a metric by 5.6 points, so differences of ±1 question are noise.
 
+## Regression guard
+
+The `demo_papers` ranking is frozen by `tests/test_retrieval_regression.py`, which re-indexes the
+corpus and fails if MRR or page recall@5 falls below the reference in the committed result files
+here. Floors are (reference − 0.03), sized so a single rank-1→rank-2 slip on the 13 answerable
+demo questions fails the build. Raising a floor means committing a new result file and updating the
+reference in that test.
+
+The demo corpus cannot see `CHUNK_SIZE_CHARS` / `CHUNK_OVERLAP_CHARS` changes at all: each of its
+15 pages yields exactly one chunk, so 600 and 1200 chars measure identically. Chunk-size work has
+to be measured on the book corpus with the commands above.
+
 ## Results
 
 ### Frozen RAG baseline (HEAD `1e78440`, 2026-09-15)
@@ -151,8 +163,20 @@ Book, top-k = 5, Qwen 2.5 72B via OpenRouter.
 Demo papers, answer correctness: 4/13 → 6/13 → **12/13** (MiniLM, either mode), false refusals 7/13 → 5/13 → 0/13.
 
 **Recommended configuration:** `EMBEDDING_PROVIDER=onnx_minilm`, `HYBRID_RETRIEVAL=false` (see `.env.example`).
-The code defaults stay on the development hash embeddings + hybrid so CI and machines without the
-downloaded model still work. With hash embeddings, hybrid is clearly better (72.2% vs 44.4%).
+
+This is also the **shipped default**, because leaving both settings unset resolves to exactly that:
+`get_embedding_provider()` selects the ONNX MiniLM model when it is present on disk and falls back to
+the deterministic hash embeddings only when it is not, and `retrieval_mode()` follows the resolved
+provider — vector-only with semantic embeddings, BM25-fused with the hash fallback (where the
+fallback run of this table shows hybrid is clearly the better half of a bad deal: 72.2% vs 44.4%).
+Coupling the two is deliberate: the measured combinations are 94.4% (MiniLM, vector-only), 83.3%
+(MiniLM, hybrid), 72.2% (hash, hybrid) and 44.4% (hash, vector-only), so no single setting is right
+for both providers, and an uncoupled default would land on one of the two middle rows.
+
+A degraded machine therefore stays usable *and* self-reporting: `/api/health` returns
+`embedding_provider`, `embedding_degraded` and `retrieval_mode` from the providers that were actually
+resolved, so hash-and-hybrid mode is announced rather than mistaken for the 94.4% configuration.
+Tests pin the development providers explicitly, so CI never depends on which models are downloaded.
 
 Cost of MiniLM on CPU (fp32 ONNX): indexing the 409-page book takes ~100 s (vs ~13 s for hash vectors).
 Search latency is ~550 ms, dominated by the SQLite vector scan rather than the model.

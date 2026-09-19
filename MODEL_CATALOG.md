@@ -75,6 +75,6 @@ ScholarEdge utilizes a triad of models optimized for edge execution on Qualcomm 
 ## 3. Fallback Providers (Development Host & Zero-Dependency)
 
 When Qualcomm AI Hub weights or QNN runtimes are unavailable (e.g. initial setup or non-Snapdragon host):
-- **DevelopmentEmbeddingProvider**: 384-dimensional feature hashing with token frequency weighting and L2 normalization. Guarantees consistent vector comparison without external dependencies.
+- **DevelopmentEmbeddingProvider**: 384-dimensional feature hashing with token frequency weighting and L2 normalization. Guarantees consistent vector comparison without external dependencies, which is why it remains the zero-dependency path — but it is selected **only when the ONNX model is absent**, and it is not a semantic encoder: on the book benchmark it scores 44.4% answer correctness vector-only (72.2% with BM25 fusion) against 94.4% for ONNX MiniLM. `/api/health` therefore reports `embedding_degraded: true` whenever this provider is auto-selected, rather than letting a hash-embedding machine look like a semantic-retrieval one.
 - **DevelopmentLLMProvider**: Deterministic evidence-extraction engine enforcing the exact source-citation contract: `[Paper: <title>, Page: <page>, Section: <section>, Chunk: <id>]`.
 - **DevelopmentVisionProvider**: Image attribute decomposition and structural heuristic classifier.
