@@ -159,6 +159,12 @@ async def test_rank_quality_does_not_regress(case: RetrievalCase, tmp_path, monk
     if case.embedding_provider != "development" and not MODEL_READY:
         pytest.skip(f"{case.label} needs the MiniLM model: run scripts/download_embedding_model.py")
 
+    try:
+        resolve_corpus(load_dataset(DATASET)[0], None)
+    except SystemExit as missing:
+        # PDFs are kept out of git, so a fresh clone (and CI) has no pinned corpus.
+        pytest.skip(f"pinned demo corpus not present locally: {missing}")
+
     summary = await measure_retrieval(tmp_path, case, monkeypatch)
 
     assert summary.mrr.count > 0, "no answerable question was scored"

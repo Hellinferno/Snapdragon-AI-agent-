@@ -46,14 +46,34 @@ import {
   chatWithFigure,
   getVisionImageUrl,
   seedDemoDataset,
+  normalizeVisionUpload,
 } from './api';
 
 const ALL_DIMENSIONS = [
-  'Core Objective',
-  'Methodology & Architecture',
-  'Key Findings & Metrics',
-  'Limitations & Future Work',
+  'Research Objective',
+  'Methodology',
+  'Dataset',
+  'Model / Architecture',
+  'Metrics',
+  'Results',
+  'Limitations',
+  'Trade-offs',
 ];
+
+// Privacy summary derived from /api/health; never assumed.
+function privacySummary(health) {
+  if (!health) return { label: 'Privacy: Unknown', tone: 'muted', detail: 'Backend not reachable' };
+  if (health.llm_runs_locally) {
+    return { label: 'Privacy: All inference local', tone: 'good', detail: 'Documents, retrieval and generation stay on this device' };
+  }
+  return {
+    label: 'Privacy: Cloud LLM in use',
+    tone: 'warn',
+    detail: `Documents and retrieval stay local; retrieved excerpts are sent to ${health.llm_provider} for generation`,
+  };
+}
+
+const TONE_COLOR = { good: 'var(--accent-emerald)', warn: '#f59e0b', muted: 'var(--text-muted)' };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
@@ -94,6 +114,7 @@ export default function App() {
   // Compare mode state (M3)
   const [selectedCompareDocs, setSelectedCompareDocs] = useState([]);
   const [selectedDimensions, setSelectedDimensions] = useState(ALL_DIMENSIONS);
+  const [compareCriteriaText, setCompareCriteriaText] = useState('diagnostic accuracy, on-device deployment');
   const [comparisonResult, setComparisonResult] = useState(null);
   const [compareLoading, setCompareLoading] = useState(false);
 
@@ -122,6 +143,7 @@ export default function App() {
   const [visionChatInput, setVisionChatInput] = useState('');
   const [visionChatMessages, setVisionChatMessages] = useState([]);
   const [visionLinkedDocId, setVisionLinkedDocId] = useState('NONE');
+  const [demoFigure, setDemoFigure] = useState(null);
   const visionFileInputRef = useRef(null);
   const visionChatBottomRef = useRef(null);
 
@@ -147,10 +169,32 @@ export default function App() {
   }, [visionChatMessages, activeTab]);
 
   useEffect(() => {
-    if (documents.length >= 2 && selectedCompareDocs.length === 0) {
-      setSelectedCompareDocs([documents[0].id, documents[1].id]);
-    }
+    // Drop deleted papers from the selection and keep at least two selected.
+    setSelectedCompareDocs((prev) => {
+      const kept = prev.filter((id) => documents.some((d) => d.id === id));
+      if (kept.length >= 2 || documents.length < 2) return kept;
+      const extra = documents.map((d) => d.id).filter((id) => !kept.includes(id));
+      return [...kept, ...extra].slice(0, 2);
+    });
   }, [documents]);
+
+  // Escape closes whichever modal is open.
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key !== 'Escape') return;
+      setSelectedDoc(null);
+      setShowHardwareModal(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // A cited chunk must be scrolled into view, not just highlighted off-screen.
+  useEffect(() => {
+    if (!selectedDoc || !highlightChunkId) return;
+    const el = document.querySelector(`[data-chunk-id="${highlightChunkId}"]`);
+    el?.scrollIntoView({ block: 'center' });
+  }, [selectedDoc, highlightChunkId, detailTab]);
 
   async function checkHealth() {
     try {
@@ -210,6 +254,7 @@ export default function App() {
       setSeedingDemo(true);
       const res = await seedDemoDataset();
       showSuccess(res.message);
+      if (res.demo_figure) setDemoFigure(normalizeVisionUpload(res.demo_figure));
       await loadDocs();
     } catch (err) {
       showError(err.message);
@@ -346,9 +391,14 @@ export default function App() {
     }
     try {
       setCompareLoading(true);
-      const res = await compareDocuments(selectedCompareDocs, selectedDimensions);
+      const criteria = compareCriteriaText
+        .split(/[,;\n]/)
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+      const res = await compareDocuments(selectedCompareDocs, selectedDimensions, criteria);
       setComparisonResult(res);
-      showSuccess(`Successfully compared ${res.comparisons.length} documents.`);
+      showSuccess(`Compared ${res.comparisons.length} papers across ${res.dimensions.length} dimensions.`);
     } catch (err) {
       showError(err.message);
     } finally {
@@ -402,30 +452,52 @@ export default function App() {
     }
   }
 
+  async function analyzeVisionImage(image) {
+    setVisionImage(image);
+    setVisionAnalyzing(true);
+    const analysis = await analyzeFigure(image.id);
+    setVisionAnalysis(analysis);
+    const confidenceText =
+      typeof analysis.confidence === 'number'
+        ? ` (model confidence ${(analysis.confidence * 100).toFixed(0)}%)`
+        : ' (rule-based on measured pixels; no model confidence)';
+    setVisionChatMessages([
+      {
+        id: 'vision-welcome',
+        sender: 'assistant',
+        text:
+          `Category: ${analysis.figure_type}${confidenceText}. ` +
+          (visionLinkedDocId !== 'NONE' || image.documentId
+            ? 'A paper is linked: answers also cite passages retrieved from it.'
+            : 'Pick a paper under Paper Context to add cited passages from it to each answer.'),
+      },
+    ]);
+  }
+
   async function handleVisionUpload(file) {
     if (!file) return;
     try {
       setVisionUploading(true);
       const linkedId = visionLinkedDocId === 'NONE' ? null : visionLinkedDocId;
       const uploaded = await uploadVisionImage(file, linkedId);
-      setVisionImage(uploaded);
-      showSuccess(`Figure '${uploaded.filename}' uploaded (${uploaded.width}x${uploaded.height}). Analyzing...`);
-
-      setVisionAnalyzing(true);
-      const analysis = await analyzeFigure(uploaded.id);
-      setVisionAnalysis(analysis);
-      setVisionChatMessages([
-        {
-          id: 'vision-welcome',
-          sender: 'assistant',
-          text: `Figure "${analysis.title}" analyzed as ${analysis.figure_type.toUpperCase()} with ${(analysis.confidence * 100).toFixed(0)}% confidence.` +
-            (uploaded.documentId ? ' Linked to a paper: figure Q&A now cites retrieved context from that document.' : ' Tip: link a paper below to ground answers in its text.'),
-        },
-      ]);
+      showSuccess(`Figure '${uploaded.filename}' uploaded (${uploaded.width}x${uploaded.height}).`);
+      setVisionUploading(false);
+      await analyzeVisionImage(uploaded);
     } catch (err) {
       showError(err.message);
     } finally {
       setVisionUploading(false);
+      setVisionAnalyzing(false);
+    }
+  }
+
+  async function handleOpenDemoFigure() {
+    if (!demoFigure) return;
+    try {
+      await analyzeVisionImage(demoFigure);
+    } catch (err) {
+      showError(err.message);
+    } finally {
       setVisionAnalyzing(false);
     }
   }
@@ -613,15 +685,15 @@ export default function App() {
           </div>
           <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Cpu size={13} />
-            <span>Runtime: {backendHealth?.runtime_engine || 'ONNX Runtime'} ({backendHealth?.active_provider || 'CPU'})</span>
+            <span>Execution provider: {backendHealth?.active_provider || 'unknown'}</span>
           </div>
           <div
-            style={{ marginTop: '4px', fontSize: '0.70rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            style={{ marginTop: '4px', fontSize: '0.70rem', color: TONE_COLOR[privacySummary(backendHealth).tone], display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
             onClick={() => setShowHardwareModal(true)}
-            title="Click to view Privacy Checklist"
+            title={privacySummary(backendHealth).detail}
           >
             <ShieldCheck size={13} />
-            <span>Privacy Mode: 100% Local (Zero Cloud)</span>
+            <span>{privacySummary(backendHealth).label}</span>
           </div>
         </div>
 
@@ -653,10 +725,11 @@ export default function App() {
                 </div>
               </div>
             )}
-            {activeTab === 'compare' && <>Cross-Paper Comparison Studio (M3)</>}
+            {activeTab === 'compare' && <>Evidence-Based Comparison</>}
+            {activeTab === 'vision' && <>Figure Analysis</>}
             {activeTab === 'learn' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <span>Learning & Formative Assessment Studio (M4)</span>
+                <span>Learning Studio</span>
                 <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-tertiary)', padding: '3px', borderRadius: '8px' }}>
                   <button
                     className={`tab-btn ${learnSubTab === 'explain' ? 'active' : ''}`}
@@ -716,10 +789,12 @@ export default function App() {
               title="Click to view Hardware Architecture, NPU telemetry, and Privacy mode"
             >
               <Cpu size={14} />
-              <span>{backendHealth?.hardware_npu_active ? 'Hexagon NPU Active' : 'Dev Host (Simulation)'}</span>
+              <span>{backendHealth?.hardware_npu_active ? 'Hexagon NPU Active' : 'Dev Host (CPU)'}</span>
               <span style={{ opacity: 0.5 }}>|</span>
-              <ShieldCheck size={14} />
-              <span>Privacy: 100% Local</span>
+              <ShieldCheck size={14} style={{ color: TONE_COLOR[privacySummary(backendHealth).tone] }} />
+              <span style={{ color: TONE_COLOR[privacySummary(backendHealth).tone] }}>
+                {privacySummary(backendHealth).label.replace('Privacy: ', '')}
+              </span>
             </button>
             <button className="btn-icon" onClick={loadDocs} title="Refresh documents" aria-label="Refresh documents">
               <RefreshCw size={17} className={loading ? 'spin' : ''} />
@@ -842,7 +917,11 @@ export default function App() {
                     <div
                       key={doc.id}
                       className="doc-card"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Inspect pages and chunks of ${doc.title || doc.filename}`}
                       onClick={() => handleOpenDoc(doc)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleOpenDoc(doc)}
                     >
                       <div>
                         <div className="doc-card-header">
@@ -858,7 +937,9 @@ export default function App() {
                           <button
                             className="btn-icon btn-danger"
                             title="Delete document"
+                            aria-label={`Delete ${doc.title || doc.filename}`}
                             onClick={(e) => handleDeleteDoc(e, doc.id)}
+                            onKeyDown={(e) => e.stopPropagation()}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -1133,16 +1214,17 @@ export default function App() {
             </div>
           )}
 
-          {/* COMPARE TAB (M3) */}
+          {/* COMPARE TAB */}
           {activeTab === 'compare' && (
             <div className="compare-container">
               {/* Setup / Configuration Panel */}
               <div className="compare-setup-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div>
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Select Research Papers to Compare</h3>
                     <p className="section-desc">
-                      Choose at least two indexed papers for side-by-side dimensional contrast and synthesis.
+                      Choose at least two indexed papers. Each dimension is answered with a quoted, page-cited sentence
+                      from each paper, or reported as an evidence gap.
                     </p>
                   </div>
                   <button
@@ -1151,7 +1233,7 @@ export default function App() {
                     onClick={handleRunComparison}
                   >
                     <Scale size={18} />
-                    {compareLoading ? 'Synthesizing...' : `Compare Selected (${selectedCompareDocs.length})`}
+                    {compareLoading ? 'Comparing...' : `Compare Selected (${selectedCompareDocs.length})`}
                   </button>
                 </div>
 
@@ -1175,7 +1257,12 @@ export default function App() {
                         <div
                           key={doc.id}
                           className={`paper-check-card ${isSelected ? 'selected' : ''}`}
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          tabIndex={0}
                           onClick={() => handleToggleCompareDoc(doc.id)}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleToggleCompareDoc(doc.id)}
+                          title={doc.title || doc.filename}
                         >
                           <div style={{ color: isSelected ? 'var(--accent-cyan)' : 'var(--text-muted)' }}>
                             {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
@@ -1197,7 +1284,7 @@ export default function App() {
                 {/* Dimensions Selector */}
                 <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
-                    Active Comparison Dimensions:
+                    Comparison dimensions:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {ALL_DIMENSIONS.map((dim) => {
@@ -1206,6 +1293,7 @@ export default function App() {
                         <button
                           key={dim}
                           className={`chip-btn ${isActive ? 'active' : ''}`}
+                          aria-pressed={isActive}
                           style={{
                             background: isActive ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.02)',
                             borderColor: isActive ? 'var(--accent-cyan)' : 'var(--border-subtle)',
@@ -1219,40 +1307,44 @@ export default function App() {
                     })}
                   </div>
                 </div>
+
+                {/* Criteria */}
+                <div style={{ marginTop: '14px' }}>
+                  <label
+                    htmlFor="compare-criteria"
+                    style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}
+                  >
+                    Which paper better matches a criterion? (optional, comma-separated, up to 5)
+                  </label>
+                  <input
+                    id="compare-criteria"
+                    type="text"
+                    className="chat-input"
+                    value={compareCriteriaText}
+                    onChange={(e) => setCompareCriteriaText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRunComparison()}
+                    placeholder="e.g. diagnostic accuracy, on-device deployment"
+                  />
+                </div>
               </div>
 
               {/* Comparison Results */}
               {comparisonResult && (
                 <>
-                  {/* Synthesis Callout Card */}
                   <div className="synthesis-card">
                     <div className="synthesis-header">
-                      <Sparkles size={20} />
-                      <span>Comparative Synthesis & Trade-off Analysis</span>
+                      <Scale size={20} />
+                      <span>Evidence-Based Comparison</span>
                     </div>
                     <div className="synthesis-body">{comparisonResult.synthesis}</div>
+                    <div className="compare-method-note">
+                      Each cell quotes one sentence from the paper, chosen by the section it sits in and the
+                      dimension's vocabulary, with its page citation. Nothing in this view is generated; where a
+                      paper does not address a dimension, the cell says so.
+                    </div>
                   </div>
 
-                  {/* Structured Decision Recommendations */}
-                  {comparisonResult.recommendations && Object.keys(comparisonResult.recommendations).length > 0 && (
-                    <div className="structured-section">
-                      <div className="structured-section-title">
-                        <Award size={18} />
-                        <span>Decision Recommendations ("Which Paper is Stronger for X?")</span>
-                      </div>
-                      <div className="recs-grid">
-                        {Object.entries(comparisonResult.recommendations).map(([scenario, recText]) => (
-                          <div key={scenario} className="rec-card">
-                            <div className="rec-title">{scenario}</div>
-                            <div className="rec-body">{recText}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-
-                  {/* Side-by-Side Matrix Table */}
+                  {/* Evidence matrix */}
                   <div className="matrix-container">
                     <table className="matrix-table">
                       <thead>
@@ -1261,7 +1353,7 @@ export default function App() {
                           {comparisonResult.comparisons.map((c) => (
                             <th key={c.document_id} className="matrix-th">
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <FileText size={16} style={{ color: 'var(--accent-cyan)' }} />
+                                <FileText size={16} style={{ color: 'var(--accent-cyan)', flexShrink: 0 }} />
                                 <span>{c.document_title}</span>
                               </div>
                             </th>
@@ -1273,20 +1365,24 @@ export default function App() {
                           <tr key={dim}>
                             <td className="matrix-td matrix-dim-col">{dim}</td>
                             {comparisonResult.comparisons.map((c) => {
-                              const cellValue = c.dimension_values[dim] || 'N/A';
+                              const cell = c.cells?.[dim];
                               return (
-                                <td key={c.document_id + dim} className="matrix-td">
-                                  <div>{cellValue}</div>
-                                  <div
-                                    className="citation-pill"
-                                    onClick={() => {
-                                      const fullDoc = documents.find((d) => d.id === c.document_id);
-                                      if (fullDoc) handleOpenDoc(fullDoc);
-                                    }}
-                                    title="Open document inspector"
-                                  >
-                                    Inspect Source Excerpt →
-                                  </div>
+                                <td key={c.document_id + dim} className={`matrix-td ${cell?.reported ? '' : 'matrix-gap'}`}>
+                                  {cell?.reported ? (
+                                    <>
+                                      <div className="matrix-quote">“{cell.statement}”</div>
+                                      <button
+                                        className="citation-pill"
+                                        onClick={() => handleViewSource(cell.source)}
+                                        title="Open this passage in the document inspector"
+                                      >
+                                        Page {cell.source.page_number}
+                                        {cell.source.section ? ` · ${cell.source.section}` : ''} · view source →
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <div className="matrix-gap-text">Not reported in this paper</div>
+                                  )}
                                 </td>
                               );
                             })}
@@ -1295,12 +1391,79 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Criterion matches */}
+                  {comparisonResult.criterion_matches?.length > 0 && (
+                    <div className="structured-section" style={{ marginTop: '16px' }}>
+                      <div className="structured-section-title">
+                        <Scale size={18} />
+                        <span>Which paper better matches this criterion?</span>
+                      </div>
+                      <div className="compare-method-note" style={{ marginTop: 0, marginBottom: '12px' }}>
+                        Match = similarity between the criterion and each paper's closest passage. It shows which
+                        paper addresses the criterion more directly, not which paper is better.
+                      </div>
+                      <div className="criterion-list">
+                        {comparisonResult.criterion_matches.map((m) => (
+                          <div key={m.criterion} className="criterion-card">
+                            <div className="criterion-title">{m.criterion}</div>
+                            <div className="criterion-verdict">{m.verdict}</div>
+                            {m.evidence.map((e) => (
+                              <div
+                                key={e.document_id}
+                                className={`criterion-evidence ${e.document_id === m.better_match_document_id ? 'best' : ''}`}
+                              >
+                                <div className="criterion-evidence-head">
+                                  <span>{e.document_title}</span>
+                                  <span style={{ fontFamily: 'var(--font-mono)' }}>similarity {e.relevance_score.toFixed(2)}</span>
+                                </div>
+                                {e.source ? (
+                                  <>
+                                    <div className="matrix-quote">
+                                      “{e.source.excerpt.replace(/\s+/g, ' ').slice(0, 240)}
+                                      {e.source.excerpt.length > 240 ? '…' : ''}”
+                                    </div>
+                                    <button className="citation-pill" onClick={() => handleViewSource(e.source)}>
+                                      Page {e.source.page_number} · view source →
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="matrix-gap-text">No related passage in this paper</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Evidence gaps */}
+                  <div className="structured-section" style={{ marginTop: '16px' }}>
+                    <div className="structured-section-title">
+                      <AlertCircle size={18} />
+                      <span>Evidence gaps ({comparisonResult.evidence_gaps?.length || 0})</span>
+                    </div>
+                    {comparisonResult.evidence_gaps?.length ? (
+                      <ul className="structured-list">
+                        {comparisonResult.evidence_gaps.map((g) => (
+                          <li key={g.document_id + g.dimension}>
+                            <strong>{g.dimension}</strong> — not addressed by any indexed passage of “{g.document_title}”
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="compare-method-note" style={{ marginTop: 0 }}>
+                        Every selected dimension is backed by a cited passage in every paper.
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </div>
           )}
 
-          {/* LEARN TAB (M4) */}
+          {/* LEARN TAB */}
           {activeTab === 'learn' && (
             <div className="learn-container">
               {/* SUBTAB 1: CONCEPT EXPLAINER */}
@@ -1495,7 +1658,7 @@ export default function App() {
                                   {selectedAns === q.correct_answer_index ? '✓ Correct Answer' : '✗ Incorrect Answer'}
                                 </div>
                                 <div style={{ marginBottom: '6px', fontSize: '0.88rem' }}>
-                                  <strong>Verified Finding:</strong> {q.correct_answer || q.options[q.correct_answer_index]}
+                                  <strong>Answer key:</strong> {q.correct_answer || q.options[q.correct_answer_index]}
                                 </div>
                                 <div style={{ color: '#cbd5e1', marginBottom: '8px' }}>{q.explanation}</div>
                                 {q.source && (
@@ -1562,7 +1725,7 @@ export default function App() {
                         onClick={() => setIsFlipped((prev) => !prev)}
                       >
                         <div className="flashcard-tag">
-                          {isFlipped ? 'Answer (Verified Finding)' : 'Prompt (Active Recall)'}
+                          {isFlipped ? 'Answer (with source)' : 'Prompt (Active Recall)'}
                         </div>
                         <div className="flashcard-content">
                           {isFlipped
@@ -1630,14 +1793,24 @@ export default function App() {
                     <ImageIcon size={20} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>Figure & Diagram Visual Studio</h3>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>Multimodal Figure Analysis</h3>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Local multimodal analysis of research charts, architectures, ROC curves, and tables with zero external API calls.
+                      On-device figure analysis from measured pixel statistics, plus cited passages from a linked paper. Images are never sent to a cloud service.
                     </p>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {demoFigure && (
+                    <button
+                      className="chip-btn"
+                      disabled={visionUploading || visionAnalyzing}
+                      onClick={handleOpenDemoFigure}
+                      title="Analyze the architecture diagram seeded with the demo papers"
+                    >
+                      <ImageIcon size={14} /> Open demo diagram
+                    </button>
+                  )}
                   <input
                     type="file"
                     ref={visionFileInputRef}
@@ -1692,7 +1865,7 @@ export default function App() {
                     Upload a Paper Figure, Architecture, or Plot
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '440px', marginBottom: '16px' }}>
-                    Drag & drop PNG, JPEG, or WebP screenshots of architecture diagrams, benchmark charts, or tables for automated decomposition.
+                    Drag & drop a PNG, JPEG, or WebP figure. Measured on this device: resolution, colour, brightness, contrast, background and edge density.
                   </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <span className="nav-badge">PNG</span>
@@ -1749,8 +1922,14 @@ export default function App() {
                       </div>
                       <div className="telemetry-item">
                         <div className="telemetry-label">Confidence</div>
-                        <div className="telemetry-value" style={{ color: 'var(--accent-emerald)' }}>
-                          {((visionAnalysis?.confidence || 0.85) * 100).toFixed(0)}%
+                        <div
+                          className="telemetry-value"
+                          style={{ color: typeof visionAnalysis?.confidence === 'number' ? 'var(--accent-emerald)' : 'var(--text-muted)' }}
+                          title="Only a trained classifier has a confidence score; rule-based analysis does not"
+                        >
+                          {typeof visionAnalysis?.confidence === 'number'
+                            ? `${(visionAnalysis.confidence * 100).toFixed(0)}%`
+                            : 'n/a (rule-based)'}
                         </div>
                       </div>
                     </div>
@@ -1779,10 +1958,10 @@ export default function App() {
                     <div className="vision-chat-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <GraduationCap size={18} style={{ color: 'var(--accent-cyan)' }} />
-                        <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>Figure Visual Q&A</span>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>Figure Q&A</span>
                       </div>
                       <span className="nav-badge" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--accent-emerald)' }}>
-                        Provider: DevelopmentVision
+                        {visionAnalysis?.provider || backendHealth?.vision_provider || 'vision provider'}
                       </span>
                     </div>
 
@@ -1815,29 +1994,17 @@ export default function App() {
 
                     {/* Quick Prompts */}
                     <div className="vision-quick-prompts">
-                      <button
-                        className="quick-prompt-btn"
-                        onClick={() => handleVisionChat('What does this graph show?')}
-                      >
-                        📊 What does this graph show?
+                      <button className="quick-prompt-btn" onClick={() => handleVisionChat("What kind of figure is this?")}>
+                        🔎 What kind of figure is this?
                       </button>
-                      <button
-                        className="quick-prompt-btn"
-                        onClick={() => handleVisionChat('Explain the pipeline.')}
-                      >
-                        🔄 Explain the pipeline
+                      <button className="quick-prompt-btn" onClick={() => handleVisionChat("What are its resolution and aspect ratio?")}>
+                        📐 Resolution and aspect ratio
                       </button>
-                      <button
-                        className="quick-prompt-btn"
-                        onClick={() => handleVisionChat('Extract the important numbers.')}
-                      >
-                        🔢 Extract the important numbers
+                      <button className="quick-prompt-btn" onClick={() => handleVisionChat("Describe its brightness, contrast and colours.")}>
+                        🎨 Brightness, contrast and colours
                       </button>
-                      <button
-                        className="quick-prompt-btn"
-                        onClick={() => handleVisionChat('Describe observable structures.')}
-                      >
-                        🔬 Describe observable structures
+                      <button className="quick-prompt-btn" onClick={() => handleVisionChat("What results does the linked paper report?")}>
+                        📄 What does the linked paper report?
                       </button>
                     </div>
 
@@ -1960,6 +2127,7 @@ export default function App() {
                       return (
                         <div
                           key={chunk.id}
+                          data-chunk-id={chunk.id}
                           className={`chunk-item ${isHighlighted ? 'highlighted' : ''}`}
                         >
                           <div className="chunk-header">
@@ -2014,7 +2182,7 @@ export default function App() {
                   ScholarEdge Hardware & Privacy Runtime Inspector
                 </h3>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Real-time on-device telemetry and hardware execution verification
+                  What is actually executing on this machine, as reported by /api/health
                 </div>
               </div>
               <button className="btn-icon" onClick={() => setShowHardwareModal(false)} aria-label="Close telemetry modal">
@@ -2031,24 +2199,24 @@ export default function App() {
                 <div className="hardware-spec-grid">
                   <div className="spec-item">
                     <span className="spec-label">Host Machine</span>
-                    <span className="spec-val">{backendHealth?.host_device || 'Development Host'}</span>
+                    <span className="spec-val">{backendHealth?.device_name || 'unknown'}</span>
                   </div>
                   <div className="spec-item">
                     <span className="spec-label">CPU Architecture</span>
-                    <span className="spec-val">{backendHealth?.host_architecture || 'AMD64 / x86_64'}</span>
+                    <span className="spec-val">{backendHealth?.architecture || 'unknown'}</span>
                   </div>
                   <div className="spec-item">
                     <span className="spec-label">Runtime Engine</span>
-                    <span className="spec-val">{backendHealth?.runtime_engine || 'ONNX Runtime'}</span>
+                    <span className="spec-val">{backendHealth?.runtime_engine || 'unknown'}</span>
                   </div>
                   <div className="spec-item">
                     <span className="spec-label">Execution Provider</span>
-                    <span className="spec-val">{backendHealth?.execution_provider || 'CPUExecutionProvider'}</span>
+                    <span className="spec-val">{backendHealth?.active_provider || 'unknown'}</span>
                   </div>
                   <div className="spec-item">
                     <span className="spec-label">Hardware Acceleration</span>
                     <span className="spec-val" style={{ color: backendHealth?.hardware_npu_active ? 'var(--accent-emerald)' : '#38bdf8' }}>
-                      {backendHealth?.hardware_npu_active ? 'Hexagon NPU Active' : 'Host CPU (NPU Simulation)'}
+                      {backendHealth?.hardware_npu_active ? 'Hexagon NPU Active' : 'Host CPU (no NPU)'}
                     </span>
                   </div>
                   <div className="spec-item">
@@ -2060,62 +2228,65 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Section 2: Demonstrable Privacy Mode */}
+              {/* Section 2: Privacy checklist, derived from /api/health */}
               <div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 600, marginBottom: '8px', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>DEMONSTRABLE LOCAL-FIRST PRIVACY AUDIT</span>
-                  <span className="badge badge-indexed" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-emerald)', borderColor: 'rgba(16, 185, 129, 0.4)' }}>
-                    OFFLINE AIR-GAPPED VERIFIED
-                  </span>
+                <div style={{ fontSize: '0.86rem', fontWeight: 600, marginBottom: '8px', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>LOCAL-FIRST PRIVACY CHECKLIST</span>
+                  {backendHealth && (
+                    <span
+                      className="badge"
+                      style={{
+                        color: TONE_COLOR[privacySummary(backendHealth).tone],
+                        borderColor: TONE_COLOR[privacySummary(backendHealth).tone],
+                      }}
+                    >
+                      {backendHealth.privacy_checklist.every((chk) => chk.status)
+                        ? 'ALL CHECKS LOCAL'
+                        : 'CLOUD LLM IN USE · NOT AIR-GAPPED'}
+                    </span>
+                  )}
                 </div>
-                <div className="privacy-checklist-grid">
-                  {(backendHealth?.privacy_checklist || [
-                    { item: "Documents stored locally", verified: true, detail: "Local SQLite & filesystem storage" },
-                    { item: "Embeddings stored locally", verified: true, detail: "384-dim vectors in local SQLite" },
-                    { item: "Vector search local", verified: true, detail: "Zero network egress for similarity ranking" },
-                    { item: "AI inference local", verified: true, detail: "Local ONNX Runtime / QNN Execution Provider" },
-                    { item: "No document upload", verified: true, detail: "No cloud endpoints receiving paper contents" },
-                    { item: "External providers disabled", verified: true, detail: "Gemini and cloud APIs disabled by default" },
-                  ]).map((chk, idx) => (
-                    <div key={idx} className={`privacy-check-item ${!chk.verified ? 'warning' : ''}`}>
-                      <div className="privacy-icon-badge">
-                        <CheckCircle2 size={16} />
+                {!backendHealth ? (
+                  <div className="empty-state" style={{ padding: '12px 0' }}>Backend not reachable; no privacy status to show.</div>
+                ) : (
+                  <div className="privacy-checklist-grid">
+                    {backendHealth.privacy_checklist.map((chk) => (
+                      <div key={chk.item} className={`privacy-check-item ${chk.status ? '' : 'warning'}`}>
+                        <div className="privacy-icon-badge">
+                          {chk.status ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{chk.item}</div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{chk.detail}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{chk.item}</div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{chk.detail}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Section 3: CPU vs Snapdragon NPU Benchmark Comparison */}
               <div>
                 <div style={{ fontSize: '0.86rem', fontWeight: 600, marginBottom: '8px', color: '#94a3b8' }}>
-                  DEVELOPMENT VS SNAPDRAGON RUNTIME STATUS
+                  THIS HOST VS SNAPDRAGON TARGET
                 </div>
                 <div className="benchmark-table-wrapper">
                   <table className="benchmark-table">
                     <thead>
                       <tr>
                         <th>Model Workload</th>
-                        <th>Development Host (CPU)</th>
-                        <th>Snapdragon NPU (Target)</th>
-                        <th>Speedup / Benefit</th>
+                        <th>This host (verified)</th>
+                        <th>Snapdragon target (not yet validated)</th>
+                        <th>Benchmark status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(backendHealth?.hardware_benchmark_comparison || [
-                        { model: "MiniLM-L6-v2 (Embedding)", cpu: "ONNX Runtime on development host", snapdragon_npu: "ONNX Runtime + QNN (validation pending)", benefit: "No benchmark published" },
-                        { model: "Qwen3-4B-Instruct-2507 (LLM)", cpu: "OpenRouter development configuration", snapdragon_npu: "QAIRT / GenAI Inference Extensions", benefit: "QAIRT inference pending" },
-                        { model: "MobileNet-v2 (Vision)", cpu: "ONNX Runtime on development host", snapdragon_npu: "ONNX Runtime + QNN (validation pending)", benefit: "No benchmark published" },
-                      ]).map((row, idx) => (
+                      {(backendHealth?.hardware_benchmark_comparison || []).map((row, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 600, color: '#f1f5f9' }}>{row.model}</td>
                           <td>{row.cpu}</td>
-                          <td style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{row.snapdragon_npu}</td>
-                          <td style={{ color: 'var(--accent-cyan)' }}>{row.benefit}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{row.snapdragon_npu}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>{row.benefit}</td>
                         </tr>
                       ))}
                     </tbody>

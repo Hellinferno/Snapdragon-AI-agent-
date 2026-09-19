@@ -1,6 +1,7 @@
 import io
-import os
-from PIL import Image
+
+import numpy as np
+from PIL import Image, ImageFilter
 
 from app.providers.base import (
     OCRProvider,
@@ -9,13 +10,107 @@ from app.providers.base import (
     VisualQAResult,
 )
 
+# Longest side of the working copy used for pixel statistics.
+ANALYSIS_MAX_SIDE = 512
+# A colour must cover at least this share of pixels to count as "used" by the figure.
+SIGNIFICANT_COLOUR_SHARE = 0.005
+# Channel spread (0-255) below which a pixel is treated as grey.
+GREY_CHANNEL_SPREAD = 12
+
+
+def measure_image(image_bytes: bytes) -> dict:
+    """Exact, reproducible pixel measurements of an image; nothing is inferred."""
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        width, height = img.size
+        mode = img.mode
+        rgb = img.convert("RGB")
+        rgb.thumbnail((ANALYSIS_MAX_SIDE, ANALYSIS_MAX_SIDE))
+
+    pixels = np.asarray(rgb, dtype=np.int16)
+    flat = pixels.reshape(-1, 3)
+    luminance = np.asarray(rgb.convert("L"), dtype=np.float32)
+
+    spread = flat.max(axis=1) - flat.min(axis=1)
+    grey_share = float(np.mean(spread <= GREY_CHANNEL_SPREAD))
+
+    # Quantise to 8 levels per channel so anti-aliasing does not inflate the palette.
+    quantised = (flat // 32).astype(np.int32)
+    codes = quantised[:, 0] * 64 + quantised[:, 1] * 8 + quantised[:, 2]
+    counts = np.bincount(codes, minlength=512)
+    shares = counts / counts.sum()
+    dominant = int(np.argmax(shares))
+    dominant_rgb = tuple(int(v) for v in np.median(flat[codes == dominant], axis=0))
+    dominant_luma = 0.299 * dominant_rgb[0] + 0.587 * dominant_rgb[1] + 0.114 * dominant_rgb[2]
+
+    edges = np.asarray(rgb.convert("L").filter(ImageFilter.FIND_EDGES), dtype=np.float32)
+
+    return {
+        "width": width,
+        "height": height,
+        "aspect_ratio": round(width / max(1, height), 2),
+        "mode": mode,
+        "brightness": float(luminance.mean()),
+        "contrast": float(luminance.std()),
+        "grey_share": grey_share,
+        "background_share": float(shares[dominant]),
+        "background_rgb": dominant_rgb,
+        "background_luma": dominant_luma,
+        "colour_count": int(np.sum(shares >= SIGNIFICANT_COLOUR_SHARE)),
+        "edge_density": float(np.mean(edges > 40)),
+    }
+
+
+def categorise(m: dict) -> tuple[str, str]:
+    """A coarse figure category from the measurements, with the rule that produced it."""
+    if m["background_share"] >= 0.45 and m["colour_count"] <= 16:
+        tone = "dark" if m["background_luma"] < 80 else "light" if m["background_luma"] > 175 else "mid-tone"
+        return (
+            "Line-art figure (chart, diagram or table)",
+            f"{m['background_share']:.0%} of pixels share one flat {tone} background colour and only "
+            f"{m['colour_count']} colours are used, which is typical of rendered charts, diagrams "
+            "and tables; these three are not distinguished without a trained classifier.",
+        )
+    if m["grey_share"] >= 0.95:
+        return (
+            "Greyscale continuous-tone image (e.g. radiograph or micrograph)",
+            f"{m['grey_share']:.0%} of pixels are grey and there is no dominant flat background, "
+            "which is typical of scans and photographs rather than rendered figures.",
+        )
+    return (
+        "Colour photograph or complex illustration",
+        f"No flat background ({m['background_share']:.0%} max colour share) and "
+        f"{m['colour_count']} colours in use.",
+    )
+
+
+def describe_measurements(m: dict) -> list[str]:
+    colour_desc = "greyscale" if m["grey_share"] >= 0.95 else "colour"
+    r, g, b = m["background_rgb"]
+    return [
+        f"Resolution {m['width']} x {m['height']} px, aspect ratio {m['aspect_ratio']}:1, "
+        f"{colour_desc} ({m['mode']} mode).",
+        f"Mean brightness {m['brightness']:.0f}/255; contrast (luminance standard deviation) "
+        f"{m['contrast']:.1f}.",
+        f"Dominant colour #{r:02x}{g:02x}{b:02x} covers {m['background_share']:.0%} of pixels; "
+        f"{m['colour_count']} colours each cover at least {SIGNIFICANT_COLOUR_SHARE:.1%}.",
+        f"Edge density {m['edge_density']:.1%} of pixels.",
+    ]
+
+
+NOT_READ_NOTICE = (
+    "This analysis measures pixels only: it does not read the figure's text, axis labels, "
+    "values or trends."
+)
+
 
 class DevelopmentVisionProvider(VisionProvider):
-    """
-    Lightweight, on-device vision provider.
-    Analyzes visual figures, benchmark plots, and architecture diagrams using
-    Pillow geometry and feature heuristics without heavy GPU tensor weights.
-    Supports optional external vision LLM when configured.
+    """On-device figure analysis from measured pixel statistics.
+
+    No neural model runs on this path. It reports what can be measured exactly
+    (size, colour, brightness, contrast, background, edges) and a coarse category
+    derived from those measurements by the explicit rules in :func:`categorise`.
+    It has no confidence score because nothing here is probabilistic, and it
+    never describes content (labels, values, trends) it cannot see.
     """
 
     @property
@@ -23,125 +118,51 @@ class DevelopmentVisionProvider(VisionProvider):
         return "development-vision-heuristic"
 
     async def analyze_figure(self, image_bytes: bytes, filename: str) -> VisionAnalysisResult:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key:
-            return await self._call_external_vision(image_bytes, filename)
-
-        try:
-            image = Image.open(io.BytesIO(image_bytes))
-            width, height = image.size
-            aspect = round(width / max(1, height), 2)
-            mode = image.mode
-        except Exception:
-            width, height, aspect, mode = 800, 600, 1.33, "RGB"
-
-        # Classify figure type based on geometry and filename cues
-        name_lower = filename.lower()
-        if any(w in name_lower for w in ["chart", "plot", "benchmark", "latency", "bar", "eval"]):
-            fig_type = "Performance Benchmark Plot"
-            summary = (
-                f"Visual benchmark plot ({width}x{height}px, aspect ratio {aspect}:1). "
-                "Compares latency and accuracy metrics across configurations."
-            )
-            observations = [
-                f"Image dimensions: {width} x {height} ({mode} color mode).",
-                "Displays comparative metric bars contrasting on-device vs cloud execution.",
-                "Prominent reduction in latency indicated along the primary metric axis.",
-                "Error bars and measurement points demonstrate consistent empirical reproducibility.",
-            ]
-        elif any(w in name_lower for w in ["arch", "diagram", "pipeline", "workflow", "system"]):
-            fig_type = "System Architecture Diagram"
-            summary = (
-                f"Architectural schematic ({width}x{height}px). "
-                "Illustrates component pipeline flow and data boundaries."
-            )
-            observations = [
-                "Hierarchical component flow from Document Input to Vector Retrieval.",
-                "Explicit boundary separating on-device provider interfaces from target runtime.",
-                "Unidirectional data flow guaranteeing that user documents remain private.",
-            ]
-        elif aspect > 1.8:
-            fig_type = "Horizontal Timeline / Multi-Panel Strip"
-            summary = f"Wide-aspect multi-panel figure ({width}x{height}px) detailing experimental sequence."
-            observations = [
-                f"Wide horizontal layout (aspect ratio {aspect}:1).",
-                "Sequential processing stages depicted across left-to-right axis.",
-                "Clear separation of preprocessing, embedding, and inference stages.",
-            ]
-        else:
-            fig_type = "Scientific Research Figure"
-            summary = (
-                f"Academic research figure ({width}x{height}px). "
-                "Illustrates empirical experimental data and methodology."
-            )
-            observations = [
-                f"Visual figure captured at {width}x{height} resolution.",
-                "Annotated labels identify comparative experimental conditions.",
-                "Visual evidence supports findings described in the accompanying manuscript.",
-            ]
-
+        m = measure_image(image_bytes)
+        category, rule = categorise(m)
         clean_title = filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ").title()
-
         return VisionAnalysisResult(
-            figure_type=fig_type,
+            figure_type=category,
             title=f"Figure: {clean_title}",
-            summary=summary,
-            observations=observations,
-            confidence=0.94,
+            summary=f"{category}, from measured pixel statistics. {NOT_READ_NOTICE}",
+            observations=describe_measurements(m) + [f"Category rule: {rule}"],
+            confidence=None,
         )
 
     async def answer_question(self, image_bytes: bytes, question: str, filename: str) -> VisualQAResult:
-        analysis = await self.analyze_figure(image_bytes, filename)
-        q_lower = question.lower()
+        m = measure_image(image_bytes)
+        category, rule = categorise(m)
+        measured = describe_measurements(m)
+        q = question.lower()
 
-        cues = [
-            f"Analyzed figure: {analysis.title}",
-            f"Detected figure type: {analysis.figure_type}",
-        ]
-
-        if "type" in q_lower or "what kind" in q_lower:
-            ans = f"This figure is classified as a **{analysis.figure_type}**. {analysis.summary}"
-        elif "dimension" in q_lower or "resolution" in q_lower or "size" in q_lower:
-            ans = f"The visual artifact has been analyzed and extracted with resolution details: {analysis.observations[0]}."
-            cues.append(analysis.observations[0])
-        elif "trend" in q_lower or "finding" in q_lower or "result" in q_lower:
-            ans = (
-                f"Based on the visual evidence in this {analysis.figure_type}, "
-                f"the primary trend shows: {analysis.observations[1]} and {analysis.observations[2]}."
-            )
-            cues.extend(analysis.observations[1:3])
+        if any(w in q for w in ("resolution", "size", "dimension", "aspect", "pixels")):
+            cues = [measured[0]]
+            answer = measured[0]
+        elif any(w in q for w in ("colour", "color", "bright", "contrast", "dark", "light")):
+            cues = measured[1:3]
+            answer = " ".join(cues)
+        elif any(w in q for w in ("type", "kind", "category", "classif", "what is this")):
+            cues = [f"Category rule: {rule}"]
+            answer = f"Measured category: {category}. {rule}"
         else:
-            ans = (
-                f"Regarding \"{question}\": The visual data in this {analysis.figure_type} ({analysis.title}) "
-                f"indicates that: {analysis.summary} Specifically, {analysis.observations[-1]}."
+            cues = measured
+            answer = (
+                f"{NOT_READ_NOTICE} It cannot answer \"{question.strip()}\" from the image itself. "
+                f"What it can measure: {category.lower()}; {measured[0]}"
             )
-            cues.append(analysis.observations[-1])
 
-        return VisualQAResult(
-            question=question,
-            answer=ans,
-            grounded_visual_cues=cues,
-        )
-
-    async def _call_external_vision(self, image_bytes: bytes, filename: str) -> VisionAnalysisResult:
-        # Fallback to local heuristic if external fails
-        return await self.analyze_figure(image_bytes, filename)
+        return VisualQAResult(question=question, answer=answer, grounded_visual_cues=cues)
 
 
 class DevelopmentOCRProvider(OCRProvider):
-    """Lightweight OCR provider for scanned notes and diagrams."""
+    """Placeholder: no OCR engine is bundled, so it extracts nothing rather than inventing text."""
 
     @property
     def name(self) -> str:
-        return "development-ocr-extractor"
+        return "development-ocr-unavailable"
 
     async def extract_text_from_image(self, image_bytes: bytes) -> str:
-        try:
-            image = Image.open(io.BytesIO(image_bytes))
-            w, h = image.size
-            return f"[Extracted Text from Image ({w}x{h}px)]: Methodological schematic diagram with labeled axes and parameters."
-        except Exception:
-            return "[OCR text extraction completed]"
+        return ""
 
 
 vision_provider: VisionProvider = DevelopmentVisionProvider()

@@ -19,7 +19,7 @@ config, git commit, per-question judgments and short excerpts.
 | Dataset | Corpus | Questions | Purpose |
 |---|---|---|---|
 | `data_science_for_business` | Provost & Fawcett, *Data Science for Business* (409 pages, ~1,900 chunks) | 18 answerable + 2 unanswerable | **Primary benchmark** |
-| `demo_papers` | 3 synthetic 5-page papers in `data/demo_papers` | 13 + 2 | Smoke test. With 15 chunks, top-5 returns a third of the corpus, so its retrieval numbers say little |
+| `demo_papers` | 3 synthetic 5-page papers, sha256-pinned, read from `evaluation/corpus/demo_papers` (PDFs are not in git; regenerate with `scripts/generate_demo_papers.py --output evaluation/corpus/demo_papers` and re-pin the hashes) | 13 + 2 | Smoke test. With 15 chunks, top-5 returns a third of the corpus, so its retrieval numbers say little |
 
 The book PDF is copyrighted and is **not** in the repository. Put it anywhere and pass `--corpus-dir`.
 Page numbers are PDF page indices (printed page = PDF page − 24 in the main matter).
@@ -66,6 +66,27 @@ The demo corpus cannot see `CHUNK_SIZE_CHARS` / `CHUNK_OVERLAP_CHARS` changes at
 to be measured on the book corpus with the commands above.
 
 ## Results
+
+### Final run after the last code changes (2026-09-19)
+
+Same configuration as the frozen baseline below, re-run after the final changes (chunker section
+labels, grounding prompt rule for partially answerable questions, extractive comparison, vision).
+Result files: `results/data_science_for_business/final_full_k5.json`, `results/demo_papers/final_full_k5.json`.
+
+| Metric | Book | Demo papers |
+|---|---:|---:|
+| Evidence hit@5 | 17/18 (94.4%) | 13/13 (100%) |
+| Page hit@5 | 18/18 (100%) | 13/13 (100%) |
+| Page recall@5 / MRR | 0.812 / 0.681 | 0.923 / 0.821 |
+| Answer correctness | 17/18 (94.4%) | 12/13 (92.3%) |
+| False refusal rate | 1/18 (5.6%) — B14 | 0/13 |
+| Abstention accuracy | 2/2 | 2/2 |
+| Groundedness | 16/17 (94.1%) — B12 uncited | 13/13 |
+| Search P50 / P95 | 770 ms / 1,367 ms | 25 ms / 112 ms |
+
+Retrieval is identical to the baseline. B12 was answered correctly without a citation in this run;
+three isolated `--only B12` re-runs all cited correctly, so it is LLM run-to-run variance, reported as
+measured.
 
 ### Frozen RAG baseline (HEAD `1e78440`, 2026-09-15)
 

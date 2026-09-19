@@ -8,7 +8,7 @@ Make ScholarEdge suitable for Snapdragon-powered Windows Copilot+ PCs (Snapdrago
 
 ## Current Status & Verification Boundaries
 
-- **Development Host**: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 Pro AMD64). Complete 5-studio research-to-learning loop, vector indexing, citation tracking, and 119 automated tests verified.
+- **Development Host**: Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 Pro AMD64). Complete 5-studio research-to-learning loop, vector indexing, citation tracking, and 125 automated tests verified.
 - **Snapdragon Support**: Implemented as an isolated, pluggable provider layer (`backend/app/providers/qualcomm/`).
 - **Development Fallback**: Local zero-weight fallback ensures seamless development on 8 GB RAM without requiring Snapdragon hardware or downloading heavy neural weights.
 - **Hardware Claims**: Any claims of Hexagon NPU acceleration are strictly **PENDING TARGET-DEVICE VALIDATION** until the target-device checklist below is executed on physical ARM64 Windows hardware.

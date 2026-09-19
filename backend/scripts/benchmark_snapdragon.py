@@ -28,7 +28,7 @@ from typing import Dict, Any, List
 backend_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_root))
 
-from app.providers.qualcomm.qualcomm_config import QualcommConfig
+from app.providers.qualcomm.qualcomm_config import QualcommConfig, QualcommModelUnavailable
 from app.providers.qualcomm.qualcomm_providers import (
     QualcommEmbeddingProvider,
     QualcommLLMProvider,
@@ -204,9 +204,13 @@ def run_full_benchmark(output_dir: Path, dry_run: bool = False) -> Path:
     
     llm_prov = QualcommLLMProvider(config)
     
-    # Vision provider may fail due to ONNX IR version mismatch
+    # Vision provider needs its own ONNX artifact, which is absent on a fresh
+    # clone and on CI (backend/models/ is gitignored).
     try:
         vision_prov = QualcommVisionProvider(config)
+    except QualcommModelUnavailable as e:
+        print(f"      Vision provider unavailable: {e}")
+        vision_prov = None
     except RuntimeError as e:
         if "Unsupported model IR version" in str(e):
             print("Vision provider unavailable (ONNX IR version mismatch), skipping vision benchmark")

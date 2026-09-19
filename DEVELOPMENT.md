@@ -34,13 +34,15 @@ pip install -r requirements.txt
 ```powershell
 python scripts/download_qualcomm_models.py
 ```
-This downloads and verifies ONNX models from legitimate sources (Hugging Face, Qualcomm AI Hub) for `all-MiniLM-L6-v2` and `MobileNet-v2` in `backend/models/qualcomm/`. The LLM is `Qwen3-4B-Instruct-2507` in QAIRT / GenAI Inference Extensions format, not an ONNX/QNN artifact.
+This downloads and verifies ONNX models from legitimate sources (Hugging Face, Qualcomm AI Hub) for `all-MiniLM-L6-v2` and `MobileNet-v2` in `backend/models/qualcomm/`. (MobileNet-v2 is the public ImageNet model: the figure-analysis studio does not use it, because no figure classifier has been trained.) The LLM is `Qwen3-4B-Instruct-2507` in QAIRT / GenAI Inference Extensions format, not an ONNX/QNN artifact.
 
 ### Run Automated Backend Tests
 ```powershell
 pytest -v
 ```
-All 119 offline test cases run without network access or API keys (about 10–15 seconds warm, which includes a nested pytest collection run by the documentation guard below; the first run after a cold boot is slower, and a few ONNX-dependent tests skip when the local model files have not been downloaded).
+All 125 hermetic tests run with 0 API keys and 0 network access (about 15–25 seconds warm, which includes a nested pytest collection run by the documentation guard below; the first run after a cold boot is slower). On a host without the Qualcomm ONNX/QAIRT artifacts, 7 of them skip because the artifact they exercise is absent.
+
+Optional live integration tests are separate and need an OpenRouter API key and internet: `$env:RUN_LIVE_TESTS = "1"; pytest -m integration`.
 
 Two separate guards keep the documentation itself honest:
 ```powershell

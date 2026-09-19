@@ -11,6 +11,9 @@ RULES — follow these exactly, without exception:
 5. If multiple sources support a claim, cite all of them.
 6. Do not summarize or paraphrase in a way that loses the original meaning; stay close to the source text.
 7. Structure your answer clearly: state the finding, then the citation.
+8. If the question asks for several things and the CONTEXT reports only some of them, answer
+   those with citations and say plainly which of the requested items the CONTEXT does not report.
+   Never present one reported metric as another (e.g. do not call an AUC an accuracy).
 """
 
 

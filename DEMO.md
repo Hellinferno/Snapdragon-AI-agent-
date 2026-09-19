@@ -1,8 +1,12 @@
-# ScholarEdge Evaluation & Demo Walkthrough
+# ScholarEdge Demo Walkthrough
 
-> **Step-by-Step Demonstration Script for Judges and Reviewers**
+> **Step-by-step demo script for judges and reviewers**
 >
-> ⚠️ **IMPORTANT**: This demo runs in **DEVELOPMENT MODE** (Intel host, OpenRouter LLM). The **SNAPDRAGON MODE** (fully air-gapped, on-device NPU) uses **Qwen3-4B-Instruct-2507 via GenieX/QAIRT** and is architecturally implemented but **not physically validated**. See [LIMITATIONS.md](LIMITATIONS.md) for the complete disclosure.
+> ⚠️ **This demo runs in DEVELOPMENT MODE** (Intel host, OpenRouter LLM). **SNAPDRAGON MODE**
+> (on-device NPU, designed to run offline) uses **Qwen3-4B-Instruct-2507 via QAIRT / GenieX** and is
+> architecturally implemented but **not physically validated**. See [LIMITATIONS.md](LIMITATIONS.md).
+
+The journey is: **Library → Research → Compare → Learn → Vision → Runtime Inspector.**
 
 ---
 
@@ -27,176 +31,177 @@ Open `http://localhost:5173` in your browser.
 
 ## 📋 2. Mode Verification (Do This First)
 
-Before evaluating features, verify the execution mode:
-
-1. Open `http://localhost:8000/api/health` — confirm:
+1. Open `http://localhost:8000/api/health` and confirm:
    ```json
    {
      "status": "healthy",
      "provider_backend": "development",
-     "external_providers_enabled": true,
-     "hardware_provider": "CPUExecutionProvider",
-     "hardware_npu_active": false
+     "active_provider": "CPUExecutionProvider",
+     "hardware_npu_active": false,
+     "llm_runs_locally": false,
+     "external_providers_enabled": true
    }
    ```
-2. In the UI, click the **Execution Badge** (top-right) — it should show:
-   ```
-   Host: Windows AMD64 | Provider: CPUExecutionProvider | Status: Development Host
-   ```
+2. In the UI, the header badge reads **`Dev Host (CPU) | Cloud LLM in use`**. Click it to open the
+   **Hardware & Privacy Runtime Inspector**.
 
-**This confirms you are evaluating the Development Mode baseline. Snapdragon Mode is not yet physically validated.**
+**This confirms you are evaluating the development-mode baseline. Snapdragon mode is not yet physically validated.**
 
 ---
 
-## 📑 3. Demo Evaluation Steps
+## 📑 3. Demo Steps
 
-### Step 1: 1-Click Seed Demo Papers
-1. Navigate to the **Document Library** (Tab 1).
-2. Click the green button **"Load Demo Papers (1-Click)"**.
-3. Three peer-reviewed-style papers and an architecture figure are ingested:
+### Step 1: Library
+1. Open the **Library** tab and click **Load Demo Papers (1-Click)**.
+2. Three synthetic papers are indexed (5 pages / 5 chunks each), plus an architecture diagram for Vision:
    - *Clinical Multimodal Transformers for Diagnostic Radiology*
    - *Privacy-Preserving On-Device Clinical Language Models*
    - *Formative Assessment and Active Recall in Medical Education*
+3. Click a paper card to open the **Document Inspector**: **Extracted Chunks** shows each chunk with its
+   page and section; **Raw Pages** shows the extracted page text. `Esc` closes it.
+4. Delete a paper with the trash icon, then click **Load Demo Papers** again: the missing paper is
+   re-indexed and the others are not duplicated.
 
 ---
 
-### Step 2: Grounded Research Studio (RAG)
-1. Click on the **Research Mode** tab.
-2. Click the evaluation prompt chip:
+### Step 2: Research (grounded RAG)
+1. Open **Research (RAG)** and click the chip **Pneumonia AUC? (Direct)**:
    > *"What diagnostic accuracy and AUC did the multimodal model achieve for pneumonia detection in chest radiography?"*
-3. **Inspect Output**:
-   - The model answers: `"The model achieved 91.4% AUC."` with citation `[Clinical Multimodal Transformers, p.4, Section: Results, Chunk: #1]`.
-   - Click **"View Source Excerpt"** on the citation card. The Document Inspector modal opens, jumps to the Chunks tab, and highlights the exact matching chunk in glowing emerald.
-4. Test the **Grounded Refusal Guarantee**:
-   - Click the prompt chip: *"What is the recommended pediatric dosage of oral amoxicillin for acute otitis media in infants under two years old?"*
-   - **Inspect Output**: The system strictly refuses:
-     > `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`
-     > It does not fabricate or hallucinate medical dosages.
+2. **Expected output**: the answer reports **91.4% AUC** with the citation
+   `[Doc: "Clinical Multimodal Transformers for Diagnostic Radiology", Page 4]`, and says that the paper
+   does not report a separate diagnostic-accuracy figure. (The exact wording comes from the cloud LLM
+   and can vary.)
+3. Click **View Source Excerpt** on the page 4 evidence card. The Document Inspector opens, scrolls to
+   chunk #4 (page 4, section *Key Findings*) and highlights it as the matched citation.
+4. **Refusal test**: click **Pediatric dosage? (Refusal Test)**:
+   > *"What is the recommended pediatric dosage of oral amoxicillin for acute otitis media in infants under two years old?"*
+
+   The answer is *"Insufficient evidence in the indexed documents to answer this question."* with an
+   **Insufficient Evidence Detected** notice — no dosage is invented.
 
 ---
 
-### Step 3: Compare Studio (Cross-Paper Synthesis & Recommendations)
-1. Switch to the **Compare Mode** tab.
-2. Ensure both paper 1 and paper 2 are selected, then click **"Synthesize Comparison"**.
-3. **Inspect Output**:
-   - **Narrative Cross-Paper Synthesis**: Details commonalities, methodological differences, performance differences, dataset differences, limitations, and contradictory findings.
-   - **Decision Recommendations ("Which Paper is Stronger for X?")**:
-     - *Diagnostic Accuracy & Multimodal Performance*: Clinical Multimodal Transformers (91.4% AUC).
-     - *On-Device Edge Privacy & PHI Compliance*: Privacy-Preserving Clinical Language Models.
-   - **Side-by-Side Matrix**: Full comparative grid with per-cell source references.
+### Step 3: Compare (evidence-based comparison)
+1. Open **Compare**, select *Clinical Multimodal Transformers…* and *Privacy-Preserving On-Device…*,
+   keep the default criteria (`diagnostic accuracy, on-device deployment`) and click **Compare Selected**.
+2. **Evidence-Based Comparison** matrix: for Research Objective, Methodology, Dataset, Model /
+   Architecture, Metrics, Results, Limitations and Trade-offs, each cell quotes one sentence from the
+   paper with a page citation, e.g. the radiology paper's Results cell quotes *"Achieved 91.4% AUC on
+   pneumonia detection…"* (Page 4 · Key Findings). Click any citation to open that exact chunk.
+3. **Which paper better matches this criterion?** Each criterion shows every paper's closest passage
+   with its similarity score. A paper is named only when it is clearly ahead; otherwise the verdict is
+   *No clear difference*. This measures how directly a paper addresses the criterion, not which paper
+   is better.
+4. **Evidence gaps**: *Trade-offs* is reported as a gap for both papers — neither states an explicit
+   trade-off, so nothing is filled in.
+
+Nothing in the Compare studio is generated; it makes no LLM call.
 
 ---
 
-### Step 4: Learning Studio (Formative Assessment & Mistake Retry Loop)
-1. Switch to the **Learn Mode** tab.
-2. Under **Concept Explainer**, explore *Beginner*, *Intermediate*, or *Deep-Dive* pedagogical levels.
-3. Switch to the **Interactive Quiz** subtab:
-   - Notice the **4-Tier Difficulty Selector**: `Easy`, `Medium`, `Hard`, `Research-Level`.
-   - Select an answer option. The system provides instant feedback with:
-     - Verified finding and correct answer.
-     - Pedagogical explanation.
-     - Verifiable source document and page number.
-     - **"Inspect Source Excerpt"** button.
-     - If incorrect, a red **"Retry Question (Analyze Mistake)"** button appears to facilitate the active recall learning loop.
-4. Switch to **Flashcards Deck** and flip through active-recall cards.
+### Step 4: Learn (formative assessment and retry loop)
+1. Open **Learn**. In **Concept Explainer**, try Beginner, Intermediate or Deep Dive. Every sentence of a
+   generated explanation must carry a `[Doc: …, Page: N]` citation; if the LLM's output cannot be
+   verified, the studio quotes the closest passage instead and labels it *extractive*.
+2. Open **Interactive Quiz**: choose Easy, Medium, Hard or Research-Level. Answer a question to see the
+   **Answer key**, the explanation, and the **Source** paper and page (the page the explanation cites).
+   **Inspect Source Excerpt** opens that chunk. A wrong answer offers **Retry Question (Analyze Mistake)**.
+3. Open **Flashcards Deck** and flip through the cards; each shows the page it was drawn from.
 
 ---
 
-### Step 5: Multimodal Vision Studio (Figure Analysis + Paper Context)
-1. Switch to the **Vision (Figures)** tab.
-2. **Link a paper**: use the **"Paper Context"** selector at the top of the Q&A panel and choose one of the demo papers. This grounds figure Q&A in that paper's indexed text.
-3. Click on the pre-loaded architecture diagram or upload your own research plot (the selected paper is linked at upload time).
-4. **Decomposition Card**:
-   - Visual telemetry: Resolution, Aspect Ratio, Format, and Confidence score.
-   - Figure classification: Categorized via MobileNet-v2 ONNX.
-5. **Researcher Quick Prompts**:
-   - Click **"📊 What does this graph show?"**
-   - Click **"🔄 Explain the pipeline"**
-   - Click **"🔢 Extract the important numbers"**
-   - Click **"🔬 Describe observable structures"** (returns visual observations, not clinical diagnoses).
-6. **Inspect Output (Paper Context linking)**:
-   - When a paper is linked, answers that retrieve matching chunks append a **"Paper Context"** section with `[Doc: <title>, Page: <N>]` citations.
-   - Click a cited chunk in the green context panel — the Document Inspector opens at that exact chunk.
-   - With **no paper linked**, answers stay purely visual-only, with no fabricated paper claims.
+### Step 5: Vision (multimodal figure analysis)
+1. Open **Vision (Figures)** and click **Open demo diagram** (available after Step 1), or upload your own
+   PNG/JPEG/WebP figure.
+2. **Measured on this device**: resolution, aspect ratio, colour mode, brightness, contrast, dominant
+   background, colours in use, edge density, and a rule-based category (the demo diagram is a
+   *Line-art figure (chart, diagram or table)*). **Confidence** reads *n/a (rule-based)*: there is no
+   trained classifier, so no model confidence exists.
+3. Under **Paper Context**, pick *Clinical Multimodal Transformers…*, then click
+   **📄 What does the linked paper report?**. The answer says what the image analysis can and cannot
+   see, then lists cited passages from the linked paper; click a cited chunk to open it.
+4. Try **🔎 What kind of figure is this?** and **📐 Resolution and aspect ratio** for the measured answers.
+
+This studio is on-device figure classification plus paper-grounded analysis. It does not read the
+figure's text, values or trends, and it says so.
 
 ---
 
 ### Step 6: Hardware & Privacy Runtime Inspector
-1. In the top right header or the bottom of the left sidebar, click the **Execution Badge**:
-   > `Host: Windows AMD64 | Provider: CPUExecutionProvider`
-2. The **ScholarEdge Hardware & Privacy Runtime Inspector Modal** opens:
-   - **Active Environment**: Displays Host Machine, Architecture, Engine, Provider, and truthful NPU status (`Validation Pending`).
-   - **Demonstrable Privacy Checklist**: 6 checks — Development Mode with OpenRouter shows 3 green (local storage, embeddings, local vector search) and 3 yellow (generation served by a cloud LLM, retrieved excerpts leave the device for that generation, external providers enabled). The two yellow inference rows are derived from the resolved LLM provider, so they turn green in Snapdragon Mode.
-   - **CPU vs Snapdragon NPU Benchmark Comparison Table**: Displays physically measured host CPU latencies alongside **target** (not verified) Snapdragon Hexagon NPU profiles.
+1. Click the header badge (or the status block at the bottom of the sidebar).
+2. The **Runtime Inspector** shows:
+   - **Active execution environment**: host, architecture, the runtime actually used for each leg
+     (ONNX Runtime for embeddings, pixel statistics for vision, cloud API for the LLM), execution
+     provider, and `NPU Status: Validation Pending (Host CPU)`.
+   - **Local-first privacy checklist**: with OpenRouter configured, 3 checks are green (local documents,
+     local embeddings, local vector search) and 3 are amber (generation is served by a cloud LLM,
+     retrieved excerpts are sent to it, external providers are enabled). The badge reads
+     **CLOUD LLM IN USE · NOT AIR-GAPPED**.
+   - **This host vs Snapdragon target**: what runs here, the target runtime, and *No benchmark
+     published* — no NPU numbers are shown before a physical run.
 
 ---
 
-## 📊 4. RAG Benchmark Evidence (Pre-Run)
+## 📊 4. RAG Benchmark Evidence
 
-The repository includes a pre-run RAG evaluation on the bundled demo-papers corpus
-(13 answerable + 2 unanswerable questions, full mode, MiniLM ONNX vector-only — i.e.
-`HYBRID_RETRIEVAL=false`, which is what that result file records — +
-OpenRouter qwen-2.5-72b-instruct):
+Pre-run evaluations (full mode: MiniLM ONNX vector-only retrieval + OpenRouter
+`qwen/qwen-2.5-72b-instruct`, top-k = 5), re-run after the final code changes. Result files:
+`backend/evaluation/results/demo_papers/final_full_k5.json` and
+`backend/evaluation/results/data_science_for_business/final_full_k5.json`.
 
-**Location**: `backend/evaluation/results/demo_papers/p1b_minilm.json` (the MiniLM
-vector-only run; `baseline.json`, `p1_hybrid.json` and `p1b_minilm_hybrid.json` sit
-beside it so the embedding and fusion choices can be compared directly)
+| Metric | Demo papers | Book |
+|---|---|---|
+| Doc / Page / Evidence Hit@5 | 100% / 100% / 100% | 100% / 100% / 94.4% |
+| Answer correctness | 12/13 (92.3%) | 17/18 (94.4%) |
+| False refusal rate | 0/13 (0%) | 1/18 (5.6%) |
+| Abstention accuracy | 2/2 (100%) | 2/2 (100%) |
+| Groundedness | 13/13 (100%) | 16/17 (94.1%) |
+| Search latency P50 | 25 ms | 770 ms |
 
-**Key Measured Metrics (Development Host)**:
-| Metric | Value |
-|---|---|
-| Doc Hit@K | 100% |
-| Page Hit@K | 100% |
-| Evidence Hit@K | 100% |
-| Answer Correctness | 92.3% |
-| False Refusal Rate | 0% |
-| Abstention Accuracy | 100% |
-| Groundedness | 100% |
-| Citation Rate / Page / Doc / Faithfulness | 100% |
-| Search Latency (P50) | ~26 ms |
-
-**Known Gaps**: One cross-document question answers at 50% (synthesis misses a second
-paper's keyword); page_recall@k = 0.92 (occasionally retrieves the neighboring page of
-a multi-page evidence span before the exact one).
+**Known gaps**: one cross-document demo question misses a second paper's keyword; on the book, the
+multi-hop question B14 is refused because its Chapter 11 evidence is never retrieved, and in this run
+B12 was answered correctly but without a citation (it cited correctly in 3 of 3 isolated re-runs).
+Details: [BENCHMARKS.md](BENCHMARKS.md#rag-quality-development-host).
 
 To re-run: `cd backend && python -m evaluation.run_eval --dataset demo_papers --mode full --label rerun`
-(For the larger "Data Science for Business" corpus, add `--corpus-dir ..`.)
+(for the book corpus, add `--dataset data_science_for_business --corpus-dir ..`).
 
 ---
 
 ## 🎯 5. What Judges Should Look For
 
-| Feature | Demo Verification | Competition Claim |
+| Feature | Demo verification (development mode) | Snapdragon status |
 |---|---|---|
-| **Grounded RAG with page citations** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
-| **Cross-paper comparison** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
-| **Formative learning loop** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
-| **Vision figure analysis** | ✅ Works in Dev Mode | ✅ Architecture ready for Snapdragon |
-| **Air-gapped privacy** | ❌ Dev Mode uses OpenRouter | 🎯 **Snapdragon Mode target** |
-| **On-device NPU inference** | ❌ Dev Mode uses CPU | 🎯 **Snapdragon Mode target** |
-| **Verified Snapdragon benchmarks** | ❌ Not yet run | 🎯 **Pending physical validation** |
+| **Grounded RAG with page citations** | ✅ Works | 🎯 Target (QAIRT generation not yet implemented) |
+| **Evidence-based comparison** | ✅ Works (extractive, no LLM) | 🎯 Target |
+| **Formative learning loop** | ✅ Works | 🎯 Target |
+| **Figure analysis + paper context** | ✅ Works (pixel statistics, no neural model) | 🎯 Target (no trained figure classifier yet) |
+| **Air-gapped privacy** | ❌ Development mode uses OpenRouter | 🎯 Designed for it; not yet tested |
+| **On-device NPU inference** | ❌ Development mode uses the CPU | 🎯 Pending physical validation |
+| **Verified Snapdragon benchmarks** | ❌ Not yet run | 🎯 Pending physical validation |
 
-**Honest framing for judges**: "We've built the complete 5-studio application with grounded RAG, cross-paper synthesis, formative learning, and vision analysis. The architecture is fully isolated behind a provider factory so the *same application* can run on Intel (development) or Snapdragon NPU (target). Physical Snapdragon validation is the remaining milestone — see LIMITATIONS.md and SNAPDRAGON.md for the exact checklist."
+**Honest framing**: "The complete five-studio application works end to end on an Intel development
+host, with grounded RAG, evidence-based comparison, formative learning and figure analysis. The
+providers are isolated behind a factory so the same application targets Snapdragon — MiniLM through
+ONNX Runtime + QNN and Qwen3 through QAIRT / GenieX. Physical Snapdragon validation is the remaining
+milestone; see LIMITATIONS.md and SNAPDRAGON.md."
 
 ---
 
-## 🧪 6. Automated Test Suite (Hermetic CI)
-
-The backend suite is fully deterministic — no live API or network access is required:
+## 🧪 6. Automated Test Suite (Hermetic)
 
 ```powershell
 cd backend
 pytest -v
 ```
 
-- All provider/LLM/embedding backends are forced to local deterministic providers during tests, regardless of your local `.env`.
-- Real OpenRouter connectivity is covered by a **separate opt-in** test module, never run in CI:
+- **125 hermetic tests**: 0 API keys, 0 network. Every provider is forced to a local deterministic
+  implementation, regardless of your `.env`. On a host without the Qualcomm ONNX/QAIRT artifacts, 7 of
+  them skip because the artifact they exercise is absent.
+- **Optional live integration tests** (separate; require an OpenRouter API key and internet):
 
 ```powershell
-# Only run this when you want to verify live external connectivity:
 $env:RUN_LIVE_TESTS = "1"
 $env:OPENROUTER_API_KEY = "sk-..."
-pytest -m live
+pytest -m integration
 ```
-
-A plain `pytest` run deselects the live tests (119 hermetic tests in about 15 seconds), demonstrating that the RAG, comparison, learning, and vision pipelines are verifiable offline.

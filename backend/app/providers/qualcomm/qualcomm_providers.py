@@ -23,14 +23,27 @@ from app.providers.base import (
     VisionAnalysisResult,
     VisualQAResult,
 )
-from app.providers.qualcomm.qualcomm_config import QualcommConfig, resolve_qairt_bundle_dir
+from app.providers.qualcomm.qualcomm_config import (
+    QualcommConfig,
+    QualcommModelUnavailable,
+    resolve_qairt_bundle_dir,
+)
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-def _load_tokenizer(model_dir: Path, model_name: str):
-    """Load tokenizer from model directory."""
+def _load_tokenizer(model_dir: Optional[Path], model_name: str):
+    """Load tokenizer from model directory.
+
+    ``model_dir`` is None when no model bundle could be resolved, which is the
+    normal state on hosts without Qualcomm artifacts; that is a skip, not an
+    error.
+    """
+    if model_dir is None:
+        logger.info("No model directory resolved for %s; tokenizer unavailable.", model_name)
+        return None
+
     tokenizer_path = model_dir / "tokenizer.json"
     if tokenizer_path.exists():
         try:
@@ -213,7 +226,7 @@ class QualcommLLMProvider(LLMProvider):
         else:
             self._qairt_bundle_detected = False
 
-        # Load real tokenizer
+        # Load real tokenizer (None when no bundle is present on this host)
         self._tokenizer = _load_tokenizer(model_dir, self.config.llm_model_id)
 
         if model_dir is not None:
@@ -294,9 +307,10 @@ class QualcommVisionProvider(VisionProvider):
     def _initialize(self) -> None:
         model_path = self.config.model_dir / self.config.vision_model_id / "model.onnx"
         if not model_path.exists():
-            raise FileNotFoundError(
+            raise QualcommModelUnavailable(
                 f"Vision model not found at {model_path}. "
-                f"Snapdragon mode requires valid ONNX model artifact."
+                f"Snapdragon mode requires valid ONNX model artifact; run "
+                f"scripts/download_qualcomm_models.py, or use VISION_PROVIDER=development."
             )
         try:
             import onnxruntime as ort

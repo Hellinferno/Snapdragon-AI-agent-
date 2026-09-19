@@ -13,7 +13,7 @@ class GeneratedChunk:
 
 # Pattern for common academic section headers
 SECTION_HEADER_PATTERN = re.compile(
-    r"^(?:\d+\.?\s+)?(abstract|introduction|background|related\s+work|method(?:ology)?|materials\s+and\s+methods|system\s+design|architecture|experiments?|results|discussion|conclusion(?:s)?|references)\b",
+    r"^(?:\d+\.?\s+)?(abstract|introduction|background|related\s+work|method(?:ology)?|materials\s+and\s+methods|system\s+design|architecture|experiments?|results|(?:key\s+)?findings|discussion|limitations?|future\s+work|conclusion(?:s)?|references)\b",
     re.IGNORECASE,
 )
 

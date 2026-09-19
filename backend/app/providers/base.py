@@ -86,7 +86,8 @@ class VisionAnalysisResult:
     title: str
     summary: str
     observations: list[str]
-    confidence: float
+    # None when the provider has no probabilistic model (e.g. rule-based analysis).
+    confidence: float | None
 
 
 @dataclass

@@ -10,6 +10,23 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
+class QualcommModelUnavailable(RuntimeError):
+    """A Qualcomm ONNX artifact is absent on this host.
+
+    Distinct from a genuine load failure: the model file simply was not
+    downloaded/compiled here, which is the normal state on a fresh clone and on
+    CI (``backend/models/`` is gitignored). Callers such as the benchmark harness
+    and the test-suite skip the affected stage instead of treating it as a bug.
+
+    Subclasses ``RuntimeError`` so existing handlers keep working.
+    """
+
+
+def onnx_artifact_exists(model_id: str, filename: str = "model.onnx") -> bool:
+    """True when the Qualcomm ONNX artifact for ``model_id`` is present locally."""
+    return (_resolve_default_model_dir() / model_id / filename).exists()
+
+
 def _resolve_default_model_dir() -> Path:
     env_dir = os.getenv("QUALCOMM_MODEL_DIR")
     if env_dir:

@@ -85,7 +85,7 @@ EXEMPT_BARE_JSON = frozenset(
 # a hyphen is allowed because the shield badge format is ``pytest-<N>%20passed``.
 COUNT_CLAIM_RE = re.compile(
     r"(?<![\w./])(\d{1,4})(?:%20|[\s_-])+"
-    r"(?:(?:automated|offline|hermetic|integration|live|opt-?in|excluded|deselected)(?:%20|\s)+)*"
+    r"(?:(?:automated|offline|hermetic|backend|integration|live|opt-?in|excluded|deselected)(?:%20|\s)+)*"
     r"(?:tests?|test\s+cases?|passed|passing)\b",
     re.IGNORECASE,
 )

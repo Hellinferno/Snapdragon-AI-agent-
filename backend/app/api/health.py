@@ -31,11 +31,26 @@ def _get_system_runtime_telemetry() -> dict:
 
     embedding = embedding_provider_status()
     llm_local = llm_runs_locally()
+    vision_name = resolved_vision_name()
+    vision_uses_model = vision_name.startswith("qualcomm-")
+
+    # What actually executes each leg on this host, not what the target design uses.
+    embedding_engine = (
+        "feature hashing (embeddings, degraded)" if embedding.degraded else "ONNX Runtime (embeddings)"
+    )
+    vision_engine = "ONNX Runtime (vision)" if vision_uses_model else "pixel statistics (vision, no neural model)"
+    if not llm_local:
+        llm_engine = f"cloud API (LLM: {resolved_llm_name()})"
+    elif resolved_llm_name().startswith("qualcomm-"):
+        llm_engine = "QAIRT / GenieX (LLM; inference not implemented)"
+    else:
+        llm_engine = "template synthesizer (LLM placeholder)"
+    runtime_engine = "; ".join([embedding_engine, vision_engine, llm_engine])
 
     privacy_checklist = [
         {"item": "Documents stored locally", "status": True, "detail": "Local SQLite database and filesystem storage"},
         {"item": "Embeddings stored locally", "status": True, "detail": f"384-d vector embeddings persisted on-device ({embedding.name})"},
-        {"item": "Vector search local", "status": True, "detail": "Local SQLite exact cosine similarity"},
+        {"item": "Vector search local", "status": True, "detail": "Exact cosine similarity over SQLite-stored vectors, computed on the host CPU"},
         # The LLM is the only leg that can leave the machine; embeddings and vision never do.
         {
             "item": "AI inference local",
@@ -75,9 +90,13 @@ def _get_system_runtime_telemetry() -> dict:
             "benefit": "QAIRT inference not implemented",
         },
         {
-            "model": "MobileNet-v2 (Vision)",
-            "cpu": "MobileNet-v2 (FP32)",
-            "snapdragon_npu": "MobileNet-v2 (ONNX Runtime + QNN; physical validation pending)",
+            "model": "Vision (figure analysis)",
+            "cpu": (
+                f"{vision_name} (ONNX Runtime)"
+                if vision_uses_model
+                else "Pixel-statistics analysis (no neural model)"
+            ),
+            "snapdragon_npu": "MobileNet-v2 (ONNX Runtime + QNN; no trained figure classifier yet, validation pending)",
             "benefit": "No benchmark published",
         },
         {
@@ -95,7 +114,7 @@ def _get_system_runtime_telemetry() -> dict:
         "device_name": env.get("detected_device"),
         "processor": uname.processor or "Unknown",
         "architecture": uname.machine,
-        "runtime_engine": "ONNX Runtime (embeddings/vision); QAIRT pending (LLM)",
+        "runtime_engine": runtime_engine,
         "active_provider": active_provider,
         "execution_backend": backend,
         "precision": precision,
@@ -111,7 +130,7 @@ def _get_system_runtime_telemetry() -> dict:
         "embedding_degraded": embedding.degraded,
         "embedding_degraded_reason": embedding.reason,
         "retrieval_mode": retrieval_mode(),
-        "vision_provider": resolved_vision_name(),
+        "vision_provider": vision_name,
         "llm_runs_locally": llm_local,
         "external_providers_enabled": settings.ALLOW_EXTERNAL_PROVIDERS,
         "device_target": settings.QUALCOMM_DEVICE_TARGET,

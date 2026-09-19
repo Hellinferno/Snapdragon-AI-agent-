@@ -61,3 +61,15 @@ def test_chunking_long_paragraph_splits_with_overlap():
     for chunk in chunks:
         assert chunk.page_number == 1
         assert len(chunk.text) <= 350
+
+
+def test_chunking_detects_findings_and_limitations_sections():
+    """Results and limitations pages must not inherit the previous section's label."""
+    pages = [
+        ParsedPage(page_number=1, text="Methodology & Architecture\nWe train a cross-attention backbone."),
+        ParsedPage(page_number=2, text="Key Findings & Metrics\nAchieved 91.4% AUC on pneumonia detection."),
+        ParsedPage(page_number=3, text="Limitations & Future Work\nLimited generalization on pediatric cohorts."),
+    ]
+
+    chunks = chunk_pages(pages, chunk_size=200, chunk_overlap=20)
+    assert [c.section for c in chunks] == ["Methodology", "Key Findings", "Limitations"]

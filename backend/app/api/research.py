@@ -15,10 +15,11 @@ async def compare_documents(
 ) -> CompareResponse:
     """
     Compares two or more research documents across selected dimensions.
-    Returns side-by-side dimension breakdowns, cross-paper synthesis, and citations.
+    Returns cited evidence per dimension, evidence gaps, and per-criterion matches.
     """
     service = ComparisonService(db)
     return await service.compare_documents(
         document_ids=request.document_ids,
         dimensions=request.dimensions,
+        criteria=request.criteria,
     )

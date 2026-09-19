@@ -12,10 +12,10 @@
 | **Device** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U) | Snapdragon X Elite / Copilot+ PC |
 | **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 INT4 → GenieX/QAIRT → Hexagon NPU (inference pending) |
 | **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) — auto-selected when the model is present, otherwise the feature-hash fallback (reported as `embedding_degraded` by `/api/health`) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
-| **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
-| **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
-| **Status Badge** | `Development Host (CPUExecutionProvider)` | `Hexagon NPU (GenieX/QAIRT)` — only when loaded |
-| **Verification** | ✅ 119 hermetic tests, frontend build passing | ❌ Architecture complete, physical validation pending |
+| **Vision** | Pixel-statistics figure analysis on the CPU (no neural model) | MobileNet-v2 ONNX (QNNExecutionProvider) — scaffolding only; no trained figure classifier yet |
+| **Air-Gapped** | No (requires internet for LLM) | Designed for it; not yet tested on hardware |
+| **Status Badge** | `Dev Host (CPU)` · `Cloud LLM in use` | `Hexagon NPU Active` — only when a component reports physical NPU execution |
+| **Verification** | ✅ 125 hermetic tests, frontend build, full browser walkthrough of all five studios | ❌ Architecture complete, physical validation pending |
 
 **The UI and `/api/health` never display LLM NPU execution without a validated QAIRT session. `QNNExecutionProvider` telemetry applies only to the ONNX embedding and vision paths.**
 
@@ -33,11 +33,11 @@
 | **AI Accelerator** | None (Host CPU only) | Qualcomm Hexagon NPU (45 TOPS) |
 | **Execution Provider** | `CPUExecutionProvider` | `QNNExecutionProvider` (embeddings/vision); QAIRT / GenieX (LLM) |
 | **NPU Status** | **Inactive / Simulated** (`hardware_npu_active: false`) | **Active Target** (`QnnHtp.dll` offload) |
-| **Verification Status** | **Physically verified** (119 automated tests) | **Pending physical target hardware verification** |
+| **Verification Status** | **Physically verified** (125 hermetic tests; 7 skip here because the Qualcomm artifacts are absent) | **Pending physical target hardware verification** |
 
 ### Truth in Telemetry
 - The application UI and runtime telemetry API (`/api/health`, `/api/runtime/status`) **never claim NPU acceleration** when running on the Intel host machine.
-- The badge displays **`Development Host (CPU Simulation)`** or **`Host CPU (Snapdragon Validation Pending)`**.
+- The header badge displays **`Dev Host (CPU)`**, plus **`Cloud LLM in use`** whenever generation is served by a cloud provider; the Runtime Inspector shows `NPU Status: Validation Pending (Host CPU)`.
 - The green status **`Hexagon NPU Active`** is displayed only when the relevant component reports physical execution: `QNNExecutionProvider` for ONNX embedding/vision, or a validated QAIRT session for the LLM.
 
 ---
@@ -53,25 +53,51 @@
 - **Target Implementation**: `Qwen3-4B-Instruct-2507` compiled for Snapdragon X Elite via Qualcomm AI Hub (QAIRT/GenieX format).
 - **Current Development Host**: Detects the QAIRT bundle and loads its tokenizer, but cannot execute QAIRT inference on the Intel host.
 - **Runtime**: GenAI Inference Extensions (GenieX/QAIRT) on Hexagon NPU (Snapdragon Mode) / Development fallback (Development Mode).
-- **Grounding Guarantee**: When evidence is missing or below relevance threshold, the system strictly outputs:  
-  `"Insufficient evidence in indexed documents to answer this question grounded in peer-reviewed sources."`  
-  It will never hallucinate fabricated findings.
+- **Grounded refusal**: when the retrieved evidence does not support an answer, the system prompt
+  requires the exact reply `"Insufficient evidence in the indexed documents to answer this question."`
+  This is enforced by the prompt and measured (abstention accuracy in §5), not guaranteed: the
+  development LLM is a cloud model whose behaviour can drift.
+- **Learning Studio checks**: a generated explanation, quiz question or flashcard is kept only if it
+  cites a retrieved passage; quiz answers and flashcard backs must also be stated by that passage
+  (numbers verbatim, at least half of the content words). Otherwise the studio falls back to quoting
+  the passage and labels the result as extractive.
+- **Comparison is extractive**: the Compare studio quotes one cited sentence per paper and dimension
+  and reports evidence gaps; it makes no LLM call and does not rank papers as stronger or weaker.
 
-### Multimodal Vision Pipeline
-- **Target Implementation**: `MobileNet-v2` / `MobileNet-v4` figure classifier and structural feature extractor compiled via Qualcomm AI Hub for Hexagon NPU.
-- **Current Development Host**: Genuine image preprocessing (224×224 RGB resize, ImageNet channel mean subtraction, standard deviation normalization into `[1, 3, 224, 224]` float32 tensors) followed by ONNX model forward pass for figure classification (`architecture_diagram`, `bar_chart`, `data_table`, `medical_radiograph`).
-- **Limitation**: The vision pipeline currently performs **figure decomposition, visual feature extraction, and structural classification**. It does **not** yet run an end-to-end 7B Multimodal VQA model on the 8 GB development machine to prevent out-of-memory crashes.
+### Figure Analysis (Vision) Pipeline
+- **What runs today (development host)**: `DevelopmentVisionProvider` measures the image on the CPU —
+  resolution, aspect ratio, colour mode, mean brightness, contrast (luminance standard deviation),
+  dominant background colour and its share, number of colours in use, and edge density — and derives a
+  coarse category (line-art figure; greyscale continuous-tone image; colour photograph) from explicit
+  rules on those measurements. The category does not depend on the file name.
+- **What it does not do**: it does not read text, axis labels, values or trends, and it reports no
+  confidence score because nothing in it is probabilistic. Q&A answers what was measured, states what
+  it cannot see, and — when a paper is linked — adds cited passages retrieved from that paper.
+- **Snapdragon target**: `QualcommVisionProvider` is scaffolding for a MobileNet-v2 ONNX classifier via
+  QNN. No trained figure classifier exists: the public MobileNet-v2 is an ImageNet classifier, and the
+  provider's four figure classes (`architecture_diagram`, `bar_chart`, `data_table`,
+  `medical_radiograph`) have no trained weights behind them. This path is not validated and makes no
+  classification claim.
+- **Not a vision-language model**: there is no end-to-end multimodal VQA model; an 8 GB development
+  machine cannot host one alongside the rest of the stack.
 
 ---
 
 ## 4. Dataset & Document Support
 - **Supported Formats**: Text-rich PDF documents (peer-reviewed papers, clinical reports, conference proceedings).
-- **OCR Capability**: PDF page parsing with fallback OCR triggers. Non-PDF files (e.g. raw `.docx`, `.pptx`) must be converted to PDF prior to ingestion.
-- **Storage Scope**: SQLite database and filesystem storage reside strictly on the local machine (`backend/data/`). Zero external network egress occurs during indexing, vector search, or synthesis.
+- **No OCR**: text comes from the PDF text layer via PyMuPDF. Scanned PDFs without a text layer produce empty pages (`ocr_used` is always `false`). Non-PDF files (e.g. `.docx`, `.pptx`) must be converted to PDF first.
+- **Storage Scope**: SQLite database and filesystem storage reside strictly on the local machine (`backend/data/`). No network egress occurs during indexing or vector search; in development mode the LLM call is the only outbound traffic (see PRIVACY.md).
 
 ---
 
 ## 5. RAG Quality (Measured on Development Host)
+
+**Final run after the last code changes** (`final_full_k5.json` for both datasets, MiniLM vector-only,
+top-k = 5): book 17/18 answer correctness, 17/18 evidence hit, 1/18 false refusals (B14), 2/2
+abstention, 16/17 groundedness (B12 answered without a citation in that run; it cited correctly in
+3 of 3 isolated re-runs); demo papers 12/13 correct, 0/13 false refusals, 2/2 abstention, 13/13
+grounded. Retrieval metrics are identical to the frozen configuration below. Full table:
+[BENCHMARKS.md](BENCHMARKS.md#rag-quality-development-host).
 
 Every number below comes from a committed result file named in the column header. Metric
 definitions, per-question detail and the experiment log live in `backend/evaluation/README.md`,
@@ -156,8 +182,10 @@ python -m evaluation.run_eval --dataset data_science_for_business --corpus-dir .
         --embedding-provider onnx_minilm --hybrid      # 83.3%-class
 ```
 
-The demo corpus is committed, so those rows reproduce with no arguments beyond `--dataset demo_papers`.
-Ranking on it is frozen by `backend/tests/test_retrieval_regression.py`.
+PDFs are kept out of git, so the demo rows reproduce only where the pinned demo PDFs exist in
+`backend/evaluation/corpus/demo_papers`; elsewhere, regenerate them with `scripts/generate_demo_papers.py`
+and re-pin the hashes (reportlab embeds a timestamp, so regenerated bytes differ). Ranking on it is
+frozen by `backend/tests/test_retrieval_regression.py`, which skips where the pinned PDFs are absent.
 
 `precision_at_k` was added to the harness with this change, so the pre-existing result files above do
 not contain it; the values recorded in this document are the ones they do contain.

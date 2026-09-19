@@ -23,7 +23,10 @@ class FigureAnalysisResponse(BaseModel):
     title: str
     summary: str
     observations: list[str]
-    confidence: float
+    confidence: float | None = Field(
+        None, description="Model confidence; null when the analysis is rule-based, not a classifier"
+    )
+    provider: str = Field("", description="Vision provider that produced this analysis")
 
 
 class VisualQARequest(BaseModel):

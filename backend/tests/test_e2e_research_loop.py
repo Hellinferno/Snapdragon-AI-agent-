@@ -1,6 +1,9 @@
 """End-to-end integration and smoke test verifying the complete research-to-learning loop."""
 
+import io
+
 import pytest
+from PIL import Image
 from httpx import AsyncClient
 
 
@@ -111,7 +114,9 @@ async def test_complete_e2e_research_and_learning_loop(client: AsyncClient):
     assert fc_data["flashcards"][0]["source_hint"] is not None
 
     # 11. Multimodal Figure Upload and Analysis
-    fig_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x02\x00\x00\x00\x02\x08\x02\x00\x00\x00\xfd\xd4\x9as\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00IEND\xaeB`\x82"
+    buf = io.BytesIO()
+    Image.new("RGB", (320, 240), (255, 255, 255)).save(buf, format="PNG")
+    fig_bytes = buf.getvalue()
     up_fig_res = await client.post(
         "/api/vision/upload",
         files={"file": ("roc_curve.png", fig_bytes, "image/png")},

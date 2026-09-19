@@ -1,24 +1,22 @@
 import pytest
 
 from app.schemas.rag import SearchResponse, SourceReference
-from app.schemas.research import DocumentComparisonItem
+from app.schemas.research import ComparisonCell, DocumentComparisonItem
 from app.services.comparison_service import ComparisonService
 from app.services.learning_service import LearningService
 
 
 def test_comparison_synthesis_does_not_invent_cross_paper_claims():
     """No evidence must produce an explicit evidence gap, not a stock narrative."""
+    gap = ComparisonCell(dimension="Methodology", reported=False, statement="Not reported.")
     comparisons = [
         DocumentComparisonItem(
-            document_id="a",
-            document_title="Paper A",
-            dimension_values={"Methodology": "No explicit details found for Methodology in indexed sections."},
-        ),
-        DocumentComparisonItem(
-            document_id="b",
-            document_title="Paper B",
-            dimension_values={"Methodology": "No explicit details found for Methodology in indexed sections."},
-        ),
+            document_id=doc_id,
+            document_title=title,
+            dimension_values={"Methodology": "Not reported."},
+            cells={"Methodology": gap},
+        )
+        for doc_id, title in (("a", "Paper A"), ("b", "Paper B"))
     ]
 
     synthesis = ComparisonService(None)._build_synthesis(comparisons, ["Methodology"])

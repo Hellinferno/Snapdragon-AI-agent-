@@ -28,8 +28,10 @@ EXPLAIN_SYSTEM_PROMPT = """You are ScholarEdge, a private on-device research tut
 Explain the requested concept using ONLY the CONTEXT blocks provided.
 
 RULES:
-1. Use ONLY facts present in the CONTEXT. Never add outside knowledge.
-2. For every factual claim cite the source: [Doc: <title>, Page: <N>].
+1. Use ONLY facts present in the CONTEXT. Never add outside knowledge, and do not claim
+   capabilities, benefits or results the CONTEXT does not state.
+2. End every sentence that states a fact with its citation in exactly this form:
+   [Doc: <title>, Page: <N>] — copy the title exactly as it appears in the CONTEXT header.
 3. If the context is insufficient, state exactly what evidence is missing instead of speculating.
 4. Write the explanation in clear prose (3-6 sentences for beginner, 5-8 for intermediate,
    6-10 with caveats for deep_dive), then a line "KEY TAKEAWAYS:" followed by 2-4 bullet
@@ -38,7 +40,8 @@ RULES:
 
 LEVEL_STYLE = {
     "beginner": (
-        "Explain for a complete newcomer: plain language, one everyday analogy, no unexplained jargon."
+        "Explain for a complete newcomer: plain language, no unexplained jargon. You may add one "
+        "everyday analogy, introduced with 'Think of it like', but the analogy must not add facts."
     ),
     "intermediate": (
         "Explain for a technically literate reader: precise terminology, mechanism, and how it is used in the cited studies."
@@ -133,11 +136,41 @@ class LearningService:
         return data if isinstance(data, list) else None
 
     @staticmethod
-    def _valid_citation(text: str, sources: list[SourceReference]) -> bool:
+    def _cited_source(text: str, sources: list[SourceReference]) -> SourceReference | None:
+        """The retrieved source a generated item cites, or None if it cites none.
+
+        A citation names both the document title and ``Page <N>`` of a retrieved
+        source; the page must match as a whole number, so "Page 12" is not read as
+        a citation of page 1.
+        """
+        for src in sources:
+            if src.document_title in text and re.search(rf"Page:?\s*{src.page_number}\b", text):
+                return src
+        return None
+
+    @staticmethod
+    def _supported_by(answer: str, source: SourceReference) -> bool:
+        """Whether the cited passage actually states ``answer``.
+
+        A citation alone does not make an answer grounded: a model can cite page 3
+        and still assert a benefit page 3 never mentions. Every number in the
+        answer must appear in the passage, and at least half of its content words
+        (compared by 5-letter stem, so "dynamic" matches "dynamically") must too.
+        """
+        answer = re.sub(r"\[Doc:[^\]]*\]", " ", answer)
+        excerpt = source.excerpt.lower()
+        if any(num not in excerpt for num in re.findall(r"\d+(?:\.\d+)?", answer)):
+            return False
+        words = {w[:5] for w in re.findall(r"[a-z][a-z-]{3,}", answer.lower())}
+        if not words:
+            return True
+        excerpt_stems = {w[:5] for w in re.findall(r"[a-z][a-z-]{3,}", excerpt)}
+        return len(words & excerpt_stems) / len(words) >= 0.5
+
+    @classmethod
+    def _valid_citation(cls, text: str, sources: list[SourceReference]) -> bool:
         """A generated item is grounded only if it cites at least one real source."""
-        return any(
-            src.document_title in text and str(src.page_number) in text for src in sources
-        )
+        return cls._cited_source(text, sources) is not None
 
     # ------------------------------------------------------------------
     # Concept explanation
@@ -219,17 +252,21 @@ class LearningService:
         self, concept: str, level: str, sources: list[SourceReference]
     ) -> ExplainResponse:
         top_source = sources[0]
-        excerpt_clean = top_source.excerpt.replace("\n", " ").strip()
+        lines = [line.strip() for line in top_source.excerpt.strip().splitlines() if line.strip()]
+        if len(lines) > 1 and len(lines[0]) <= 60 and not lines[0].endswith("."):
+            lines = lines[1:]  # drop a leading section-heading line
+        excerpt_clean = " ".join(lines)
         sentences = [s.strip() for s in excerpt_clean.split(". ") if len(s.strip()) > 10]
         core_point = sentences[0] if sentences else excerpt_clean
 
-        headings = {
-            "beginner": f"### Explanation: {concept}",
-            "intermediate": f"### Technical Overview: {concept}",
-            "deep_dive": f"### Architectural Analysis & Evidence Review: {concept}",
-        }
+        # Nothing is generated on this path, so say so rather than presenting a
+        # quote as an explanation.
         source_label = f"[Doc: {top_source.document_title}, Page: {top_source.page_number}]"
-        body = f"{headings[level]}\n\n{excerpt_clean}\n\n{source_label}"
+        body = (
+            f'Quoted from the closest indexed passage on "{concept}" (extractive: no generated '
+            f"explanation could be verified against its citations):\n\n"
+            f"{excerpt_clean} {source_label}"
+        )
         takeaways = [
             f"Evidence: {core_point}",
             f"Source: {top_source.document_title}, Page {top_source.page_number}.",
@@ -322,7 +359,8 @@ class LearningService:
             ):
                 continue
 
-            if not self._valid_citation(explanation, sources):
+            cited = self._cited_source(explanation, sources)
+            if cited is None or not self._supported_by(options[correct_idx], cited):
                 continue
 
             questions.append(
@@ -334,7 +372,7 @@ class LearningService:
                     correct_answer=options[correct_idx].strip(),
                     explanation=explanation,
                     difficulty=difficulty,
-                    source=sources[0],
+                    source=cited,
                 )
             )
 
@@ -492,7 +530,8 @@ class LearningService:
                 continue
             front = str(item.get("front", "")).strip()
             back = str(item.get("back", "")).strip()
-            if not front or not back or not self._valid_citation(back, sources):
+            cited = self._cited_source(back, sources) if front and back else None
+            if cited is None or not self._supported_by(back, cited):
                 continue
 
             flashcards.append(
@@ -500,7 +539,7 @@ class LearningService:
                     id=str(uuid.uuid4())[:8],
                     front_prompt=front,
                     back_answer=back,
-                    source_hint=f"{sources[0].document_title}, Page {sources[0].page_number}",
+                    source_hint=f"{cited.document_title}, Page {cited.page_number}",
                 )
             )
 

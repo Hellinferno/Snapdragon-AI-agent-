@@ -43,7 +43,10 @@ async def test_vision_pipeline_lifecycle(client: AsyncClient):
     ana_data = ana_res.json()
     assert "Figure:" in ana_data["title"]
     assert len(ana_data["observations"]) > 0
-    assert ana_data["confidence"] > 0.8
+    # Rule-based analysis has no model, so it must not report a confidence score.
+    assert ana_data["confidence"] is None
+    assert ana_data["provider"] == "development-vision-heuristic"
+    assert "600 x 400 px" in ana_data["observations"][0]
 
     # 4. Visual Q&A
     chat_res = await client.post(
@@ -54,6 +57,8 @@ async def test_vision_pipeline_lifecycle(client: AsyncClient):
     chat_data = chat_res.json()
     assert "answer" in chat_data
     assert len(chat_data["grounded_visual_cues"]) > 0
+    # A trend question cannot be answered from pixel statistics; say so, don't invent one.
+    assert "does not read" in chat_data["answer"]
 
 
 @pytest.mark.asyncio
@@ -121,3 +126,40 @@ async def test_vision_link_persists_across_requests(client: AsyncClient):
     chat_data = chat_res.json()
     if chat_data["paper_context_sources"]:
         assert chat_data["paper_context_sources"][0]["document_id"] == doc_id
+
+
+def _bar_chart_png() -> bytes:
+    from PIL import ImageDraw
+
+    img = Image.new("RGB", (640, 420), "white")
+    draw = ImageDraw.Draw(img)
+    draw.line([60, 370, 600, 370], fill="black", width=2)
+    draw.line([60, 40, 60, 370], fill="black", width=2)
+    for i, h in enumerate([220, 150, 300, 90]):
+        x = 110 + i * 120
+        draw.rectangle([x, 370 - h, x + 70, 370], fill=(59, 130, 246))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@pytest.mark.asyncio
+async def test_vision_category_comes_from_pixels_not_filename(client: AsyncClient):
+    """The same image must get the same category whatever it is called."""
+    png = _bar_chart_png()
+    types = []
+    for name in ("figure1.png", "system_architecture_diagram.png", "latency_benchmark_chart.png"):
+        up = await client.post("/api/vision/upload", files={"file": (name, png, "image/png")})
+        ana = await client.post("/api/vision/analyze", json={"image_id": up.json()["image_id"]})
+        types.append(ana.json()["figure_type"])
+
+    assert len(set(types)) == 1
+    assert types[0].startswith("Line-art figure")
+
+
+@pytest.mark.asyncio
+async def test_vision_upload_rejects_truncated_image(client: AsyncClient):
+    """A file that cannot be decoded is refused at upload, not analysed with made-up values."""
+    truncated = make_test_image_bytes(200, 200)[:-40]
+    res = await client.post("/api/vision/upload", files={"file": ("cut.png", truncated, "image/png")})
+    assert res.status_code == 400

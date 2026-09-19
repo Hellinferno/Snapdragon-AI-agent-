@@ -87,3 +87,7 @@ Desktop.ini
 # RAG evaluation scratch index and the copyrighted benchmark book (never commit)
 backend/evaluation/.cache/
 datapot.vn-Data-Science-for-Business.pdf
+
+# Never commit PDFs: the benchmark book is copyrighted, and the pinned demo corpus
+# (backend/evaluation/corpus/demo_papers) stays local.
+*.pdf

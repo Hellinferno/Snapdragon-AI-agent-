@@ -282,3 +282,74 @@ async def test_weak_sources_skip_llm_and_use_templates():
 
     assert llm.calls == []  # LLM never invoked
     assert len(res.flashcards) == 1
+
+
+# ---------------------------------------------------------------------------
+# Attribution: an item's source is the one it cites, not the first retrieved
+# ---------------------------------------------------------------------------
+
+
+def _second_source():
+    from app.schemas.rag import SourceReference
+
+    return SourceReference(
+        document_id="doc-2",
+        document_title="Radiology Transformers",
+        page_number=4,
+        chunk_id="chunk-2",
+        relevance_score=0.8,
+        section="Key Findings",
+        excerpt="Achieved 91.4% AUC on pneumonia detection.",
+    )
+
+
+@pytest.mark.asyncio
+async def test_quiz_and_flashcards_attribute_the_cited_source():
+    first, second = _make_source(), _second_source()
+    quiz_payload = [
+        {
+            "question": "What AUC was achieved for pneumonia detection?",
+            "options": ["91.4%", "85.0%", "70.2%", "99.9%"],
+            "correct_index": 0,
+            "explanation": "Reported as 91.4% [Doc: Radiology Transformers, Page: 4].",
+        }
+    ]
+    service = LearningService(None, llm=_GenerativeFakeLLM(json.dumps(quiz_payload)))
+    service.retrieval_service = _FakeRetrieval([first, second])
+
+    quiz = await service.generate_quiz(question_count=1)
+    assert quiz.questions[0].source.chunk_id == "chunk-2"
+
+    card_payload = [{"front": "AUC?", "back": "91.4% [Doc: Radiology Transformers, Page: 4]"}]
+    service = LearningService(None, llm=_GenerativeFakeLLM(json.dumps(card_payload)))
+    service.retrieval_service = _FakeRetrieval([first, second])
+
+    deck = await service.generate_flashcards(count=2)
+    assert deck.flashcards[0].source_hint == "Radiology Transformers, Page 4"
+
+
+def test_page_citation_must_match_as_a_whole_number():
+    src = _make_source(page=1)
+    assert LearningService._cited_source("[Doc: Quantization Study, Page: 12]", [src]) is None
+    assert LearningService._cited_source("[Doc: Quantization Study, Page: 1]", [src]) is src
+
+
+@pytest.mark.asyncio
+async def test_quiz_rejects_answers_the_cited_passage_does_not_state():
+    """Citing a real page is not enough: the answer itself must be on that page."""
+    src = _make_source()
+    payload = [
+        {
+            "question": "What is the main benefit of INT4 weights?",
+            "options": ["Lower cloud transmission costs", "Higher accuracy", "More tokens", "None"],
+            "correct_index": 0,
+            "explanation": "Per the study [Doc: Quantization Study, Page: 2].",
+        }
+    ]
+    service = LearningService(None, llm=_GenerativeFakeLLM(json.dumps(payload)))
+    service.retrieval_service = _FakeRetrieval([src])
+
+    res = await service.generate_quiz(question_count=1)
+
+    # Unsupported LLM question rejected -> template question quoting the passage
+    assert res.questions[0].question.startswith("According to")

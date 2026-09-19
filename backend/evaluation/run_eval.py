@@ -59,7 +59,12 @@ DATASETS_DIR = EVAL_DIR / "datasets"
 RESULTS_DIR = EVAL_DIR / "results"
 CACHE_DIR = EVAL_DIR / ".cache"
 EXCERPT_CHARS = 160  # the repository is public: keep copyrighted corpus text in results short
-DEFAULT_CORPUS_DIRS = {"demo_papers": BACKEND_DIR / "data" / "demo_papers"}
+# The pinned demo corpus lives under evaluation/corpus/, separate from the app's
+# runtime storage in backend/data/ (which seeding regenerates, with different bytes).
+# PDFs are kept out of git, so this directory exists only where it was created; a
+# fresh clone must regenerate the papers and re-pin evaluation/datasets/*.json.
+DEMO_CORPUS_DIR = EVAL_DIR / "corpus" / "demo_papers"
+DEFAULT_CORPUS_DIRS = {"demo_papers": DEMO_CORPUS_DIR}
 
 
 def sha256_file(path: Path) -> str:
@@ -99,7 +104,11 @@ def resolve_corpus(dataset: dict, corpus_dir: Path | None) -> list[tuple[dict, P
         if not pdf.exists():
             raise SystemExit(f"Corpus file not found: {pdf}")
         if entry.get("sha256") and sha256_file(pdf) != entry["sha256"]:
-            raise SystemExit(f"{pdf.name} does not match the dataset's sha256; page labels would be wrong")
+            raise SystemExit(
+                f"{pdf.name} does not match the dataset's sha256; page labels would be wrong. "
+                f"Restore the pinned PDFs in {base}, or regenerate them and re-pin "
+                f"evaluation/datasets/{dataset['name']}.json with --corpus-dir."
+            )
         resolved.append((entry, pdf))
     return resolved
 

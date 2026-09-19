@@ -17,6 +17,27 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["Demo Seeding"])
 
 
+# The sha256-pinned demo papers (see evaluation/datasets/demo_papers.json) live
+# here when present locally; PDFs are kept out of git.
+PINNED_DEMO_CORPUS = settings.BASE_DIR / "evaluation" / "corpus" / "demo_papers"
+
+
+def resolve_demo_corpus_dir() -> Path:
+    """Return the directory holding the demo papers.
+
+    Prefers the local sha256-pinned evaluation corpus. Where it is absent (a fresh
+    clone: PDFs are not in git), this generates a copy into gitignored runtime
+    storage, so seeding a demo never writes into tracked paths.
+    """
+    if len(list(PINNED_DEMO_CORPUS.glob("*.pdf"))) >= 3:
+        return PINNED_DEMO_CORPUS
+
+    generated = settings.BASE_DIR / "data" / "demo_papers"
+    if len(list(generated.glob("*.pdf"))) < 3:
+        generate_demo_papers_script()
+    return generated
+
+
 def ensure_demo_figure(output_path: Path) -> Path:
     """Generate a clean synthetic architecture diagram for vision evaluation if missing."""
     if output_path.exists():
@@ -48,9 +69,7 @@ async def seed_demo_dataset(db: AsyncSession = Depends(get_db)):
     Seeds 3 academic research papers and 1 system architecture diagram.
     Allows evaluators to instantly test all 5 studios with 1 click.
     """
-    demo_dir = settings.BASE_DIR / "data" / "demo_papers"
-    if not demo_dir.exists() or len(list(demo_dir.glob("*.pdf"))) < 3:
-        generate_demo_papers_script()
+    demo_dir = resolve_demo_corpus_dir()
 
     doc_service = DocumentService(db)
     seeded_docs = 0
@@ -93,17 +112,24 @@ async def seed_demo_dataset(db: AsyncSession = Depends(get_db)):
     ensure_demo_figure(fig_path)
 
     seeded_figures = 0
+    demo_figure = None
     try:
         raw_bytes = fig_path.read_bytes()
         fig_record = await vision_service.save_raw_image(raw_bytes, fig_path.name)
         await vision_service.analyze_figure(fig_record.image_id)
+        demo_figure = fig_record.model_dump()
         seeded_figures = 1
     except Exception as e:
         logger.warning("Could not seed demo figure: %s", e)
 
     return {
         "success": True,
-        "message": f"Seeded {seeded_docs} demo research papers and {seeded_figures} architecture diagram.",
+        "message": (
+            f"Demo library ready: {seeded_docs} research papers indexed"
+            + (" and 1 architecture diagram available in Vision Studio." if seeded_figures else ".")
+        ),
         "documents_seeded": seeded_docs,
         "figures_seeded": seeded_figures,
+        # The seeded figure, so the UI can open it in the Vision studio.
+        "demo_figure": demo_figure,
     }

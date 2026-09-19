@@ -67,6 +67,7 @@ class VisionService:
             image = Image.open(io.BytesIO(content))
             dimensions = image.size
             mime_type = Image.MIME.get(image.format, f"image/{ext.lstrip('.')}")
+            image.load()  # decode fully: a truncated file must fail here, not at analysis
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -129,6 +130,7 @@ class VisionService:
             summary=result.summary,
             observations=result.observations,
             confidence=result.confidence,
+            provider=self.vision_provider.name,
         )
 
     async def chat_with_figure(
@@ -154,7 +156,8 @@ class VisionService:
         answer = result.answer
         if paper_context_block:
             answer = (
-                f"{answer}\n\n**Paper Context** (from the linked document):\n{paper_context_block}"
+                f"{answer}\n\nPaper Context: passages of the linked paper retrieved for this "
+                f"question (they describe the paper, not what the image shows):\n{paper_context_block}"
             )
 
         return VisualQAResponse(
@@ -192,7 +195,7 @@ class VisionService:
                 for src in search_res.results:
                     sec = f", Section: {src.section}" if src.section else ""
                     lines.append(
-                        f"- {src.excerpt} [Doc: {src.document_title}, Page: {src.page_number}{sec}]"
+                        f"- {' '.join(src.excerpt.split())} [Doc: {src.document_title}, Page: {src.page_number}{sec}]"
                     )
                 return search_res.results, "\n".join(lines)
         except Exception as e:  # noqa: BLE001 - paper context is best-effort

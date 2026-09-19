@@ -1660,3 +1660,205 @@ body {
 }
 
 
+
+/* ---- Final polish pass ---- */
+
+/* The header grows instead of letting long titles overflow it. */
+.top-bar {
+  height: auto;
+  min-height: 64px;
+  padding: 10px 32px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.top-bar .tab-btn {
+  white-space: nowrap;
+}
+
+/* Shared primary button (was referenced but never defined). */
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  border: 1px solid transparent;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-main);
+  transition: filter 0.2s, opacity 0.2s;
+}
+
+.primary-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.primary-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Shared text input (was referenced but never defined). */
+.chat-input {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-family: var(--font-main);
+  padding: 9px 12px;
+  outline: none;
+}
+
+.chat-input:focus {
+  border-color: var(--accent-cyan);
+}
+
+.chip-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vision-msg {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* A cited chunk is the evidence the answer rests on: make it unmistakable. */
+.chunk-item.highlighted {
+  border: 2px solid var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.08);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+/* Evidence-based comparison */
+.compare-method-note {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.matrix-quote {
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.matrix-td.matrix-gap {
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.matrix-gap-text {
+  color: var(--accent-amber);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+button.citation-pill {
+  text-align: left;
+}
+
+.criterion-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.criterion-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.criterion-title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.criterion-verdict {
+  font-size: 0.84rem;
+  color: var(--accent-cyan);
+}
+
+.criterion-evidence {
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 10px;
+  font-size: 0.82rem;
+}
+
+.criterion-evidence.best {
+  border-left-color: var(--accent-emerald);
+}
+
+.criterion-evidence-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 720px) {
+  .top-bar {
+    padding: 10px 16px;
+  }
+  .matrix-dim-col {
+    width: 120px;
+    min-width: 110px;
+  }
+}
+
+.criterion-evidence-head span:last-child {
+  white-space: nowrap;
+}
+
+.privacy-check-item.warning .privacy-icon-badge {
+  color: var(--accent-amber);
+}
+
+/* Narrow screens: the sidebar becomes a top navigation strip. The runtime and
+   privacy status stay visible in the header badge, so the footer is dropped. */
+@media (max-width: 820px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .brand-header {
+    padding: 10px 16px;
+    border-bottom: none;
+  }
+  .nav-section {
+    flex: none;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 4px 12px 10px;
+    gap: 4px;
+  }
+  .nav-item {
+    width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
+  .nav-badge,
+  .sidebar-footer {
+    display: none;
+  }
+  .view-content {
+    padding: 16px;
+  }
+}

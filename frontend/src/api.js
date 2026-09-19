@@ -103,11 +103,11 @@ export async function sendChatQuestion(question, documentIds = null, topK = 5) {
   return res.json();
 }
 
-export async function compareDocuments(documentIds, dimensions = null) {
+export async function compareDocuments(documentIds, dimensions = null, criteria = null) {
   const res = await fetch(`${API_BASE}/research/compare`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ document_ids: documentIds, dimensions }),
+    body: JSON.stringify({ document_ids: documentIds, dimensions, criteria }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));

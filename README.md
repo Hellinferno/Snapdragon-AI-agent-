@@ -1,242 +1,269 @@
 # ScholarEdge
 
-> **Private, On-Device AI Research & Learning Copilot**  
-> *Engineered for Qualcomm Snapdragon Copilot+ PCs (Snapdragon X Elite / Hexagon NPU 45 TOPS).*
+> **Private, On-Device AI Research & Learning Copilot**
+> *Designed for Qualcomm Snapdragon Copilot+ PCs (Snapdragon X Elite, Hexagon NPU). Currently verified on an Intel development host; Snapdragon execution is not yet physically validated.*
 
-[![Automated Tests](https://img.shields.io/badge/pytest-119%20hermetic%20tests-10b981.svg)](DEVELOPMENT.md)
+[![Automated Tests](https://img.shields.io/badge/pytest-125%20hermetic%20tests-10b981.svg)](DEVELOPMENT.md)
 [![Frontend Build](https://img.shields.io/badge/vite-build%20passing-38bdf8.svg)](DEVELOPMENT.md)
-[![Privacy Mode](https://img.shields.io/badge/privacy-100%25%20local--first-emerald.svg)](PRIVACY.md)
+[![Privacy](https://img.shields.io/badge/privacy-documents%20%26%20retrieval%20local%20%7C%20dev%20LLM%20cloud-f59e0b.svg)](PRIVACY.md)
 [![Hardware Status](https://img.shields.io/badge/runtime-Intel%20i3%20Verified%20%7C%20Snapdragon%20NPU%20Pending-f59e0b.svg)](LIMITATIONS.md)
 
 ---
 
 ## 💡 Why Snapdragon for Research AI?
 
-Research AI workloads—dense PDF parsing, vector embedding generation, multi-paper comparative synthesis, active-recall formative assessments, and multimodal figure analysis—represent the **ideal archetype for private on-device edge computing**:
+Research work — parsing dense PDFs, semantic search, cross-paper comparison, active-recall study,
+and figure analysis — often involves unpublished manuscripts, trial data, or clinical material.
 
-```text
-Research PDF ──► Semantic RAG ──► MiniLM Embedding ──► Qwen3-4B LLM ──► MobileNet Vision ──► Hexagon NPU
- (Confidential)    (Local-First)      (384-dim INT4)      (INT4 QAIRT)      (INT4 QNN)       (45 TOPS)
-```
-
-1. **Uncompromised Data Confidentiality**: Medical trials, unpublished research papers, patent applications, and clinical health data (PHI) cannot legally or ethically be transmitted to third-party cloud APIs under HIPAA and GDPR. Snapdragon Copilot+ PCs execute all embeddings, vector ranking, and language models 100% on-device.
-2. **Heterogeneous Compute Architecture**: Modern research analysis demands diverse computing resources:
-   - **Qualcomm Hexagon NPU (45 TOPS)**: High-throughput, ultra-efficient INT4/INT8 tensor acceleration for continuous vector indexing and prompt processing under a 4.5W power envelope.
-   - **Qualcomm Oryon CPU**: 12 high-performance cores for multi-threaded PDF layout decomposition, vector graphics parsing, and OCR.
-   - **Qualcomm Adreno GPU**: Fluid hardware-accelerated rendering of the 5-Studio interface, interactive comparison matrices, and 3D flashcards.
-3. **All-Day Battery Life**: Researchers, clinicians, and students require sustained AI intelligence in clinical rounds, libraries, and fieldwork without cloud tethering or thermal throttling.
+1. **Data confidentiality**: Sensitive research and clinical data may be subject to institutional,
+   contractual, or legal restrictions. ScholarEdge's Snapdragon architecture is designed to reduce
+   external data exposure by performing inference locally.
+2. **Heterogeneous compute (target design)**:
+   - **Hexagon NPU**: embedding generation (MiniLM via QNN) and LLM generation (Qwen3-4B via QAIRT / GenieX).
+   - **Oryon CPU**: PDF parsing, chunking, and exact cosine-similarity retrieval over SQLite.
+3. **Offline use**: once the LLM runs locally, the whole research loop is designed to work without a
+   network connection (not yet tested on hardware — see [PRIVACY.md](PRIVACY.md)).
 
 ---
 
-## 🏛️ System Execution Architecture
+## 🏛️ System Architecture
 
-ScholarEdge separates ONNX/QNN embedding and vision execution from the QAIRT LLM path across **two modes**:
-
-### Development Mode (Intel Host — Verified)
+### Development mode (Intel host — verified)
 
 ```text
-                            ScholarEdge Application
-                                       │
-           ┌───────────────────────────┼───────────────────────────┐
-           ↓                           ↓                           ↓
-  Embedding Engine                LLM Engine                Vision Engine
- (all-MiniLM-L6-v2 ONNX)   (OpenRouter: configured LLM)    (MobileNet-v2 ONNX)
-           │                           │                           │
-           └───────────────────────────┼───────────────────────────┘
-                                       ↓
-                                 ONNX Runtime
-                         (ort.InferenceSession v1.20+)
-                                       │
-                           ┌───────────┴───────────┐
-                           ▼                       ▼
-                  CPUExecutionProvider        CPUExecutionProvider
-                           │                       │
-                           ▼                       ▼
-                     Intel Core i3              Intel Core i3
-                    (Development Host)        (Development Host)
+PDF
+ ↓
+PyMuPDF (page-aware text extraction)
+ ↓
+all-MiniLM-L6-v2 embeddings (ONNX Runtime, CPUExecutionProvider)
+ ↓
+SQLite (chunks + vectors)
+ ↓
+Local cosine retrieval (host CPU)
+ ↓
+LLM generation via OpenRouter (development configuration; cloud)
 ```
 
-### Snapdragon Mode (Target — Not Yet Physically Validated)
+### Snapdragon mode (target — not yet physically validated)
 
 ```text
-                            ScholarEdge Application
-                                       │
-            ┌───────────────────────────┼───────────────────────────┐
-            ↓                           ↓                           ↓
-  Embedding Engine                LLM Engine                Vision Engine
- (all-MiniLM-L6-v2 INT4 ONNX)  (Qwen3-4B-Instruct INT4)  (MobileNet-v2 INT4 ONNX)
-            │                           │                           │
-            └───────────────────────────┼───────────────────────────┘
-                                        ↓
-                                  ONNX Runtime
-                          (ort.InferenceSession v1.20+)
-                                        │
-                       ┌────────────────┴────────────────┐
-                       ▼                                 ▼
-            QNNExecutionProvider              QAIRT / GenieX Runtime              QNNExecutionProvider
-                       │                                 │
-                       ▼                                 ▼
-            Snapdragon Hexagon NPU                Snapdragon Hexagon NPU
-                (45 TOPS INT4)                       (45 TOPS INT4)
-          [Target Hardware Execution]           [Target Hardware Execution]
+PDF
+ ↓
+PyMuPDF
+ ↓
+all-MiniLM-L6-v2 ONNX
+ ↓
+QNN → Hexagon NPU            (embedding generation)
+ ↓
+SQLite
+ ↓
+Local retrieval              (cosine similarity on the host CPU, not the NPU)
+ ↓
+Qwen3-4B-Instruct-2507
+ ↓
+QAIRT / GenieX → Hexagon NPU (bundle detected, tokenizer loads; inference not yet implemented)
 ```
 
-> **LLM Note:** The target LLM is **Qwen3-4B-Instruct-2507** in **QAIRT / GenAI Inference Extensions** format. Bundle detection and tokenizer loading are implemented; QAIRT inference and physical Snapdragon validation are pending. Embedding and Vision use ONNX Runtime with QNNExecutionProvider when available.
-```
+The two NPU paths are deliberately separate runtimes: MiniLM runs through **ONNX Runtime + QNN**,
+while Qwen3 runs through **QAIRT / GenieX**. The Qwen3 bundle is not converted to ONNX.
+
+**Figure analysis** runs on the CPU (in Snapdragon mode too, with `VISION_PROVIDER=development`): it measures pixel statistics (resolution,
+colour, brightness, contrast, background, edge density) and derives a coarse figure category with
+explicit rules. No trained figure classifier exists yet, so no model confidence is reported. See
+[LIMITATIONS.md](LIMITATIONS.md#3-model-execution-boundaries).
 
 ---
 
-## 🔍 Hardware Verification & Truth in Telemetry
+## 🔍 Verified vs Target vs Not Yet Verified
 
-In accordance with strict scientific honesty:
+### ✅ Verified (Lenovo ThinkBook 14 G4 IAP)
 
-| Aspect | Development Host (Verified) | Snapdragon Target (Pending) |
-|--------|----------------------------|----------------------------|
-| **Hardware** | Lenovo ThinkBook 14 G4 IAP (Intel Core i3-1215U, 8 GB RAM, Windows 11 AMD64) | Snapdragon X Elite / Hexagon NPU 45 TOPS |
-| **Tests** | 95 backend tests passing offline (deterministic, zero live-API dependency); 2 live OpenRouter tests as separate opt-in integration tests; frontend build passing | Architecture implemented, GenieX/QAIRT bundle detected, provider isolation complete |
-| **LLM Inference** | OpenRouter (configured development model) | Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU (inference validation pending) |
-| **Embeddings** | all-MiniLM-L6-v2 ONNX (CPUExecutionProvider) | all-MiniLM-L6-v2 INT4 ONNX (QNNExecutionProvider) |
-| **Vision** | MobileNet-v2 ONNX (CPUExecutionProvider) | MobileNet-v2 INT4 ONNX (QNNExecutionProvider) |
-| **Air-Gapped** | No (requires internet for LLM) | Yes (fully offline capable) |
-| **Status Badge** | ✅ Physically Verified | ❌ Not Physically Verified |
+```text
+Intel Core i3-1215U · 8 GB RAM · Windows 11 · AMD64
+ONNX Runtime CPUExecutionProvider (MiniLM embeddings)
+125 hermetic tests (0 API keys, 0 network required)
+RAG evaluation (committed result files, see BENCHMARKS.md)
+Frontend build
+Complete application workflow (Library → Research → Compare → Learn → Vision → Runtime Inspector)
+```
 
-**Truthful Status Display**:
-- Development Host UI shows: `Development Host (CPUExecutionProvider)`
-- Snapdragon PC UI shows `Hexagon NPU Active` only for components whose runtime reports physical execution; QNN covers embeddings/vision, while QAIRT LLM execution remains pending validation.
+### 🎯 Target architecture
 
-*Read our detailed disclosure in [LIMITATIONS.md](LIMITATIONS.md).*
+```text
+Snapdragon X Elite → Hexagon NPU → QNN          → MiniLM (embeddings)
+Qwen3-4B-Instruct-2507 → QAIRT / GenieX → Hexagon NPU
+```
+
+### ❌ Not yet verified
+
+```text
+Physical Snapdragon execution
+Qwen3 QAIRT generation
+NPU latency, tokens/sec, power consumption
+Air-gapped physical test
+A trained figure classifier (MobileNet-v2 path is scaffolding only)
+```
+
+**Truthful telemetry**: the header badge and the Runtime Inspector read `/api/health`, which reports the
+providers that were actually resolved. On the Intel host they show `Dev Host (CPU)` and, while
+OpenRouter is configured, `Cloud LLM in use`. `Hexagon NPU Active` appears only when a component reports
+physical NPU execution.
+
+*Full disclosure: [LIMITATIONS.md](LIMITATIONS.md).*
 
 ---
 
-## 🌟 The 5 Integrated Studios
+## 🌟 The 5 Studios
 
 ```text
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│   Library    │   │   Research   │   │   Compare    │   │    Learn     │   │    Vision    │
-│    Studio    │   │   RAG Mode   │   │    Studio    │   │    Studio    │   │    Studio    │
+│   Library    │ → │   Research   │ → │   Compare    │ → │    Learn     │ → │    Vision    │
 └──────┬───────┘   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       │                  │                  │                  │                  │
-  Page-Aware         Semantic RAG       Structured          4-Tier Quiz        Researcher
- PDF Ingestion       & View Source      Synthesis &         & Mistake          Prompts &
- & 1-Click Demo      Citation Jump      Recommendations     Retry Loop         MobileNet
+  Page-aware         Grounded RAG       Evidence-based      Explainer, quiz,   Figure analysis +
+  ingestion &        with page          comparison with     retry loop,        paper-grounded
+  chunk inspector    citations          cited quotes        flashcards         cited context
 ```
 
-### 1. Document Library Studio
-- Page-aware PDF ingestion preserving 1-based page indices and section headers.
-- SHA-256 duplicate detection and retryable parsing for interrupted uploads.
-- Interactive chunk inspector modal with direct page navigation.
-- **1-Click Demo Dataset Seeder**: Instantly seeds 3 peer-reviewed-style Medical-AI research papers and an architecture diagram.
+### 1. Library
+- Page-aware PDF ingestion that preserves 1-based page numbers and section headings.
+- SHA-256 duplicate detection; retry for failed parses.
+- Document inspector with **Extracted Chunks** and **Raw Pages** views.
+- **Load Demo Papers (1-Click)** seeds three synthetic clinical-AI papers and an architecture diagram.
 
-### 2. Grounded Research Studio (RAG)
-- Dense 384-dimensional vector retrieval with cosine similarity ranking.
-- **Claim-Level Citations**: Excerpts tagged with `Paper`, `Page`, `Section`, `Chunk ID`, and `Relevance Score`.
-- **"View Source Excerpt" Click-Through**: Clicking a citation opens the Document Inspector, navigates to the exact chunk, and highlights it in glowing emerald.
-- **Grounded Refusal Guarantee**: Strictly outputs *"Insufficient evidence in indexed documents"* on unsupported queries rather than hallucinating.
+### 2. Research (grounded RAG)
+- 384-dimensional MiniLM retrieval with exact cosine similarity.
+- Citations carry paper, page, section, chunk ID and relevance score.
+- **View Source Excerpt** opens the document inspector, scrolls to the cited chunk and highlights it.
+- **Grounded refusal**: questions the indexed documents cannot answer return
+  *"Insufficient evidence in the indexed documents to answer this question."* When a question asks for
+  several things and only some are reported, the answer says which ones are missing.
 
-### 3. Cross-Paper Comparison Studio
-- Structured dimensional comparison across $\ge 2$ documents (Objectives, Methodology, Metrics, Limitations).
-- **LLM Synthesis**: Automatically identifies commonalities, methodological differences, performance differences, dataset differences, limitations, and contradictory findings.
-- **Decision Recommendations ("Which Paper is Stronger for X?")**: Provides evidence-backed guidance for specific research and clinical scenarios.
-- Side-by-side comparison matrix with per-cell citation references.
+### 3. Compare (evidence-based comparison)
+- Dimensions: **Research objective, Methodology, Dataset, Model / architecture, Metrics, Results,
+  Limitations, Trade-offs**.
+- Every cell quotes one sentence from the paper with a page citation that opens the exact chunk.
+  Nothing in the comparison is generated.
+- **Evidence gaps**: a dimension a paper does not address is shown as a gap instead of being filled.
+- **Which paper better matches this criterion?** For each criterion you enter, the evidence from every
+  paper is shown with its similarity score; a paper is named only when it is clearly ahead. This
+  measures how directly a paper addresses the criterion, not which paper is better.
 
-### 4. Learning & Formative Assessment Studio
-- **Pedagogical Explainer**: Three conceptual depths (`Beginner`, `Intermediate`, `Deep-Dive`).
-- **4-Tier Formative Quizzes**: Generates multiple-choice assessments across `Easy`, `Medium`, `Hard`, and `Research-Level` difficulties.
-- **Formative Learning Loop**: Each question displays verified findings, pedagogical explanation, source paper, and a **"Retry Question (Analyze Mistake)"** loop.
-- **Active-Recall Flashcards**: 3D interactive flip cards for spaced repetition.
+### 4. Learn
+- **Concept explainer** at Beginner, Intermediate and Deep-Dive levels.
+- **4-tier quizzes** (Easy, Medium, Hard, Research-Level) with an answer key, explanation, source
+  page and a **Retry Question** loop.
+- **Flashcards** for active recall.
+- A generated explanation, question or card is kept only if it cites a retrieved passage — and, for
+  quizzes and cards, only if that passage actually states the answer. Otherwise the studio falls back
+  to quoting the passage and says so.
 
-### 5. Multimodal Vision Studio (Figure Analysis)
-- MobileNet-v2 ONNX figure classification: `architecture_diagram`, `bar_chart`, `data_table`, `medical_radiograph`.
-- Telemetry decomposition: Resolution, aspect ratio, color mode, and confidence score.
-- **Researcher Quick Prompts**:
-  - `📊 What does this graph show?` (Trend and distribution analysis)
-  - `🔄 Explain the pipeline` (Architectural pipeline and flow)
-  - `🔢 Extract the important numbers` (Tabular and comparative metrics)
-  - `🔬 Describe observable structures` (Visual observations; zero unsupported clinical diagnoses)
+### 5. Vision (multimodal figure analysis)
+- On-device figure analysis from measured pixel statistics: resolution, aspect ratio, colour mode,
+  brightness, contrast, dominant background, edge density, and a rule-based figure category.
+- **Paper-grounded Q&A**: link a paper and each answer adds cited passages retrieved from it; every
+  citation opens the exact chunk.
+- It does not read the figure's text, axes, values or trends, and it says so rather than guessing.
+  This is on-device figure classification plus paper-grounded analysis, not a vision-language model.
 
 ---
 
-## 🛡️ Privacy Modes: Development vs. Snapdragon
+## 🛡️ Privacy Modes
 
-ScholarEdge operates in **two distinct modes**. The distinction is explicit and non-negotiable.
-
-### DEVELOPMENT MODE (Current Verified State)
+### Development mode (current, verified)
 
 ```text
-Inference:        OpenRouter (configured development model)
-Document retrieval: Local (SQLite + all-MiniLM-L6-v2 ONNX)
-Documents uploaded to cloud: No
-Embeddings uploaded to cloud: No
-Vector search:    Local (zero network egress)
-Air-gapped:       No (requires internet for LLM)
-Verified on:      Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB RAM, Windows 11)
-Tests:            95 backend tests passing offline (deterministic) + 2 opt-in live integration tests | Frontend build passing
+Documents / embeddings / vector store / retrieval:  local
+Comparison and figure analysis:                      local (no LLM)
+LLM generation:                                      OpenRouter (question + retrieved excerpts are sent)
+Air-gapped:                                          No
+Verified on:                                         Lenovo ThinkBook 14 G4 IAP (Intel i3-1215U, 8 GB, Windows 11)
 ```
 
-### SNAPDRAGON MODE (Target — Not Yet Physically Validated)
+### Snapdragon mode (target — not yet physically validated)
 
 ```text
-Inference:        Qwen3-4B-Instruct-2507 → GenieX/QAIRT → Hexagon NPU
-Document retrieval: Local (SQLite + all-MiniLM-L6-v2 INT4 ONNX → QNNExecutionProvider → Hexagon NPU)
-Documents uploaded to cloud: No
-Embeddings uploaded to cloud: No
-Vector search:    Local (zero network egress)
-Air-gapped:       Yes (fully offline capable)
-Target hardware:  Snapdragon X Elite / Hexagon NPU (45 TOPS)
-Status:           Architecture implemented, QAIRT bundle detected, provider isolation complete
-                  NPU VALIDATION PENDING
+Embeddings:        all-MiniLM-L6-v2 ONNX → QNN → Hexagon NPU
+Vector store:      SQLite (local)
+Retrieval:         cosine similarity on the host CPU
+LLM:               Qwen3-4B-Instruct-2507 → QAIRT / GenieX → Hexagon NPU (inference not yet implemented)
+Air-gapped:        designed for it; not yet tested on hardware
 ```
 
-**The UI Hardware Inspector never assumes Snapdragon execution: QNN must be physically loaded for embedding/vision, and QAIRT LLM execution remains unverified until a physical Snapdragon run succeeds.**
+Details, including exactly what leaves the machine in development mode: [PRIVACY.md](PRIVACY.md).
 
-**Air-Gapped Offline Guarantee (Snapdragon Mode only)**: Disconnect the internet or switch to airplane mode—ScholarEdge continues complete operation with zero interruption.
+---
+
+## 📊 Measured RAG Quality (development host)
+
+Full mode (retrieval + generation), MiniLM embeddings, vector-only retrieval, top-k = 5. The numbers,
+their configuration and the per-question detail live in the committed result files; see
+[BENCHMARKS.md](BENCHMARKS.md#rag-quality-development-host).
+
+| Metric | Book: *Data Science for Business* (409 pages, 18 + 2 questions) | Demo papers (3 synthetic papers, 13 + 2 questions) |
+|---|---|---|
+| Evidence Hit@5 | 17/18 (94.4%) | 13/13 (100%) |
+| Page Hit@5 | 18/18 (100%) | 13/13 (100%) |
+| Answer correctness | 17/18 (94.4%) | 12/13 (92.3%) |
+| False refusal rate | 1/18 (5.6%) | 0/13 (0%) |
+| Abstention accuracy | 2/2 (100%) | 2/2 (100%) |
+| Groundedness (cited answers) | 16/17 (94.1%) | 13/13 (100%) |
+
+Result files: `backend/evaluation/results/data_science_for_business/final_full_k5.json` and
+`backend/evaluation/results/demo_papers/final_full_k5.json`. The generator is the OpenRouter development model, so these measure the
+RAG pipeline on the development host, not Snapdragon performance.
 
 ---
 
 ## ⚡ Quick Start
 
-### 1. Backend Setup
+### 1. Backend
 ```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# Run automated tests (119 hermetic tests, no API keys or network needed)
+# 125 hermetic tests: 0 API keys, 0 network required
 pytest -v
 
-# Optional: real OpenRouter connectivity tests (require network + API key)
-$env:RUN_LIVE_TESTS = "1"; $env:OPENROUTER_API_KEY = "sk-..."
-pytest -m integration
-
-# Start FastAPI server
+# Start the API
 uvicorn app.main:app --reload --port 8000
 ```
-- API Docs: `http://localhost:8000/docs`
-- Health & Runtime Telemetry: `http://localhost:8000/api/health`
+- API docs: `http://localhost:8000/docs`
+- Health & runtime telemetry: `http://localhost:8000/api/health`
 
-### 2. Frontend Setup
+On a host without the Qualcomm ONNX/QAIRT artifacts (such as the Intel development laptop), 7 of the
+hermetic tests skip because the artifact they exercise is absent; none fail.
+
+**Optional live integration tests** (separate from the hermetic suite; require an OpenRouter API key
+and internet):
+```powershell
+$env:RUN_LIVE_TESTS = "1"; $env:OPENROUTER_API_KEY = "sk-..."
+pytest -m integration
+```
+
+### 2. Frontend
 ```powershell
 cd frontend
 npm install
 npm run build
 npm run dev
 ```
-- Studio Interface: `http://localhost:5173`
+- Studio interface: `http://localhost:5173`
 
 ---
 
-## 📚 Complete Repository Documentation
+## 📚 Documentation
 
 | Document | Purpose |
 |---|---|
-| [README.md](README.md) | Project overview, "Why Snapdragon?", architecture, and studio guide. |
-| [LIMITATIONS.md](LIMITATIONS.md) | **Brutally honest** disclosure of development host vs Snapdragon target status. |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System pipeline diagrams, data flow, and provider factory abstractions. |
-| [SNAPDRAGON.md](SNAPDRAGON.md) | Snapdragon Copilot+ PC deployment, QNN SDK, and HTP offload guide. |
-| [MODEL_CATALOG.md](MODEL_CATALOG.md) | Specifications for MiniLM-L6-v2, Qwen3-4B-Instruct-2507, and MobileNet-v2. |
-| [BENCHMARKS.md](BENCHMARKS.md) | Reproducible benchmark methodology and current validation status. |
-| [PRIVACY.md](PRIVACY.md) | Demonstrable local-first checklist, air-gapped test, and HIPAA/GDPR compliance. |
-| [DEVELOPMENT.md](DEVELOPMENT.md) | Developer onboarding, environment setup, and test execution. |
-| [DEMO.md](DEMO.md) | Step-by-step evaluation script for challenge reviewers. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution standards, code style, and PR requirements. |
+| [README.md](README.md) | Overview, architecture, verified vs target status, studio guide. |
+| [LIMITATIONS.md](LIMITATIONS.md) | What is verified on the development host and what is pending on Snapdragon. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Pipelines, data flow, provider factory, telemetry contract. |
+| [SNAPDRAGON.md](SNAPDRAGON.md) | Snapdragon deployment and the physical validation checklist. |
+| [MODEL_CATALOG.md](MODEL_CATALOG.md) | MiniLM-L6-v2, Qwen3-4B-Instruct-2507, and the figure-analysis path. |
+| [BENCHMARKS.md](BENCHMARKS.md) | Measured RAG quality and the Snapdragon benchmark protocol. |
+| [PRIVACY.md](PRIVACY.md) | What stays local in each mode, the privacy checklist, and the air-gapped test. |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Developer setup and test execution. |
+| [DEMO.md](DEMO.md) | Step-by-step demo script for reviewers. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution standards. |

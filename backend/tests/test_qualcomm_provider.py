@@ -5,7 +5,11 @@ import math
 import pytest
 from pathlib import Path
 
-from app.providers.qualcomm.qualcomm_config import QualcommConfig
+from app.providers.qualcomm.qualcomm_config import (
+    QualcommConfig,
+    QualcommModelUnavailable,
+    onnx_artifact_exists,
+)
 from app.providers.qualcomm.qualcomm_providers import (
     QualcommEmbeddingProvider,
     QualcommLLMProvider,
@@ -98,6 +102,14 @@ async def test_qualcomm_vision_provider(tmp_path):
     from PIL import Image
     import io
 
+    # backend/models/ is gitignored, so CI has no MobileNet artifact; the absent
+    # artifact is a skip, not a failure.
+    if not onnx_artifact_exists(QualcommConfig().vision_model_id):
+        pytest.skip(
+            "MobileNet-v2 ONNX artifact absent on this host "
+            "(run scripts/download_qualcomm_models.py to exercise the vision path)"
+        )
+
     try:
         provider = QualcommVisionProvider()
     except RuntimeError as e:
@@ -139,10 +151,12 @@ def test_provider_factory_resolution():
     assert isinstance(q_emb, QualcommEmbeddingProvider)
     assert isinstance(q_llm, QualcommLLMProvider)
 
-    # Vision provider may fail due to ONNX IR version mismatch
+    # Vision provider needs its ONNX artifact, and may also fail to load it.
     try:
         q_vis = get_vision_provider("qualcomm")
         assert isinstance(q_vis, QualcommVisionProvider)
+    except QualcommModelUnavailable as e:
+        pytest.skip(f"Vision model unavailable on this host: {e}")
     except RuntimeError as e:
         if "Unsupported model IR version" in str(e):
             pytest.skip("Vision model ONNX IR version mismatch")

@@ -1,117 +1,148 @@
-# Demonstrable Privacy Architecture & Data Governance
+# Privacy Architecture & Data Handling
 
-> **ScholarEdge: Two Privacy Modes — Development (Cloud LLM) vs Snapdragon (Fully Air-Gapped)**
+> **ScholarEdge has two privacy modes: Development (cloud LLM, verified on an Intel host) and Snapdragon (fully local by design, not yet physically validated).**
+
+Sensitive research and clinical data may be subject to institutional, contractual, or legal
+restrictions. ScholarEdge's Snapdragon architecture is designed to reduce external data exposure
+by performing inference locally. This document describes what stays on the device in each mode
+and how to check it; it is not a compliance certification.
 
 ---
 
 ## 1. Privacy Modes at a Glance
 
-This exact distinction is canonical and must stay identical across README.md, DEMO.md, and this document.
+This distinction must stay identical across README.md, DEMO.md, and this document.
 
-### Development Mode (current, verified)
+### Development Mode (current, verified on the Intel host)
 
 ```text
-Documents          → LOCAL
-Embeddings         → LOCAL
-Vector DB          → LOCAL
-Retrieval          → LOCAL
-LLM                → OpenRouter
-Internet required  → YES
+Documents          → LOCAL (SQLite + filesystem)
+Embeddings         → LOCAL (all-MiniLM-L6-v2, ONNX Runtime, CPU)
+Vector store       → LOCAL (SQLite)
+Retrieval          → LOCAL (exact cosine similarity, host CPU)
+Comparison         → LOCAL (extractive, no LLM)
+Figure analysis    → LOCAL (pixel statistics, no LLM)
+LLM generation     → OpenRouter (cloud) — receives the question + retrieved excerpts
+Internet required  → YES (for generation only)
 ```
 
 ### Snapdragon Mode (target, pending physical validation)
 
 ```text
-Documents          → LOCAL
-Embeddings         → Snapdragon NPU (QNN)
-Vector DB          → LOCAL
-Retrieval          → LOCAL
-LLM                → Qwen3-4B via QAIRT/GenieX
-Internet required  → NO
+Documents          → LOCAL (SQLite + filesystem)
+Embeddings         → all-MiniLM-L6-v2 ONNX → QNN → Hexagon NPU
+Vector store       → LOCAL (SQLite)
+Retrieval          → LOCAL (exact cosine similarity, host CPU — not the NPU)
+LLM generation     → Qwen3-4B-Instruct-2507 → QAIRT / GenieX → Hexagon NPU (inference not yet implemented)
+Internet required  → NO (by design; the air-gapped test has not been run on hardware)
 ```
 
-| Check | **DEVELOPMENT MODE** (Current) | **SNAPDRAGON MODE** (Target) |
+| Check | **DEVELOPMENT MODE** (current) | **SNAPDRAGON MODE** (target) |
 |---|---|---|
-| **Local Document Storage** | ✅ Verified (SQLite + filesystem) | ✅ Target |
-| **Local Embedding Storage** | ✅ Verified (SQLite vectors) | ✅ Target |
-| **Local Vector Search** | ✅ Verified (CPU cosine similarity) | ✅ Target (NPU) |
-| **AI Inference** | ⚠️ OpenRouter (cloud LLM) | ✅ Local (QAIRT/GenieX on NPU) |
-| **No Document Upload** | ✅ Verified | ✅ Target |
-| **External Providers** | ⚠️ OpenRouter enabled | ✅ Disabled by default |
-| **Air-Gapped Operation** | ❌ No (requires internet) | ✅ Fully offline capable |
+| **Local document storage** | ✅ Verified (SQLite + filesystem) | 🎯 Target |
+| **Local embedding storage** | ✅ Verified (SQLite vectors) | 🎯 Target |
+| **Local vector search** | ✅ Verified (cosine similarity on the host CPU) | 🎯 Target (cosine similarity on the host CPU) |
+| **AI inference** | ⚠️ OpenRouter (cloud LLM) | 🎯 Local (QAIRT / GenieX on the NPU) |
+| **No excerpt leaves the device** | ❌ Retrieved excerpts are sent to OpenRouter | 🎯 Target |
+| **External providers** | ⚠️ OpenRouter enabled | 🎯 Disabled by default |
+| **Air-gapped operation** | ❌ No (generation needs internet) | 🎯 Designed for it; not yet tested on hardware |
 
 ---
 
-## 2. Demonstrable Privacy Audit Checklist — Development Mode (Verified)
+## 2. What Leaves the Machine in Development Mode
 
-ScholarEdge provides continuous verification of its local-first privacy boundary via both the web UI and the `/api/health` telemetry endpoint:
+The only outbound traffic is the LLM call. It is made by these features, and only these:
 
-| Verification Check | Architectural Implementation | Audit Status |
+| Feature | Sent to OpenRouter | Never sent |
+|---|---|---|
+| Research chat | the question + the top-k retrieved excerpts | the PDF, other pages, embeddings |
+| Learn: explainer, quiz, flashcards | the concept/task + retrieved excerpts | the PDF, other pages, embeddings |
+| Compare | nothing (extractive) | everything |
+| Vision / figure analysis | nothing (pixel statistics + local retrieval) | the image and everything else |
+| Library, search, document inspector | nothing | everything |
+
+---
+
+## 3. Privacy Checklist — Development Mode (Verified)
+
+The web UI (header badge and the **Hardware & Privacy Runtime Inspector**) and `/api/health` report
+this checklist from the provider that was actually resolved, not from configuration:
+
+| Verification check | Implementation | Status |
 |---|---|:---:|
-| **1. Local Document Storage** | PDF files and extracted page representations reside exclusively in local SQLite database and `./backend/data/` filesystem directory. | **✅ VERIFIED LOCAL** |
-| **2. Local Embedding Storage** | 384-dimensional dense vectors stored in local SQLite `chunks` table; no cloud vector databases (Pinecone, Weaviate, etc.) contacted. | **✅ VERIFIED LOCAL** |
-| **3. Local Vector Search** | Cosine similarity scoring computed entirely on host CPU using local memory; zero query text transmitted externally. | **✅ VERIFIED LOCAL** |
-| **4. AI Inference** | **Development**: LLM via OpenRouter (internet required). Embeddings & Vision are local ONNX. | **⚠️ CLOUD LLM** |
-| **5. No Document Upload** | Zero document, page, or excerpt payloads dispatched to external endpoints. | **✅ VERIFIED LOCAL** |
-| **6. External Providers** | OpenRouter enabled for LLM; configurable to disable via `AI_PROVIDER=qualcomm` (not yet physically validated). | **⚠️ PARTIAL** |
+| **1. Local document storage** | PDF files and extracted pages live in the local SQLite database and `./backend/data/`. | **✅ LOCAL** |
+| **2. Local embedding storage** | 384-dimensional vectors are stored in the local SQLite database; no cloud vector database is contacted. | **✅ LOCAL** |
+| **3. Local vector search** | Exact cosine similarity computed on the host CPU; query text is not sent anywhere for retrieval. | **✅ LOCAL** |
+| **4. AI inference** | Generation via OpenRouter (internet required). Embeddings, retrieval, comparison and figure analysis are local. | **⚠️ CLOUD LLM** |
+| **5. No document upload** | Whole documents are never uploaded, but retrieved excerpts are sent to OpenRouter for generation. | **⚠️ EXCERPTS SENT** |
+| **6. External providers** | OpenRouter enabled via `ALLOW_EXTERNAL_PROVIDERS=true`. | **⚠️ ENABLED** |
 
 ---
 
-## 3. Demonstrable Privacy Audit Checklist — Snapdragon Mode (Target)
+## 4. Privacy Checklist — Snapdragon Mode (Target)
 
-| Verification Check | Architectural Implementation | Audit Status |
+| Verification check | Implementation | Status |
 |---|---|:---:|
-| **1. Local Document Storage** | PDF files and extracted page representations reside exclusively in local SQLite database and `./backend/data/` filesystem directory. | **🎯 TARGET** |
-| **2. Local Embedding Storage** | 384-dimensional dense vectors stored in local SQLite `chunks` table; no cloud vector databases contacted. | **🎯 TARGET** |
-| **3. Local Vector Search** | Cosine similarity scoring computed entirely on Hexagon NPU using local memory; zero query text transmitted externally. | **🎯 TARGET** |
-| **4. AI Inference** | **Snapdragon**: LLM → Qwen3-4B via QAIRT/GenieX; Embeddings → MiniLM ONNX + QNN; Vision → MobileNet-v2 ONNX + QNN; all on Hexagon NPU. | **🎯 TARGET** |
-| **5. No Document Upload** | Zero document, page, or excerpt payloads dispatched to external endpoints. | **🎯 TARGET** |
-| **6. External Providers** | All external providers disabled (`AI_PROVIDER=qualcomm`); `OPENROUTER_API_KEY` ignored if set. | **🎯 TARGET** |
+| **1. Local document storage** | Same as development mode. | **🎯 TARGET** |
+| **2. Local embedding storage** | Same as development mode; embeddings are computed by MiniLM ONNX via QNN on the Hexagon NPU. | **🎯 TARGET** |
+| **3. Local vector search** | Exact cosine similarity on the host CPU. The vector search itself is not an NPU workload in this design. | **🎯 TARGET** |
+| **4. AI inference** | LLM → Qwen3-4B-Instruct-2507 via QAIRT / GenieX on the Hexagon NPU; embeddings → MiniLM ONNX via QNN. | **🎯 TARGET** |
+| **5. No document upload** | No document, page, or excerpt leaves the device. | **🎯 TARGET** |
+| **6. External providers** | Disabled (`ALLOW_EXTERNAL_PROVIDERS=false`, the default); `OPENROUTER_API_KEY` is ignored. | **🎯 TARGET** |
 
 ---
 
-## 4. Air-Gapped Offline Mode Test — Snapdragon Mode Only
+## 5. Air-Gapped Test — Snapdragon Mode Only (Not Yet Performed)
 
-**Development Mode CANNOT run air-gapped** (requires OpenRouter internet access).
+**Development mode cannot run air-gapped**, because generation uses OpenRouter.
 
-**Snapdragon Mode** is engineered to maintain complete functionality when entirely disconnected from the internet:
+Snapdragon mode is designed to run with the network disconnected. This procedure has **not yet been
+executed on physical Snapdragon hardware**; it is the test to run once QAIRT generation works:
 
 ```text
-[INTERNET DISCONNECTED / AIRPLANE MODE — SNAPDRAGON MODE]
-  ├── Document Library PDF Upload: ACTIVE (PyMuPDF Local)
-  ├── Page-Aware Chunker: ACTIVE (Regex & Layout Local)
-  ├── Vector Indexing: ACTIVE (MiniLM INT4 ONNX / QNN Local)
-  ├── Semantic Search & Q&A: ACTIVE (Cosine Similarity Local / NPU)
-  ├── Cross-Paper Comparison: ACTIVE (Structured Synthesis Local / NPU)
-  ├── Active-Recall Quiz & Flashcards: ACTIVE (Local Formative Engine)
-  └── Multimodal Vision Studio: ACTIVE (MobileNet INT4 ONNX Local / NPU)
+[INTERNET DISCONNECTED — SNAPDRAGON MODE — EXPECTED BEHAVIOUR]
+  ├── Document upload & parsing: PyMuPDF (local)
+  ├── Page-aware chunking: local
+  ├── Embedding generation: MiniLM ONNX via QNN (Hexagon NPU)
+  ├── Retrieval: cosine similarity (host CPU)
+  ├── Grounded chat, explainer, quiz, flashcards: Qwen3-4B via QAIRT / GenieX (Hexagon NPU)
+  ├── Comparison: extractive (local, no LLM)
+  └── Figure analysis: pixel statistics + local retrieval
 ```
 
-### Verification Procedure (Snapdragon Mode):
-1. Turn off Wi-Fi or disconnect Ethernet on the Snapdragon Copilot+ PC.
-2. In the Document Library, upload a research PDF or click "Load Demo Papers (1-Click)".
-3. Ask research queries, generate comparative synthesis matrices, play active-recall quizzes, and upload figures.
-4. Open the **Hardware & Privacy Runtime Inspector** from the header badge or sidebar to verify that all 6 privacy checks remain green and status shows `Hexagon NPU (QNNExecutionProvider)`.
+### Procedure (Snapdragon mode)
+1. Turn off Wi-Fi and disconnect Ethernet on the Snapdragon Copilot+ PC.
+2. In the Library, upload a PDF or click **Load Demo Papers (1-Click)**.
+3. Ask research questions, run a comparison, generate a quiz, and analyse a figure.
+4. Open the **Hardware & Privacy Runtime Inspector** and confirm that all six checks are green and that
+   the NPU status reports physical execution.
 
 ---
 
-## 5. Technical Privacy Properties (Snapdragon Mode Target)
+## 6. Technical Privacy Properties (Snapdragon Mode Target)
 
-- **Zero Cloud Egress**: All document content, embeddings, vector search, LLM inference, and vision analysis execute locally on the device. No query text, retrieved excerpts, or document payloads leave the physical machine.
-- **Zero Cross-Border Transfer**: Air-gapped operation means no network transmission of any kind — all data remains within the device's memory and storage boundaries.
-- **Zero Cloud Exposure for Proprietary IP**: Documents never contact external APIs; model weights and inference run on-device without telemetry to model providers.
-- **Data Minimization by Architecture**: Only the RAG prompt (question + retrieved citations) is constructed in memory; full documents never enter the LLM context window.
-- **Local-First Vector Search**: Cosine similarity computed on-device using local embeddings; zero query vectors transmitted externally.
-- **No Document Upload**: Zero document, page, or excerpt payloads dispatched to external endpoints — verified by the runtime privacy inspector.
+These are properties of the design. They become verified claims only after the air-gapped test
+above passes on physical hardware.
+
+- **Local inference**: embedding generation and LLM generation run on the device, so no query text,
+  retrieved excerpt, or document content needs to leave it.
+- **No outbound traffic by default**: external providers are disabled unless explicitly enabled, and
+  no telemetry is sent to model providers.
+- **Data minimisation**: only the question and the retrieved excerpts are placed in the LLM prompt;
+  whole documents never enter the context window.
+- **Local retrieval**: vectors are stored in SQLite and compared on the host CPU.
+- **Inspectable**: `/api/health` and the Runtime Inspector report what is actually executing, so a
+  fallback to a cloud provider is visible rather than silent.
 
 ---
 
-## 6. Current Development Workflow Privacy Note
+## 7. Development Workflow Note
 
-During development, the system uses **OpenRouter (qwen/qwen-2.5-72b-instruct)** for LLM inference. This means:
+During development, generation uses **OpenRouter (`qwen/qwen-2.5-72b-instruct`)**. That means:
 
-- **Query text + retrieved context** are sent to OpenRouter's API
-- **Documents, embeddings, and vector search** remain fully local
-- **No document content is uploaded** — only the RAG prompt with citations
+- the **question and the retrieved excerpts** are sent to OpenRouter's API;
+- **documents, embeddings, and vector search** remain local;
+- the demo corpus is synthetic, so no real patient or proprietary data is involved in the demo.
 
-**For true air-gapped operation with the technical privacy properties above, deploy in Snapdragon Mode on target hardware.**
+Do not load confidential documents in development mode. Fully local operation is the Snapdragon-mode
+target described above.

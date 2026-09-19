@@ -52,7 +52,10 @@ async def test_learning_endpoints(client: AsyncClient):
     }
     deep_res = await client.post("/api/learning/explain", json=deep_req)
     assert deep_res.status_code == 200
-    assert "Architectural Analysis" in deep_res.json()["explanation"]
+    deep_explanation = deep_res.json()["explanation"]
+    # The hermetic (non-generative) provider quotes the passage and must say so.
+    assert "extractive" in deep_explanation
+    assert "[Doc: Neural Network Quantization, Page: 1]" in deep_explanation
 
     # 3. Quiz Generator
     quiz_req = {

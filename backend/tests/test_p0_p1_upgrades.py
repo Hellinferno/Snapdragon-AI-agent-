@@ -1,7 +1,7 @@
 """Verification tests for P0/P1/P2 capabilities:
 - Actual Qualcomm ONNX model execution
 - Truth in runtime telemetry (no false NPU claims)
-- Structured comparison synthesis
+- Evidence-based comparison (cited cells, explicit gaps)
 - 4-tier quiz generation with explicit correct_answer and explanation
 - Demonstrable privacy telemetry
 """
@@ -15,9 +15,7 @@ from app.providers.qualcomm.qualcomm_providers import (
     QualcommLLMProvider,
     QualcommVisionProvider,
 )
-from app.providers.qualcomm.qualcomm_config import QualcommConfig
-from app.services.comparison_service import ComparisonService
-from app.schemas.research import DocumentComparisonItem
+from app.providers.qualcomm.qualcomm_config import QualcommConfig, onnx_artifact_exists
 
 
 @pytest.mark.asyncio
@@ -79,6 +77,14 @@ async def test_qualcomm_onnx_vision_classification():
     from PIL import Image
     import io
 
+    # backend/models/ is gitignored, so CI has no MobileNet artifact; the absent
+    # artifact is a skip, not a failure.
+    if not onnx_artifact_exists(QualcommConfig().vision_model_id):
+        pytest.skip(
+            "MobileNet-v2 ONNX artifact absent on this host "
+            "(run scripts/download_qualcomm_models.py to exercise the vision path)"
+        )
+
     try:
         provider = QualcommVisionProvider()
     except RuntimeError as e:
@@ -126,41 +132,50 @@ async def test_runtime_and_privacy_telemetry_endpoint(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_structured_compare_studio_synthesis():
-    comparisons = [
-        DocumentComparisonItem(
-            document_id="p1",
-            document_title="Paper A (Transformers)",
-            dimension_values={
-                "Methodology & Architecture": "End-to-end vision-language cross-attention transformer.",
-                "Key Findings & Metrics": "Achieved 91.4% AUC on clinical benchmark.",
-                "Limitations & Future Work": "High memory footprint during unquantized inference.",
-            },
-        ),
-        DocumentComparisonItem(
-            document_id="p2",
-            document_title="Paper B (INT4 Edge)",
-            dimension_values={
-                "Methodology & Architecture": "Quantized INT4 weights with post-training calibration.",
-                "Key Findings & Metrics": "Achieved 4.2x speedup and 18.5 tokens/second on edge CPU.",
-                "Limitations & Future Work": "0.8% drop in retrieval accuracy due to low-bit quantization.",
-            },
-        ),
-    ]
+async def test_compare_studio_is_evidence_based(client: AsyncClient):
+    """Every comparison cell quotes a cited passage or is reported as a gap;
+    nothing ranks papers as "stronger" and no cross-paper claim is invented."""
+    await client.post("/api/documents/seed_demo")
+    docs = {d["title"]: d["id"] for d in (await client.get("/api/documents")).json()}
+    radiology = docs["Clinical Multimodal Transformers for Diagnostic Radiology"]
+    privacy = docs["Privacy-Preserving On-Device Clinical Language Models"]
 
-    service = ComparisonService(None)
-    dims = ["Methodology & Architecture", "Key Findings & Metrics", "Limitations & Future Work"]
-    commonalities, meth_diffs, perf_diffs, data_diffs, limitations, contradictions, recs = (
-        service._synthesize_structured_comparison(comparisons)
+    res = await client.post(
+        "/api/research/compare",
+        json={"document_ids": [radiology, privacy], "criteria": ["pneumonia detection AUC"]},
     )
+    assert res.status_code == 200
+    data = res.json()
 
-    assert len(commonalities) >= 2
-    assert len(meth_diffs) == 2
-    assert len(perf_diffs) == 2
-    assert len(limitations) == 2
-    assert len(contradictions) >= 2
-    assert "Resource-Constrained Edge Inference" in recs
-    assert "Paper A" in recs["Maximum Diagnostic / Metric Accuracy"] or "Paper B" in recs["Resource-Constrained Edge Inference"]
+    assert data["method"] == "extractive"
+    assert "recommendations" not in data and "commonalities" not in data
+    assert "Stronger" not in data["synthesis"]
+
+    for item in data["comparisons"]:
+        assert set(item["cells"]) == set(data["dimensions"])
+        for dim, cell in item["cells"].items():
+            if cell["reported"]:
+                src = cell["source"]
+                assert src["document_id"] == item["document_id"]
+                # The statement is verbatim text of the cited passage.
+                assert cell["statement"].rstrip("…") in " ".join(src["excerpt"].split())
+            else:
+                assert cell["source"] is None
+                assert any(
+                    g["document_id"] == item["document_id"] and g["dimension"] == dim
+                    for g in data["evidence_gaps"]
+                )
+
+    # The radiology paper's result is found where the paper states it (page 4).
+    radiology_cells = next(c for c in data["comparisons"] if c["document_id"] == radiology)["cells"]
+    assert radiology_cells["Results"]["reported"]
+    assert "91.4% AUC" in radiology_cells["Results"]["statement"]
+    assert radiology_cells["Results"]["source"]["page_number"] == 4
+
+    [match] = data["criterion_matches"]
+    assert match["criterion"] == "pneumonia detection AUC"
+    assert {e["document_id"] for e in match["evidence"]} == {radiology, privacy}
+    assert match["better_match_document_id"] in (radiology, None)
 
 
 @pytest.mark.asyncio

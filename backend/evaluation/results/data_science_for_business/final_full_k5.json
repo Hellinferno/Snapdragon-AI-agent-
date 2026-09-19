@@ -1,0 +1,1715 @@
+{
+  "dataset": "data_science_for_business",
+  "label": "final_full_k5",
+  "mode": "full",
+  "created_at": "2026-09-19T13:30:37+00:00",
+  "config": {
+    "git": {
+      "commit": "d83ed3b",
+      "dirty": true
+    },
+    "python": "3.12.10",
+    "dataset_sha256": "a8359649bc3a606b8548c94cf4c677780bb5c002c337812627d4dbc02760491f",
+    "corpus": [
+      {
+        "title": "Data Science for Business",
+        "sha256": "5414cc78e6b8a6c6ba16f7263ac9d9d61fd2dafeab28be3e4b1e1801ef561867"
+      }
+    ],
+    "embedding_provider": "onnx-all-MiniLM-L6-v2",
+    "embedding_degraded": false,
+    "embedding_degraded_reason": null,
+    "retrieval_mode": "semantic-vector",
+    "llm_provider": "openrouter-qwen/qwen-2.5-72b-instruct",
+    "hybrid_retrieval": false,
+    "hybrid_retrieval_explicit": true,
+    "top_k": 5,
+    "min_score_threshold": 0.08,
+    "chunk_size_chars": 600,
+    "chunk_overlap_chars": 100
+  },
+  "counts": {
+    "questions": 20,
+    "answerable": 18,
+    "unanswerable": 2
+  },
+  "retrieval": {
+    "doc_hit_at_k": {
+      "percent": 100.0,
+      "numerator": 18,
+      "denominator": 18
+    },
+    "page_hit_at_k": {
+      "percent": 100.0,
+      "numerator": 18,
+      "denominator": 18
+    },
+    "evidence_hit_at_k": {
+      "percent": 94.44,
+      "numerator": 17,
+      "denominator": 18
+    },
+    "page_recall_at_k": {
+      "mean": 0.812,
+      "count": 18
+    },
+    "mrr": {
+      "mean": 0.6806,
+      "count": 18
+    },
+    "precision_at_k": {
+      "mean": 0.2111,
+      "count": 18
+    }
+  },
+  "generation": {
+    "answer_correctness": {
+      "percent": 94.44,
+      "numerator": 17,
+      "denominator": 18
+    },
+    "false_refusal_rate": {
+      "percent": 5.56,
+      "numerator": 1,
+      "denominator": 18
+    },
+    "abstention_accuracy": {
+      "percent": 100.0,
+      "numerator": 2,
+      "denominator": 2
+    },
+    "groundedness": {
+      "percent": 94.12,
+      "numerator": 16,
+      "denominator": 17
+    }
+  },
+  "citation": {
+    "citation_rate": {
+      "percent": 94.12,
+      "numerator": 16,
+      "denominator": 17
+    },
+    "cited_page_accuracy": {
+      "percent": 94.12,
+      "numerator": 16,
+      "denominator": 17
+    },
+    "cited_doc_accuracy": {
+      "percent": 100.0,
+      "numerator": 30,
+      "denominator": 30
+    },
+    "citation_faithfulness": {
+      "percent": 100.0,
+      "numerator": 30,
+      "denominator": 30
+    }
+  },
+  "by_category": {
+    "conceptual": {
+      "evidence_hit": {
+        "percent": 80.0,
+        "numerator": 4,
+        "denominator": 5
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 5,
+        "denominator": 5
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 5,
+        "denominator": 5
+      }
+    },
+    "cross_section": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "correct": {
+        "percent": 66.67,
+        "numerator": 2,
+        "denominator": 3
+      }
+    },
+    "direct_factual": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 5,
+        "denominator": 5
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 5,
+        "denominator": 5
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 5,
+        "denominator": 5
+      }
+    },
+    "multi_page": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 3,
+        "denominator": 3
+      }
+    },
+    "page_citation": {
+      "evidence_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "page_hit": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      },
+      "correct": {
+        "percent": 100.0,
+        "numerator": 2,
+        "denominator": 2
+      }
+    }
+  },
+  "top1_score": {
+    "answerable": {
+      "min": 0.498,
+      "median": 0.6647,
+      "max": 0.8076
+    },
+    "unanswerable": {
+      "min": 0.3969,
+      "median": 0.3969,
+      "max": 0.4008
+    }
+  },
+  "latency": {
+    "search": {
+      "count": 20,
+      "mean_ms": 861.5,
+      "p50_ms": 770.3,
+      "p95_ms": 1366.8
+    },
+    "chat": {
+      "count": 20,
+      "mean_ms": 8541.2,
+      "p50_ms": 6087.2,
+      "p95_ms": 20313.3
+    }
+  },
+  "tokens": {
+    "prompt": 20392,
+    "completion": 3158
+  },
+  "results": [
+    {
+      "id": "B01",
+      "category": "direct_factual",
+      "question": "In the Wal-Mart Hurricane Frances example, which product's sales increased to about seven times their normal rate ahead of a hurricane?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            27
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 27,
+          "score": 0.6647,
+          "excerpt": "ights. ‘We didn’t know in the past that strawberry Pop- Tarts increase in sales, like seven times their normal sales rate, ahead of a hurricane, ’ Ms. Dillman …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 27,
+          "score": 0.6358,
+          "excerpt": "examine the huge volume of Wal-Mart data from prior, similar situations (such as Hurricane Charley) to identify unusual local demand for products. From such pa…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 27,
+          "score": 0.5487,
+          "excerpt": "e to the hurricane, to ensure that local Wal-Marts are properly stocked. Perhaps mining the data could reveal that a particular DVD sold out in the hurricane’s…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 27,
+          "score": 0.503,
+          "excerpt": "r higher ground, but far away, in Bentonville, Ark., executives at Wal-Mart Stores decided that the situation offered a great opportunity for one of their newe…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 27,
+          "score": 0.4454,
+          "excerpt": "n Wal-Mart’s data warehouse, she felt that the company could ‘start predicting what’s going to happen, instead of waiting for it to happen, ’ as she put it. (H…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Strawberry Pop-Tarts increased in sales to about seven times their normal rate ahead of a hurricane [Doc: \"Data Science for Business\", Page 27].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 27
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          27,
+          27,
+          27,
+          27,
+          27
+        ]
+      }
+    },
+    {
+      "id": "B02",
+      "category": "direct_factual",
+      "question": "In the MegaTelCo churn example, what percentage of cell phone customers leave when their contracts expire?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            28
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 375,
+          "score": 0.6814,
+          "excerpt": "ta already in TelCo’s possession. We will model the probability that a customer will (or will not) leave within 90 days of contract expiration, with the unders…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 28,
+          "score": 0.6652,
+          "excerpt": "se MegaTelCo’s vast data resources to decide which customers should be offered the special retention deal prior to the expiration of their contracts. Think car…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 28,
+          "score": 0.6372,
+          "excerpt": "tion in their wireless business. In the mid-Atlantic region, 20% of cell phone customers leave when their contracts expire, and it is getting increasingly diff…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 307,
+          "score": 0.6092,
+          "excerpt": "t’s call uS(x) the profit from customer x if she stays, not including the incentive cost; and uNS(x) the profit from customer x if she leaves, not including th…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 28,
+          "score": 0.5894,
+          "excerpt": "Example: Predicting Customer Churn How are such data analyses performed? Consider a second, more typical business scenario and how it might be treated from a d…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 3
+      },
+      "generation": {
+        "answer": "In the MegaTelCo churn example, 20% of cell phone customers leave when their contracts expire [Doc: \"Data Science for Business\", Page 28, Section: \"Introduction\"].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 28
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          375,
+          28,
+          28,
+          307,
+          28
+        ]
+      }
+    },
+    {
+      "id": "B03",
+      "category": "direct_factual",
+      "question": "What does CRISP-DM stand for?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            38,
+            51
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 38,
+          "score": 0.498,
+          "excerpt": "ed systematically by following a process with reasonably well-defined stages. The Cross Industry Standard Process for Data Mining, abbreviated CRISP-DM (CRISP-…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 51,
+          "score": 0.4422,
+          "excerpt": "1. See also the Wikipedia page on the CRISP-DM process model. mining process is given by the Cross Industry Standard Process for Data Mining (CRISP-DM; Shearer…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 380,
+          "score": 0.3307,
+          "excerpt": "ed on that fold. The accuracy estimate is the average accuracy for the k folds or the accuracy on the combined (“pooled”) testing folds. Data cleaning/cleansin…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 15,
+          "score": 0.2947,
+          "excerpt": "e: From Crowd-Sourcing to Cloud-Sourcing 343 Final Words 344 A. Proposal Review Guide. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 348,
+          "score": 0.2944,
+          "excerpt": "d for other target variables. Their very effective solution cobbled together models built from these surrogate data, and “transferred” these models for use on …"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "CRISP-DM stands for Cross Industry Standard Process for Data Mining [Doc: \"Data Science for Business\", Page 38].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 38
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          38,
+          51,
+          380,
+          15,
+          348
+        ]
+      }
+    },
+    {
+      "id": "B04",
+      "category": "direct_factual",
+      "question": "How much higher is productivity for a firm that is one standard deviation higher on the data-driven decision-making (DDD) scale?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            30
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 30,
+          "score": 0.7584,
+          "excerpt": "data to make decisions across the company. They show that statistically, the more data- driven a firm is, the more productive it is—even controlling for a wide…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 29,
+          "score": 0.6289,
+          "excerpt": "enefits of data-driven decision-making have been demonstrated conclusively. Economist Erik Brynjolfsson and his colleagues from MIT and Penn’s Wharton School c…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 32,
+          "score": 0.5291,
+          "excerpt": "hich big data technologies seem to help firms (Tambe, 2012). He finds that, after controlling for various possible confounding factors, using big data technolo…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 29,
+          "score": 0.4616,
+          "excerpt": "Figure 1-1. Data science in the context of various data-related processes in the organization. of data science as improving decision making, as this generally …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 29,
+          "score": 0.447,
+          "excerpt": "efers to the practice of basing decisions on the analysis of data, rather than purely on intuition. For example, a marketer could select advertisements based p…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "A firm that is one standard deviation higher on the data-driven decision-making (DDD) scale is associated with a 4%–6% increase in productivity [Doc: \"Data Science for Business\", Page 30].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 30
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          30,
+          29,
+          32,
+          29,
+          29
+        ]
+      }
+    },
+    {
+      "id": "B05",
+      "category": "direct_factual",
+      "question": "When cross-validation splits a labeled dataset into k folds, what values of k does the book say are typical?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            151
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 152,
+          "score": 0.6935,
+          "excerpt": "k–1 folds are combined to form the training data. So, in each iteration we have ( k– 1)/k of the data used for training and 1/k used for testing. Figure 5-9. A…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 151,
+          "score": 0.6258,
+          "excerpt": "which you may want to invest. Cross-validation begins by splitting a labeled dataset into k partitions called folds. Typically, k will be five or ten. The top …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 150,
+          "score": 0.5686,
+          "excerpt": "t, cross-validation computes its estimates over all the data by performing multiple splits and systematically swapping out samples for testing. 126 | Chapter 5…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 380,
+          "score": 0.5398,
+          "excerpt": "e performance task (and/or benefit) of making a prediction ŷ when the actual label is y. The use of accuracy to evaluate a model assumes uniform costs of error…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 249,
+          "score": 0.5379,
+          "excerpt": "he problem. The accuracy numbers have all dropped considerably, except for Naive Bayes, which is still oddly low. The standard deviations are fairly small comp…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "The book states that typical values for k in cross-validation are five or ten [Doc: \"Data Science for Business\", Page 151].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 151
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          152,
+          151,
+          150,
+          380,
+          249
+        ]
+      }
+    },
+    {
+      "id": "B06",
+      "category": "conceptual",
+      "question": "How does the book distinguish a supervised data mining problem from an unsupervised one?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            48
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 318,
+          "score": 0.625,
+          "excerpt": "2. Thanks to Wally Wang for help with this. 3. See this page. Note: Supervised Versus Unsupervised? We should keep in mind our distinction between supervised a…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 209,
+          "score": 0.618,
+          "excerpt": "examples (with known values for the target). Once we can retrieve a set of nearest neighbors (most similar examples) we can use these for various data mining t…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 48,
+          "score": 0.616,
+          "excerpt": "ferent techniques than unsupervised tasks do, and the results often are much more useful. A supervised technique is given a specific purpose for the grouping—p…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 9,
+          "score": 0.6129,
+          "excerpt": "vised versus unsupervised data mining. From Business Problems to Data Mining Tasks 19 Supervised Versus Unsupervised Methods 24 Data Mining and Its Results 25 …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 208,
+          "score": 0.6028,
+          "excerpt": "In contrast, unsupervised problems often are much more exploratory. We may have a notion that if we could cluster companies, news stories, or whiskeys, we woul…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": false,
+        "first_relevant_rank": null
+      },
+      "generation": {
+        "answer": "The book distinguishes a supervised data mining problem from an unsupervised one based on the presence of a target variable and the specific purpose of the analysis:\n\n- **Supervised Data Mining**: In supervised data mining, the goal is to predict a specific target variable. The data must include known values for this target. The techniques used are directed towards achieving this specific purpose, such as classification, regression, and instance scoring [Doc: \"Data Science for Business\", Page 48, Page 209].\n\n- **Unsupervised Data Mining**: In unsupervised data mining, the goal is more exploratory. There is no specific target variable, and the focus is on discovering patterns, similarities, or structures in the data. Techniques like clustering are used to group data based on similarities, but these groupings may not necessarily be meaningful or useful for a specific purpose [Doc: \"Data Science for Business\", Page 48, Page 208].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 48
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 48
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          318,
+          209,
+          48,
+          9,
+          208
+        ]
+      }
+    },
+    {
+      "id": "B07",
+      "category": "conceptual",
+      "question": "How does the book define overfitting?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            137
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 137,
+          "score": 0.6377,
+          "excerpt": "Overfitting Overfitting is the tendency of data mining procedures to tailor models to the training data, at the expense of generalization to previously unseen …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 156,
+          "score": 0.5733,
+          "excerpt": "ight show generalization accuracy continuing to improve, so obtaining more training data could be a good investment. 132 | Chapter 5: Overfitting and Its Avoid…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 148,
+          "score": 0.5721,
+          "excerpt": "* Example: Why Is Overfitting Bad? At the beginning of the chapter, we said that a model that only memorizes is useless because it always overfits and is incap…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 11,
+          "score": 0.5644,
+          "excerpt": "Summary 108 5. Overfitting and Its Avoidance. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 111 Fundamental conce…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 137,
+          "score": 0.5623,
+          "excerpt": "real complexities of the application and thereby be more accurate. There is no single choice or procedure that will eliminate overfitting. The best strategy is…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The book defines overfitting as the tendency of data mining procedures to tailor models to the training data, at the expense of generalization to previously unseen data points [Doc: \"Data Science for Business\", Page 137].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 137
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          137,
+          156,
+          148,
+          11,
+          137
+        ]
+      }
+    },
+    {
+      "id": "B08",
+      "category": "conceptual",
+      "question": "What does information gain measure when segmenting data on an attribute?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            76,
+            77
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 76,
+          "score": 0.7291,
+          "excerpt": "to measure how disordered any set is, we can define information gain (IG) to measure how much an attribute improves (decreases) entropy over the whole segmenta…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 80,
+          "score": 0.6873,
+          "excerpt": "tal idea is important: a natural measure of impurity for numeric values is variance. If the set has all the same values for the numeric target variable, then t…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 86,
+          "score": 0.6323,
+          "excerpt": "’s values, and the width of the bar corresponding to the prevalence of that value in the data. Supervised Segmentation with Tree-Structured Models We have now …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 80,
+          "score": 0.627,
+          "excerpt": "by choosing a split point (or many split points) and then treating the result as a categorical attribute. For example, Income could be divided into two or more…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 82,
+          "score": 0.62,
+          "excerpt": "ce we now have a way to measure information gain this is straightforward: we are asking for the single attribute that gives the highest information gain. To do…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Information gain measures the change in entropy due to the new information being added by splitting the set on all values of a single attribute. Specifically, it quantifies how much an attribute improves (decreases) the entropy over the whole segmentation it creates [Doc: \"Data Science for Business\", Page 76].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 76
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          76,
+          80,
+          86,
+          80,
+          82
+        ]
+      }
+    },
+    {
+      "id": "B09",
+      "category": "conceptual",
+      "question": "Why does the book call the name 'logistic regression' a misnomer?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            123
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 123,
+          "score": 0.6006,
+          "excerpt": "orical. Debating this point is rather academic. What is important to understand is what logistic regression is doing. It is estimating the log-odds or, more lo…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 123,
+          "score": 0.5857,
+          "excerpt": "tructured models we developed in Chapter 3. Note: Logistic regression is a misnomer Above we mentioned that the name logistic regression is a misnomer under th…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 122,
+          "score": 0.5568,
+          "excerpt": "ues. • The output of the logistic regression model is interpreted as the log-odds of class membership. • These log-odds can be translated directly into the pro…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 123,
+          "score": 0.5258,
+          "excerpt": "xamine a few of the technical details. Y ou may skip this subsection without it affecting your understanding of the rest of the book. So, technically, what is …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 122,
+          "score": 0.5164,
+          "excerpt": "more technical than most of the book, so we’ve relegated it to a special “technical details” subsection (next), which also discusses what exactly is the object…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "The book calls the name 'logistic regression' a misnomer because, under modern data science terminology, the distinction between classification and regression is based on whether the target variable is categorical or numeric. Logistic regression produces a numeric estimate (the estimation of the log-odds), but the values of the target variable in the data are categorical. Therefore, despite its name, logistic regression is more accurately considered a classification model rather than a regression model [Doc: \"Data Science for Business\", Page 123, Section: \"Discussion\"].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 123
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          123,
+          123,
+          122,
+          123,
+          122
+        ]
+      }
+    },
+    {
+      "id": "B10",
+      "category": "conceptual",
+      "question": "What is a leak in data preparation, according to the book?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            54
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 54,
+          "score": 0.8076,
+          "excerpt": "2003). Leakage must be considered carefully during data preparation, because data preparation typically is performed after the fact—from historical data. We pr…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 54,
+          "score": 0.6314,
+          "excerpt": "eneral and important concern during data preparation is to beware of “leaks” (Kaufman et al. 2012). A leak is a situation where a variable collected in histori…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 54,
+          "score": 0.6277,
+          "excerpt": "a science or are necessary to present a concrete example. More generally, data scientists may spend considerable time early in the process defining the variabl…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 364,
+          "score": 0.5723,
+          "excerpt": "(fortunately for the data mining efforts) were kept in a different database. Unfortunately, whoever designed that database decided that it was not important to…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 54,
+          "score": 0.4978,
+          "excerpt": "s visited in the session” is predictive. However, the total number of webpages visited in the session would not be known until after the session was over (Koha…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "A leak in data preparation is a situation where a variable collected in historical data gives information on the target variable—information that appears in historical data but is not actually available when the decision has to be made [Doc: \"Data Science for Business\", Page 54, Section: \"Limitations\"]. \n\nFor example, when predicting whether a website visitor would end her session or continue surfing to another page, the variable \"total number of webpages visited in the session\" is predictive. However, this total number would not be known until after the session was over, at which point one would already know the value for the target variable [Doc: \"Data Science for Business\", Page 54, Section: \"Limitations\"].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 54
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 54
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          54,
+          54,
+          54,
+          364,
+          54
+        ]
+      }
+    },
+    {
+      "id": "B11",
+      "category": "multi_page",
+      "question": "What are the stages of the CRISP-DM data mining process described in the book?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            51,
+            52,
+            53,
+            54,
+            55,
+            56
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 51,
+          "score": 0.7236,
+          "excerpt": "1. See also the Wikipedia page on the CRISP-DM process model. mining process is given by the Cross Industry Standard Process for Data Mining (CRISP-DM; Shearer…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 38,
+          "score": 0.703,
+          "excerpt": "ed systematically by following a process with reasonably well-defined stages. The Cross Industry Standard Process for Data Mining, abbreviated CRISP-DM (CRISP-…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 51,
+          "score": 0.5714,
+          "excerpt": "d after the first iteration the data science team knows much more. The next iteration can be much more well-informed. Let’s now discuss the steps in detail. Bu…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 206,
+          "score": 0.5536,
+          "excerpt": "work to define as precisely as possible the goal of any data mining. Recall the CRISP data mining process, replicated in Figure 6-15. We should spend as much t…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 380,
+          "score": 0.5499,
+          "excerpt": "ed on that fold. The accuracy estimate is the average accuracy for the k folds or the accuracy on the combined (“pooled”) testing folds. Data cleaning/cleansin…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.1667,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The CRISP-DM (Cross Industry Standard Process for Data Mining) data mining process, as described in the book, includes the following stages:\n\n1. **Business Understanding**: Initially, it is vital to understand the problem to be solved. This stage involves defining the project goals and objectives in business terms and converting them into a data mining problem definition [Doc: \"Data Science for Business\", Page 51].\n\n2. **Data Understanding**: This stage involves collecting initial data, describing and exploring the data, and verifying data quality. The book emphasizes spending significant time in this stage to ensure a clear and precise definition of the problem [Doc: \"Data Science for Business\", Page 206].\n\n3. **Data Preparation**: This stage involves selecting, cleaning, constructing, and formatting the data to prepare it for modeling. Data cleaning, or data cleansing, is a crucial part of this stage, where the quality of the data is improved by modifying its form or content [Doc: \"Data Science for Business\", Page 380].\n\n4. **Modeling**: This stage involves selecting and applying various modeling techniques and calibrating the parameters to optimal values. The goal is to build a model that can be used to solve the business problem [Doc: \"Data Science for Business\", Page 38].\n\n5. **Evaluation**: This stage involves evaluating the model results to determine if the business objectives have been met. The model is assessed to ensure it meets the business requirements and is effective in solving the problem [Doc: \"Data Science for Business\", Page 38].\n\n6. **Deployment**: This stage involves planning the deployment of the model into the production environment, where it can be used to make decisions or predictions. The model is put into practice, and its performance is monitored to ensure it continues to meet the business needs [Doc: \"Data Science for Business\", Page 38].\n\nThe book also emphasizes that iteration is a key aspect of the CRISP-DM process. Each iteration provides more insights, and subsequent iterations can be more well-informed [Doc: \"Data Science for Business\", Page 51].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 51
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 206
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 380
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 38
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 38
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 38
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 51
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          51,
+          38,
+          51,
+          206,
+          380
+        ]
+      }
+    },
+    {
+      "id": "B12",
+      "category": "multi_page",
+      "question": "How does the book calculate a classifier's expected profit from a confusion matrix?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            222,
+            223,
+            224,
+            225
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 226,
+          "score": 0.7137,
+          "excerpt": "Here again is our sample confusion matrix in Table 7-5. Table 7-5. Our sample confusion matrix (raw counts) p n Y 56 7 N 5 42 Table 7-6 shows the class priors …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 236,
+          "score": 0.7031,
+          "excerpt": "g the value of a classifier at successive points, implicitly dividing the list of instances into many successive sets of predicted positive and negative instan…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 224,
+          "score": 0.6966,
+          "excerpt": "for the classification model. Figure 7-4. A cost-benefit matrix for the targeted marketing example. Given a matrix of costs and benefits, these are multiplied …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 225,
+          "score": 0.6927,
+          "excerpt": "also can be calculated directly from the confusion matrix (see “Sidebar: Other Evaluation Metrics” on page 203). A Key Analytical Framework: Expected Value | 2…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 222,
+          "score": 0.689,
+          "excerpt": "would be estimated by the number of test-set consumers who fell into the confusion matrix cell (Y,n), divided by the total number of test-set consumers. Let’s …"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.75,
+        "evidence_hit": true,
+        "first_relevant_rank": 3
+      },
+      "generation": {
+        "answer": "The book calculates a classifier's expected profit from a confusion matrix by using the following steps:\n\n1. **Confusion Matrix and Class Priors**: The confusion matrix provides the counts of true positives (TP), false positives (FP), true negatives (TN), and false negatives (FN). The class priors (p(p) and p(n)) are also needed.\n\n2. **Error Rates**: Calculate the true positive rate (TPR), false positive rate (FPR), true negative rate (TNR), and false negative rate (FNR) from the confusion matrix:\n   - True Positive Rate (TPR) = TP / (TP + FN)\n   - False Positive Rate (FPR) = FP / (FP + TN)\n   - True Negative Rate (TNR) = TN / (TN + FP)\n   - False Negative Rate (FNR) = FN / (FN + TP)\n\n3. **Cost-Benefit Matrix**: Use a cost-benefit matrix that specifies the benefits (b) and costs for each possible outcome (TP, FP, TN, FN).\n\n4. **Expected Profit Calculation**: Multiply the probabilities (from the confusion matrix and class priors) with the corresponding benefits (from the cost-benefit matrix) and sum them up to get the total expected profit. The formula is:\n   \\[\n   \\text{Expected profit} = p(\\text{p}, \\text{p}) \\cdot b(\\text{p}, \\text{p}) + p(\\text{p}, \\text{n}) \\cdot b(\\text{p}, \\text{n}) + p(\\text{n}, \\text{p}) \\cdot b(\\text{n}, \\text{p}) + p(\\text{n}, \\text{n}) \\cdot b(\\text{n}, \\text{n})\n   \\]\n\n   Where:\n   - \\( p(\\text{p}, \\text{p}) \\) is the probability of a true positive.\n   - \\( p(\\text{p}, \\text{n}) \\) is the probability of a false negative.\n   - \\( p(\\text{n}, \\text{p}) \\) is the probability of a false positive.\n   - \\( p(\\text{n}, \\text{n}) \\) is the probability of a true negative.\n   - \\( b(\\text{p}, \\text{p}) \\) is the benefit of a true positive.\n   - \\( b(\\text{p}, \\text{n}) \\) is the cost of a false negative.\n   - \\( b(\\text{n}, \\text{p}) \\) is the cost of a false positive.\n   - \\( b(\\text{n}, \\text{n}) \\) is the benefit of a true negative.\n\n### Example Calculation:\nUsing the confusion matrix from Table 7-5 and the rates from Table 7-6:\n- TP = 56\n- FP = 7\n- TN = 42\n- FN = 5\n- p(p) = 0.55\n- p(n) = 0.45\n- TPR = 56/61 = 0.92\n- FPR = 7/49 = 0.14\n- TNR = 42/49 = 0.86\n- FNR = 5/61 = 0.08\n\nAssuming a cost-benefit matrix with the following values:\n- \\( b(\\text{p}, \\text{p}) = 10 \\)\n- \\( b(\\text{p}, \\text{n}) = -20 \\)\n- \\( b(\\text{n}, \\text{p}) = -15 \\)\n- \\( b(\\text{n}, \\text{n}) = 5 \\)\n\nThe expected profit is calculated as:\n\\[\n\\text{Expected profit} = (0.55 \\cdot 0.92 \\cdot 10) + (0.55 \\cdot 0.08 \\cdot -20) + (0.45 \\cdot 0.14 \\cdot -15) + (0.45 \\cdot 0.86 \\cdot 5)\n\\]\n\n\\[\n\\text{Expected profit} = (0.55 \\cdot 0.92 \\cdot 10) + (0.55 \\cdot 0.08 \\cdot -20) + (0.45 \\cdot 0.14 \\cdot -15) + (0.45 \\cdot 0.86 \\cdot 5)\n\\]\n\n\\[\n\\text{Expected profit} = (5.06) + (-0.88) + (-0.945) + (1.935)\n\\]\n\n\\[\n\\text{Expected profit} = 5.06 - 0.88 - 0.945 +",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": false,
+        "citations": [],
+        "cited_expected_page": false,
+        "context_pages": [
+          226,
+          236,
+          224,
+          225,
+          222
+        ]
+      }
+    },
+    {
+      "id": "B13",
+      "category": "multi_page",
+      "question": "How does five-fold cross-validation work, and what does it produce?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            151,
+            152
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 152,
+          "score": 0.6345,
+          "excerpt": "k–1 folds are combined to form the training data. So, in each iteration we have ( k– 1)/k of the data used for training and 1/k used for testing. Figure 5-9. A…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 151,
+          "score": 0.5996,
+          "excerpt": "which you may want to invest. Cross-validation begins by splitting a labeled dataset into k partitions called folds. Typically, k will be five or ten. The top …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 150,
+          "score": 0.5914,
+          "excerpt": "t, cross-validation computes its estimates over all the data by performing multiple splits and systematically swapping out samples for testing. 126 | Chapter 5…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 159,
+          "score": 0.5631,
+          "excerpt": "s-validation. Then we build another model using the entire training fold, using that value for C, and test on the corresponding test fold. The only difference …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 380,
+          "score": 0.5368,
+          "excerpt": "e performance task (and/or benefit) of making a prediction ŷ when the actual label is y. The use of accuracy to evaluate a model assumes uniform costs of error…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "Five-fold cross-validation works by splitting a labeled dataset into five equal-sized partitions called folds. The process iterates five times, with each fold being used once as the test set while the remaining four folds are used for training the model. Specifically, in each iteration, (k–1)/k of the data is used for training and 1/k is used for testing, where k is 5 in this case [Doc: \"Data Science for Business\", Page 152].\n\nThe result of five-fold cross-validation is five different accuracy results, which can be used to estimate the performance of the modeling procedure [Doc: \"Data Science for Business\", Page 152]. The final accuracy estimate is typically the average of these five accuracy results [Doc: \"Data Science for Business\", Page 380].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 152
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 152
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 380
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          152,
+          151,
+          150,
+          159,
+          380
+        ]
+      }
+    },
+    {
+      "id": "B14",
+      "category": "cross_section",
+      "question": "How does the book's approach to the churn problem change from the tree induction example in Chapter 3 to the expected value analysis in Chapter 11?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            97,
+            98,
+            305,
+            306,
+            307
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 99,
+          "score": 0.664,
+          "excerpt": "closely with model generality and overfitting, whose discussion we defer to Chapter 5. Example: Addressing the Churn Problem with Tree Induction | 75"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 10,
+          "score": 0.6306,
+          "excerpt": "Visualizing Segmentations 67 Trees as Sets of Rules 71 Probability Estimation 71 Example: Addressing the Churn Problem with Tree Induction 73 Summary 78 4. Fi"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 153,
+          "score": 0.5935,
+          "excerpt": "Each iteration produces one model, and thereby one estimate of generalization performance, for example, one estimate of accuracy. When cross-validation is fini…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 97,
+          "score": 0.5584,
+          "excerpt": "again. How could we use tree induction to help solve it? For this example, we have a historical data set of 20,000 customers. At the point of collecting the da…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 97,
+          "score": 0.5538,
+          "excerpt": "number of instances increases (2/3, 4/5, and 1/1). For each ratio the solid horizontal line shows the uncorrected (constant) estimate, while the corresponding …"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.2,
+        "evidence_hit": true,
+        "first_relevant_rank": 4
+      },
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": false,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "B15",
+      "category": "cross_section",
+      "question": "How is the idea of lift used both to evaluate classifiers and to combine evidence in Naive Bayes-style models?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            244,
+            268
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 268,
+          "score": 0.6229,
+          "excerpt": "ve Bayes, since it’s making stronger simplifying assumptions about the world. Assuming full feature independence, Equation 9-3 becomes the following for Naive-…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 12,
+          "score": 0.6046,
+          "excerpt": ". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 233 Fundamental concepts: Explicit evidence combination with Bayes’ Rule; Probabili…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 268,
+          "score": 0.5967,
+          "excerpt": "classifier to classifier a new example E =<e1, e2, ⋯, ek>. Starting at the prior probability, each piece of evidence—each feature ei—raises or lowers the proba…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 268,
+          "score": 0.594,
+          "excerpt": "A Model of Evidence “Lift” “Cumulative Response and Lift Curves” on page 219 presented the notion of lift as a metric for evaluating a classifier. Intuitively,…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 268,
+          "score": 0.5682,
+          "excerpt": "lected population it is 0.02%, then the classifier gives us a lift of 2—the selected population has double the booking rate. With a slight modification, we can…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The concept of lift is used in two distinct but related ways in the context of evaluating classifiers and combining evidence in Naive Bayes-style models.\n\n1. **Evaluating Classifiers**:\n   - Lift is a metric used to evaluate the performance of a classifier by measuring how much more prevalent the positive class is in the selected subpopulation compared to the prevalence in the population as a whole.\n   - For example, if the prevalence of hotel bookings in a randomly targeted set of consumers is 0.01% and in the selected population it is 0.02%, the classifier gives a lift of 2, indicating that the selected population has double the booking rate [Doc: \"Data Science for Business\", Page 268].\n\n2. **Combining Evidence in Naive Bayes-Style Models**:\n   - In Naive Bayes models, lift is used to combine evidence from different features to update the probability of a class.\n   - Conceptually, we start with the prior probability of a class \\( p(C = c) \\). For each piece of evidence \\( e_i \\), we multiply the current probability by the lift of that evidence, \\( \\text{lift}_c(e_i) \\), which is defined as \\( \\frac{p(e_i | c)}{p(e_i)} \\).\n   - If the lift is greater than one, the probability is increased; if less than one, the probability is decreased.\n   - Mathematically, this can be expressed as:\n     \\[\n     p(C = c | \\mathbf{e}) = p(C = c) \\cdot \\text{lift}_c(e_1) \\cdot \\text{lift}_c(e_2) \\cdots \\text{lift}_c(e_k)\n     \\]\n   - This process allows the model to update the probability of a class based on the combined effect of multiple pieces of evidence [Doc: \"Data Science for Business\", Page 268].\n\nIn summary, lift is used to evaluate the effectiveness of a classifier by measuring how well it concentrates positive examples, and it is also used in Naive Bayes models to combine evidence from different features to update the probability of a class.",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 268
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 268
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          268,
+          12,
+          268,
+          268,
+          268
+        ]
+      }
+    },
+    {
+      "id": "B16",
+      "category": "cross_section",
+      "question": "What is the difference between a fitting graph and a learning curve, and why can logistic regression beat tree induction on small training sets?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            137,
+            155
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 155,
+          "score": 0.6825,
+          "excerpt": "and fitting graphs (or fitting curves). A learning curve shows the generalization performance—the performance only on testing data, plotted against the amount …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 156,
+          "score": 0.6664,
+          "excerpt": "Figure 5-11. Learning curves for tree induction and logistic regression for the churn problem. As the training size grows (x axis), generalization performance …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 155,
+          "score": 0.6456,
+          "excerpt": "y as the modeling procedure finds the most apparent regularities in the dataset. Then as the modeling procedure is allowed to train on larger and larger datase…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 155,
+          "score": 0.6342,
+          "excerpt": "5-11, observe that for smaller training-set sizes, logistic regression yields better generalization accuracy than tree induction. However, as the training sets…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 155,
+          "score": 0.6047,
+          "excerpt": "5. Perlich et al. (2003) show learning curves for tree induction and logistic regression for dozens of classification problems. point. A plot of the generaliza…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 0.5,
+        "evidence_hit": true,
+        "first_relevant_rank": 3
+      },
+      "generation": {
+        "answer": "**Difference between a fitting graph and a learning curve:**\n\n- A **learning curve** shows the generalization performance (performance on testing data) plotted against the amount of training data used [Doc: \"Data Science for Business\", Page 155].\n- A **fitting graph** shows both the generalization performance and the performance on the training data, but it is plotted against model complexity, and it is generally shown for a fixed amount of training data [Doc: \"Data Science for Business\", Page 155].\n\n**Why logistic regression can beat tree induction on small training sets:**\n\n- Logistic regression has less flexibility, which allows it to overfit less with small data. This means that it can generalize better on smaller training sets compared to tree induction, which is more flexible and can overfit more with small data [Doc: \"Data Science for Business\", Page 156].\n- As the training sets get larger, the learning curve for logistic regression levels off faster, and tree induction, due to its greater flexibility, can model more complex regularities and thus become more accurate [Doc: \"Data Science for Business\", Page 155].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 155
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 155
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 156
+          },
+          {
+            "document": "Data Science for Business",
+            "page": 155
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          155,
+          156,
+          155,
+          155,
+          155
+        ]
+      }
+    },
+    {
+      "id": "B17",
+      "category": "page_citation",
+      "question": "On which page does the book note that the AUC is equivalent to the Mann-Whitney-Wilcoxon measure?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            243
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 243,
+          "score": 0.5076,
+          "excerpt": "s a good general summary statistic of the predictiveness of a classifier. As a technical note, the AUC is equivalent to the Mann-Whitney- Wilcoxon measure, a w…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 243,
+          "score": 0.4753,
+          "excerpt": "As the name implies, this is simply the area under a classifier’s curve expressed as a fraction of the unit square. Its value ranges from zero to one. Though a…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 250,
+          "score": 0.409,
+          "excerpt": "ey do raise some questions. There are two things to note about the AUC values. One is that they are all fairly modest. This is unsurprising with real-world dom…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 23,
+          "score": 0.3937,
+          "excerpt": "How to Contact Us Please address comments and questions concerning this book to the publisher: O’Reilly Media, Inc. 1005 Gravenstein Highway North Sebastopol, …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 250,
+          "score": 0.3737,
+          "excerpt": "t is that Naive Bayes, which has the lowest accuracy of the group, has the highest AUC score in Table 8-2. What’s going on here? Let’s take a look at a sample …"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 1
+      },
+      "generation": {
+        "answer": "The book notes that the AUC is equivalent to the Mann-Whitney-Wilcoxon measure on Page 243 [Doc: \"Data Science for Business\", Page 243].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 243
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          243,
+          243,
+          250,
+          23,
+          250
+        ]
+      }
+    },
+    {
+      "id": "B18",
+      "category": "page_citation",
+      "question": "On which page is the equation for inverse document frequency (IDF) given?",
+      "answerable": true,
+      "expected_sources": [
+        {
+          "document": "Data Science for Business",
+          "pages": [
+            279
+          ]
+        }
+      ],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 279,
+          "score": 0.744,
+          "excerpt": "Overly common terms are typically eliminated. One way to do this is to impose an arbitrary upper limit on the number (or fraction) of documents in which a word…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 279,
+          "score": 0.7046,
+          "excerpt": "on called inverse document frequency (IDF), which is shown in Equation 10-1. Equation 10-1. Inverse Document Frequency (IDF) of a term IDF(t) = 1 + log ( Total…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 285,
+          "score": 0.6052,
+          "excerpt": "the relationship. If you’re not curious about this you can skip this section. Figure 10-5 shows some graphs related to the equations we’re going to talk about.…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 285,
+          "score": 0.5556,
+          "excerpt": ") = 1 + log ( Total number of documents Number of documents containing t ) The 1 is just a constant so let’s discard it. We then notice that IDF(t) is basicall…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 400,
+          "score": 0.5526,
+          "excerpt": "inverse document frequency (IDF), 254–255 and entropy, 261–275 in TFIDF , 256 term frequency, combining with, 256 investments in data, evaluating, 204–207 iPho…"
+        }
+      ],
+      "retrieval": {
+        "doc_hit": true,
+        "page_hit": true,
+        "page_recall": 1.0,
+        "evidence_hit": true,
+        "first_relevant_rank": 2
+      },
+      "generation": {
+        "answer": "The equation for inverse document frequency (IDF) is given on Page 279 [Doc: \"Data Science for Business\", Page 279].",
+        "has_sufficient_evidence": true,
+        "refused": false,
+        "correct": true,
+        "grounded": true,
+        "citations": [
+          {
+            "document": "Data Science for Business",
+            "page": 279
+          }
+        ],
+        "cited_expected_page": true,
+        "context_pages": [
+          279,
+          279,
+          285,
+          285,
+          400
+        ]
+      }
+    },
+    {
+      "id": "B19",
+      "category": "unanswerable",
+      "question": "What does the book recommend for fine-tuning large language models such as GPT-4?",
+      "answerable": false,
+      "expected_sources": [],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 23,
+          "score": 0.4008,
+          "excerpt": "m. To comment or ask technical questions about this book, send email to bookques tions@oreilly.com. For more information about O’Reilly Media’s books, courses,…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 406,
+          "score": 0.3802,
+          "excerpt": "ce curves, 212 time series (data), 268 Tobermory single malt scotch, 178 tokens, 251 tools, analytic, 113 topic layer, 264 topic models for text representation…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 156,
+          "score": 0.3728,
+          "excerpt": "ight show generalization accuracy continuing to improve, so obtaining more training data could be a good investment. 132 | Chapter 5: Overfitting and Its Avoid…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 23,
+          "score": 0.339,
+          "excerpt": "How to Contact Us Please address comments and questions concerning this book to the publisher: O’Reilly Media, Inc. 1005 Gravenstein Highway North Sebastopol, …"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 13,
+          "score": 0.3387,
+          "excerpt": "ords representation; TFIDF calculation; N-grams; Stemming; Named entity extraction; Topic models. Why Text Is Important 250 Why Text Is Difficult 250 Represent…"
+        }
+      ],
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": null,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    },
+    {
+      "id": "B20",
+      "category": "unanswerable",
+      "question": "How does the book suggest deploying models with Docker containers on Kubernetes?",
+      "answerable": false,
+      "expected_sources": [],
+      "retrieved": [
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 381,
+          "score": 0.3969,
+          "excerpt": "used specifically to contrast with the “use” of a model in the Evaluation stage of the data mining process. In the latter, deployment Model deployment Glossary…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 56,
+          "score": 0.3343,
+          "excerpt": "itself is not comprehensible (e.g., maybe the model is a very complex mathematical formula), how can the data scientists work to make the behavior of the model…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 373,
+          "score": 0.3084,
+          "excerpt": "clustering, how will the clustering be understood? • Will deployment as planned actually (best) address the stated business problem? • If the project expense h…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 57,
+          "score": 0.2999,
+          "excerpt": "so be much more subtle, such as a change to data acquisition procedures, or a change to strategy, marketing, or operations resulting from insight gained from m…"
+        },
+        {
+          "document_title": "Data Science for Business",
+          "page_number": 127,
+          "score": 0.2803,
+          "excerpt": "Why is this important? For many business problems, the data science team does not have the ultimate say in which models are used or implemented. Often there is…"
+        }
+      ],
+      "generation": {
+        "answer": "Insufficient evidence in the indexed documents to answer this question.",
+        "has_sufficient_evidence": false,
+        "refused": true,
+        "correct": null,
+        "grounded": null,
+        "citations": [],
+        "cited_expected_page": null,
+        "context_pages": []
+      }
+    }
+  ]
+}
