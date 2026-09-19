@@ -100,9 +100,10 @@ Nothing in the Compare studio is generated; it makes no LLM call.
 ---
 
 ### Step 4: Learn (formative assessment and retry loop)
-1. Open **Learn**. In **Concept Explainer**, try Beginner, Intermediate or Deep Dive. Every sentence of a
-   generated explanation must carry a `[Doc: …, Page: N]` citation; if the LLM's output cannot be
-   verified, the studio quotes the closest passage instead and labels it *extractive*.
+1. Open **Learn**. In **Concept Explainer**, try Beginner, Intermediate or Deep Dive. The prompt asks the
+   LLM to cite every factual sentence as `[Doc: …, Page: N]`; the studio keeps the explanation only if it
+   cites at least one retrieved passage, and otherwise quotes the closest passage and labels it
+   *extractive*. The prose is LLM-written, so read it against the **Supporting Evidence** cards below it.
 2. Open **Interactive Quiz**: choose Easy, Medium, Hard or Research-Level. Answer a question to see the
    **Answer key**, the explanation, and the **Source** paper and page (the page the explanation cites).
    **Inspect Source Excerpt** opens that chunk. A wrong answer offers **Retry Question (Analyze Mistake)**.
@@ -149,14 +150,17 @@ Pre-run evaluations (full mode: MiniLM ONNX vector-only retrieval + OpenRouter
 `backend/evaluation/results/demo_papers/final_full_k5.json` and
 `backend/evaluation/results/data_science_for_business/final_full_k5.json`.
 
-| Metric | Demo papers | Book |
-|---|---|---|
-| Doc / Page / Evidence Hit@5 | 100% / 100% / 100% | 100% / 100% / 94.4% |
-| Answer correctness | 12/13 (92.3%) | 17/18 (94.4%) |
-| False refusal rate | 0/13 (0%) | 1/18 (5.6%) |
-| Abstention accuracy | 2/2 (100%) | 2/2 (100%) |
-| Groundedness | 13/13 (100%) | 16/17 (94.1%) |
-| Search latency P50 | 25 ms | 770 ms |
+| Metric              |    409-page book |   Demo papers |
+| ------------------- | ---------------: | ------------: |
+| Evidence Hit@5      |    17/18 (94.4%) |  13/13 (100%) |
+| Page Hit@5          |     18/18 (100%) |  13/13 (100%) |
+| Answer correctness  |    17/18 (94.4%) | 12/13 (92.3%) |
+| False refusals      | 1/18 (5.6%, B14) |          0/13 |
+| Abstention accuracy |       2/2 (100%) |    2/2 (100%) |
+| Groundedness        |    16/17 (94.1%) |  13/13 (100%) |
+
+> Evaluation performed on the development laptop with the same settings as the frozen baseline.
+> Qualcomm NPU execution was not available on this machine.
 
 **Known gaps**: one cross-document demo question misses a second paper's keyword; on the book, the
 multi-hop question B14 is refused because its Chapter 11 evidence is never retrieved, and in this run

@@ -199,14 +199,17 @@ Full mode (retrieval + generation), MiniLM embeddings, vector-only retrieval, to
 their configuration and the per-question detail live in the committed result files; see
 [BENCHMARKS.md](BENCHMARKS.md#rag-quality-development-host).
 
-| Metric | Book: *Data Science for Business* (409 pages, 18 + 2 questions) | Demo papers (3 synthetic papers, 13 + 2 questions) |
-|---|---|---|
-| Evidence Hit@5 | 17/18 (94.4%) | 13/13 (100%) |
-| Page Hit@5 | 18/18 (100%) | 13/13 (100%) |
-| Answer correctness | 17/18 (94.4%) | 12/13 (92.3%) |
-| False refusal rate | 1/18 (5.6%) | 0/13 (0%) |
-| Abstention accuracy | 2/2 (100%) | 2/2 (100%) |
-| Groundedness (cited answers) | 16/17 (94.1%) | 13/13 (100%) |
+| Metric              |    409-page book |   Demo papers |
+| ------------------- | ---------------: | ------------: |
+| Evidence Hit@5      |    17/18 (94.4%) |  13/13 (100%) |
+| Page Hit@5          |     18/18 (100%) |  13/13 (100%) |
+| Answer correctness  |    17/18 (94.4%) | 12/13 (92.3%) |
+| False refusals      | 1/18 (5.6%, B14) |          0/13 |
+| Abstention accuracy |       2/2 (100%) |    2/2 (100%) |
+| Groundedness        |    16/17 (94.1%) |  13/13 (100%) |
+
+> Evaluation performed on the development laptop with the same settings as the frozen baseline.
+> Qualcomm NPU execution was not available on this machine.
 
 Result files: `backend/evaluation/results/data_science_for_business/final_full_k5.json` and
 `backend/evaluation/results/demo_papers/final_full_k5.json`. The generator is the OpenRouter development model, so these measure the

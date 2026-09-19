@@ -91,3 +91,9 @@ datapot.vn-Data-Science-for-Business.pdf
 # Never commit PDFs: the benchmark book is copyrighted, and the pinned demo corpus
 # (backend/evaluation/corpus/demo_papers) stays local.
 *.pdf
+
+# Local-only artifacts that must never be committed: extracted text of the copyrighted
+# benchmark book, and multi-GB Qualcomm model bundles.
+backend/book_pages*.txt
+*__cisim/
+.freebuff/

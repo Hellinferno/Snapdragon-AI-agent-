@@ -5,6 +5,25 @@
 
 ---
 
+## 0. Known Limitations (summary)
+
+- **Snapdragon hardware validation is pending**: nothing has run on a physical Snapdragon device.
+- **Qwen3 QAIRT generation is not implemented or validated**: the bundle is detected and its
+  tokenizer loads; no token has been generated on the NPU.
+- **No NPU latency, tokens/sec or power numbers exist**: none are measured, so none are published.
+- **Air-gapped operation is not physically validated**: development mode needs the network for
+  generation, and the Snapdragon offline test (PRIVACY.md §5) has not been run.
+- **Figure semantic classification is not implemented**: vision measures pixel statistics and applies
+  rules; it does not read text, values or trends, and no figure classifier has been trained.
+- **OpenRouter is an external dependency in development**: generation needs the network and an API
+  key, answers vary run to run, and upstream rate limits can fail a request (one full evaluation run
+  crashed this way; see BENCHMARKS.md).
+- **One book question still fails**: B14 (multi-hop, Chapter 3 vs Chapter 11) is refused because its
+  Chapter 11 evidence is never retrieved; B06 is answered correctly but its evidence sentence misses
+  the top 5.
+
+---
+
 ## 1. Two Execution Modes — Explicit & Non-Negotiable
 
 | Aspect | **DEVELOPMENT MODE** (Physically Verified) | **SNAPDRAGON MODE** (Target — Not Verified) |

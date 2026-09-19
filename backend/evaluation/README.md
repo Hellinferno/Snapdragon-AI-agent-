@@ -88,6 +88,14 @@ Retrieval is identical to the baseline. B12 was answered correctly without a cit
 three isolated `--only B12` re-runs all cited correctly, so it is LLM run-to-run variance, reported as
 measured.
 
+**Run log, reported as measured.** The first full book run (2026-09-19) crashed at question B02:
+OpenRouter's upstream provider returned HTTP 429 (rate limited) and the fallback provider it routed
+to rejected the request with HTTP 400. `run_eval` has no retry, so that run produced no result. The
+same command was re-run unchanged once the rate limit cleared, and the table reports that complete
+run. B12 was then re-run three times in isolation only to diagnose its missing citation (it cited
+correctly each time); those diagnostic runs did not replace the recorded result. No run was
+repeated to obtain a better number.
+
 ### Frozen RAG baseline (HEAD `1e78440`, 2026-09-15)
 
 Book benchmark, recommended configuration: `EMBEDDING_PROVIDER=onnx_minilm`, `HYBRID_RETRIEVAL=false`,

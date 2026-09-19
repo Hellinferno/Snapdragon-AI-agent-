@@ -11,20 +11,36 @@ Result files: `backend/evaluation/results/data_science_for_business/final_full_k
 retrieval-and-grounding pipeline on the Intel development host. They are
 not Snapdragon measurements.
 
-| Metric | Book: *Data Science for Business* | Demo papers |
+| Metric              |    409-page book |   Demo papers |
+| ------------------- | ---------------: | ------------: |
+| Evidence Hit@5      |    17/18 (94.4%) |  13/13 (100%) |
+| Page Hit@5          |     18/18 (100%) |  13/13 (100%) |
+| Answer correctness  |    17/18 (94.4%) | 12/13 (92.3%) |
+| False refusals      | 1/18 (5.6%, B14) |          0/13 |
+| Abstention accuracy |       2/2 (100%) |    2/2 (100%) |
+| Groundedness        |    16/17 (94.1%) |  13/13 (100%) |
+
+> Evaluation performed on the development laptop with the same settings as the frozen baseline.
+> Qualcomm NPU execution was not available on this machine.
+
+Additional metrics from the same run:
+
+| Metric | 409-page book | Demo papers |
 |---|---|---|
 | Questions | 18 answerable + 2 unanswerable | 13 answerable + 2 unanswerable |
 | Doc Hit@5 | 18/18 (100%) | 13/13 (100%) |
-| Page Hit@5 | 18/18 (100%) | 13/13 (100%) |
-| Evidence Hit@5 | 17/18 (94.4%) | 13/13 (100%) |
 | Page recall@5 | 0.812 | 0.923 |
 | MRR | 0.681 | 0.821 |
-| Answer correctness | 17/18 (94.4%) | 12/13 (92.3%) |
-| False refusal rate | 1/18 (5.6%) | 0/13 (0%) |
-| Abstention accuracy | 2/2 (100%) | 2/2 (100%) |
-| Groundedness | 16/17 (94.1%) | 13/13 (100%) |
 | Citation faithfulness | 30/30 (100%) | 35/35 (100%) |
 | Search P50 / P95 | 770 ms / 1,367 ms | 25 ms / 112 ms |
+
+**Run log, reported as measured.** The first full book run (2026-09-19) crashed at question B02:
+OpenRouter's upstream provider returned HTTP 429 (rate limited) and the fallback provider it routed
+to rejected the request with HTTP 400. `run_eval` has no retry, so that run produced no result. The
+same command was re-run unchanged once the rate limit cleared, and the table reports that complete
+run. B12 was then re-run three times in isolation only to diagnose its missing citation (it cited
+correctly each time); those diagnostic runs did not replace the recorded result. No run was
+repeated to obtain a better number.
 
 What changed against the frozen baseline (`head_full_k5.json`, `p1b_minilm.json`):
 
